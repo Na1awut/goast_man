@@ -1,0 +1,22 @@
+# Node modules & build outputs
+node_modules/
+frontend/node_modules/
+frontend/.svelte-kit/
+frontend/build/
+frontend/.output/
+
+# Go binaries & env
+backend/.env
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# OS & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
