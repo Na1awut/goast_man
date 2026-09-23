@@ -8,15 +8,15 @@ let authToken = $state<string | null>(null);
 // --- Init from localStorage ---
 export function initAuth() {
 	if (typeof window === 'undefined') return;
-	const saved = localStorage.getItem('modman_user');
-	const token = localStorage.getItem('modman_token');
+	const saved = localStorage.getItem('gooseman_user');
+	const token = localStorage.getItem('gooseman_token');
 	if (saved && token) {
 		try {
 			currentUser = JSON.parse(saved);
 			authToken = token;
 		} catch {
-			localStorage.removeItem('modman_user');
-			localStorage.removeItem('modman_token');
+			localStorage.removeItem('gooseman_user');
+			localStorage.removeItem('gooseman_token');
 		}
 	}
 }
@@ -26,8 +26,8 @@ export function login(user: User, token: string) {
 	currentUser = user;
 	authToken = token;
 	if (typeof window !== 'undefined') {
-		localStorage.setItem('modman_user', JSON.stringify(user));
-		localStorage.setItem('modman_token', token);
+		localStorage.setItem('gooseman_user', JSON.stringify(user));
+		localStorage.setItem('gooseman_token', token);
 	}
 }
 
@@ -35,8 +35,8 @@ export function logout() {
 	currentUser = null;
 	authToken = null;
 	if (typeof window !== 'undefined') {
-		localStorage.removeItem('modman_user');
-		localStorage.removeItem('modman_token');
+		localStorage.removeItem('gooseman_user');
+		localStorage.removeItem('gooseman_token');
 	}
 }
 
@@ -44,7 +44,7 @@ export function logout() {
 export function demoLogin() {
 	const demoUser: User = {
 		id: 'u-demo-001',
-		email: 'mod@mail.kmutt.ac.th',
+		email: 'goose@mail.kmutt.ac.th',
 		fullName: 'น้องมด (Demo)',
 		studentId: '66130500001',
 		avatarUrl: '',

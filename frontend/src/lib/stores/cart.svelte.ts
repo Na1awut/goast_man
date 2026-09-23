@@ -9,8 +9,8 @@ let selectedStore = $state<Store | null>(null);
 // --- Init from localStorage ---
 export function initCart() {
 	if (typeof window === 'undefined') return;
-	const saved = localStorage.getItem('modman_cart');
-	const savedStore = localStorage.getItem('modman_cart_store');
+	const saved = localStorage.getItem('gooseman_cart');
+	const savedStore = localStorage.getItem('gooseman_cart_store');
 	if (saved) {
 		try { items = JSON.parse(saved); } catch { items = []; }
 	}
@@ -21,11 +21,11 @@ export function initCart() {
 
 function persistCart() {
 	if (typeof window === 'undefined') return;
-	localStorage.setItem('modman_cart', JSON.stringify(items));
+	localStorage.setItem('gooseman_cart', JSON.stringify(items));
 	if (selectedStore) {
-		localStorage.setItem('modman_cart_store', JSON.stringify(selectedStore));
+		localStorage.setItem('gooseman_cart_store', JSON.stringify(selectedStore));
 	} else {
-		localStorage.removeItem('modman_cart_store');
+		localStorage.removeItem('gooseman_cart_store');
 	}
 }
 

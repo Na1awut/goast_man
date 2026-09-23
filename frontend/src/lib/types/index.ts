@@ -1,5 +1,5 @@
 // ============================================================
-// Mod Man (มดแมน) — Shared TypeScript Types
+// Goose Man (ห่านบางมด) — Shared TypeScript Types
 // KMUTT Campus P2P Delivery Platform
 // ============================================================
 
