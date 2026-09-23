@@ -1,72 +1,74 @@
 // Auth global store (Svelte 5 runes)
 import type { User } from '$lib/types';
+import { isKmuttEmail } from '$lib/utils';
 
-// --- State ---
-let currentUser = $state<User | null>(null);
-let authToken = $state<string | null>(null);
+const USER_KEY = 'gooseman_user';
+const TOKEN_KEY = 'gooseman_token';
 
-// --- Init from localStorage ---
-export function initAuth() {
-	if (typeof window === 'undefined') return;
-	const saved = localStorage.getItem('gooseman_user');
-	const token = localStorage.getItem('gooseman_token');
-	if (saved && token) {
+/** Demo account used until Google OAuth is wired to the backend (/api/v1/auth/google) */
+export const DEMO_USER: User = {
+	id: 'u-demo-001',
+	email: 'goose.b@mail.kmutt.ac.th',
+	fullName: 'กูส บางมด',
+	nickname: 'น้องกูส',
+	studentId: '66070500123',
+	faculty: 'คณะเทคโนโลยีสารสนเทศ (SIT)',
+	avatarUrl: '',
+	phoneNumber: '081-234-5678',
+	promptPayNo: '081-234-5678',
+	role: 'STUDENT',
+	status: 'ACTIVE',
+	buyerRatingAvg: 4.95,
+	createdAt: '2025-08-01T00:00:00.000Z'
+};
+
+export class AuthError extends Error {}
+
+class AuthStore {
+	user = $state<User | null>(null);
+	token = $state<string | null>(null);
+	isAuthenticated = $derived(this.user !== null && this.token !== null);
+
+	/** Restore a saved session. Returns true when the user is signed in. */
+	init(): boolean {
+		const saved = localStorage.getItem(USER_KEY);
+		const token = localStorage.getItem(TOKEN_KEY);
+		if (!saved || !token) return false;
 		try {
-			currentUser = JSON.parse(saved);
-			authToken = token;
+			const user = JSON.parse(saved) as User;
+			if (!isKmuttEmail(user.email)) throw new AuthError('invalid domain');
+			this.user = user;
+			this.token = token;
+			return true;
 		} catch {
-			localStorage.removeItem('gooseman_user');
-			localStorage.removeItem('gooseman_token');
+			this.logout();
+			return false;
 		}
 	}
-}
 
-// --- Actions ---
-export function login(user: User, token: string) {
-	currentUser = user;
-	authToken = token;
-	if (typeof window !== 'undefined') {
-		localStorage.setItem('gooseman_user', JSON.stringify(user));
-		localStorage.setItem('gooseman_token', token);
+	/**
+	 * Simulated Google sign-in. Only KMUTT Workspace accounts are accepted;
+	 * the backend enforces the same rule when verifying the ID token.
+	 */
+	async signInWithGoogle(email = DEMO_USER.email): Promise<User> {
+		await new Promise((r) => setTimeout(r, 900));
+		if (!isKmuttEmail(email)) {
+			throw new AuthError('ใช้ได้เฉพาะอีเมล @kmutt.ac.th หรือ @mail.kmutt.ac.th เท่านั้น');
+		}
+		const user: User = { ...DEMO_USER, email };
+		this.user = user;
+		this.token = `demo-token-${Date.now()}`;
+		localStorage.setItem(USER_KEY, JSON.stringify(user));
+		localStorage.setItem(TOKEN_KEY, this.token);
+		return user;
+	}
+
+	logout() {
+		this.user = null;
+		this.token = null;
+		localStorage.removeItem(USER_KEY);
+		localStorage.removeItem(TOKEN_KEY);
 	}
 }
 
-export function logout() {
-	currentUser = null;
-	authToken = null;
-	if (typeof window !== 'undefined') {
-		localStorage.removeItem('gooseman_user');
-		localStorage.removeItem('gooseman_token');
-	}
-}
-
-// Demo login for prototype
-export function demoLogin() {
-	const demoUser: User = {
-		id: 'u-demo-001',
-		email: 'goose@mail.kmutt.ac.th',
-		fullName: 'น้องมด (Demo)',
-		studentId: '66130500001',
-		avatarUrl: '',
-		phoneNumber: '081-234-5678',
-		promptPayNo: '0812345678',
-		role: 'STUDENT',
-		status: 'ACTIVE',
-		riderRatingAvg: 4.95,
-		createdAt: new Date().toISOString()
-	};
-	login(demoUser, 'demo-token-kmutt');
-}
-
-// --- Getters ---
-export function getUser(): User | null {
-	return currentUser;
-}
-
-export function getToken(): string | null {
-	return authToken;
-}
-
-export function isAuthenticated(): boolean {
-	return currentUser !== null && authToken !== null;
-}
+export const auth = new AuthStore();

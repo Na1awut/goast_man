@@ -1,85 +1,148 @@
-// Mock Store Data for Demo (matches seeder.go data)
-import type { Store, MenuItem } from '$lib/types';
+// Mock partner store catalogue (mirrors backend seeder.go)
+import type { Store, StoreZone } from '$lib/types';
+
+const img = (id: string, w: number) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=75`;
+
+export const STORE_ZONES: { id: StoreZone | 'all'; label: string }[] = [
+	{ id: 'all', label: 'ทั้งหมด' },
+	{ id: 'canteen-male', label: 'โรงชาย' },
+	{ id: 'green-canteen', label: 'Green Canteen 190 ปี' },
+	{ id: 'dorm', label: 'หอพัก' }
+];
+
+export const ZONE_NAMES: Record<StoreZone, string> = {
+	'canteen-male': 'โรงอาหารพระจอมเกล้า (โรงชาย)',
+	'green-canteen': 'Green Canteen 190 ปี',
+	dorm: 'โซนหอพักนักศึกษา'
+};
 
 export const MOCK_STORES: Store[] = [
 	{
 		id: 'store-panee',
-		locationId: 'canteen-male',
+		zone: 'canteen-male',
 		name: 'ข้าวมันไก่ป้าณี (สูตรไหหลำ)',
 		category: 'ข้าวมันไก่',
 		description: 'ข้าวมันไก่สูตรไหหลำแท้ๆ น้ำจิ้มเต้าเจี้ยวสูตรลับ',
-		imageUrl: 'https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?auto=format&fit=crop&w=800&q=80',
+		imageUrl: img('photo-1569058242253-92a9c755a0ec', 800),
 		isOpen: true,
 		rating: 4.9,
 		reviewsCount: '1.2k',
-		queueStatus: 'ปานกลาง (~10 นาที)',
-		dealText: 'สั่งผ่านมดแมน ลดค่าอาหาร 5 บาท + ฟรีค่าบริการ',
+		queueMinutes: 10,
+		lock: 'ล็อก 8',
+		deal: { label: 'สั่งผ่านแอป ลดค่าอาหาร 5 บาททันที', minQty: 1, amount: 5 },
 		menuItems: [
-			{ id: 'pm1', storeId: 'store-panee', name: 'ข้าวมันไก่ผสม (ต้ม+ทอด) พิเศษ', price: 55, originalPrice: 60, description: 'แถมน้ำซุปมะนาวดองร้อนๆ เลือกระบุไม่ใส่แตงกวาได้', imageUrl: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=300&q=80', isAvailable: true, category: 'เมนูยอดฮิต' },
-			{ id: 'pm2', storeId: 'store-panee', name: 'ข้าวมันไก่ต้มเนื้อน่องฉ่ำ', price: 45, originalPrice: 50, description: 'เนื้อน่องฉ่ำนุ่ม น้ำจิ้มเต้าเจี้ยวพริกสดสูตรเด็ดป้าณี', imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=300&q=80', isAvailable: true, category: 'ข้าวมันไก่ต้ม' },
-			{ id: 'pm3', storeId: 'store-panee', name: 'ข้าวมันไก่ทอดกรอบ', price: 50, description: 'ไก่ทอดกรอบนอกนุ่มใน เสิร์ฟกับข้าวมันหอมๆ', imageUrl: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=300&q=80', isAvailable: true, category: 'ข้าวมันไก่ทอด' },
-			{ id: 'pm4', storeId: 'store-panee', name: 'ชามะนาวเย็น ดับร้อน', price: 25, description: 'ชาดำเข้มข้นผสมมะนาวแท้ เปรี้ยวหวานสดชื่น', imageUrl: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=300&q=80', isAvailable: true, category: 'เครื่องดื่ม' },
+			{ id: 'pm1', storeId: 'store-panee', name: 'ข้าวมันไก่ผสม (ต้ม+ทอด) พิเศษ', price: 55, originalPrice: 60, description: 'แถมน้ำซุปร้อนๆ ระบุไม่ใส่แตงกวาได้', imageUrl: img('photo-1626082927389-6cd097cdc6ec', 300), isAvailable: true, category: 'ข้าวมันไก่', isPopular: true },
+			{ id: 'pm2', storeId: 'store-panee', name: 'ข้าวมันไก่ต้มเนื้อน่องฉ่ำ', price: 45, originalPrice: 50, description: 'เนื้อน่องนุ่มฉ่ำ น้ำจิ้มเต้าเจี้ยวพริกสด', imageUrl: img('photo-1546069901-ba9599a7e63c', 300), isAvailable: true, category: 'ข้าวมันไก่ต้ม' },
+			{ id: 'pm3', storeId: 'store-panee', name: 'ข้าวมันไก่ทอดกรอบ', price: 50, description: 'ไก่ทอดกรอบนอกนุ่มใน เสิร์ฟกับข้าวมันหอมๆ', imageUrl: img('photo-1598515214211-89d3c73ae83b', 300), isAvailable: true, category: 'ข้าวมันไก่ทอด' },
+			{ id: 'pm4', storeId: 'store-panee', name: 'ชามะนาวเย็น ดับร้อน', price: 25, description: 'ชาดำเข้มข้นผสมมะนาวแท้ เปรี้ยวหวานสดชื่น', imageUrl: img('photo-1556679343-c7306c1976bc', 300), isAvailable: true, category: 'เครื่องดื่ม' }
 		]
 	},
 	{
 		id: 'store-kaprao',
-		locationId: 'canteen-male',
-		name: 'ร้านพี่แดง กะเพราเด็ดเผ็ด',
+		zone: 'canteen-male',
+		name: 'พี่แดง กะเพราเด็ดเผ็ด',
 		category: 'อาหารตามสั่ง',
 		description: 'กะเพราทุกชนิด ไข่ดาวกรอบทุกใบ',
-		imageUrl: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=800&q=80',
+		imageUrl: img('photo-1604908176997-125f25cc6f3d', 800),
 		isOpen: true,
 		rating: 4.7,
 		reviewsCount: '890',
-		queueStatus: 'ยาว (~15 นาที)',
-		dealText: 'สั่ง 2 กล่อง ลด 10 บาท!',
+		queueMinutes: 15,
+		lock: 'ล็อก 3',
+		deal: { label: 'สั่ง 2 กล่องขึ้นไป ลด 10 บาท', minQty: 2, amount: 10 },
 		menuItems: [
-			{ id: 'km1', storeId: 'store-kaprao', name: 'ข้าวกะเพราหมูกรอบไข่ดาว', price: 55, description: 'หมูกรอบผัดกะเพราเผ็ดจัด ไข่ดาวกรอบ', imageUrl: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=300&q=80', isAvailable: true, category: 'กะเพรา' },
-			{ id: 'km2', storeId: 'store-kaprao', name: 'ข้าวกะเพราไก่ไข่ดาว', price: 45, description: 'ไก่สับผัดกะเพรา ไข่ดาวฟู', imageUrl: 'https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?auto=format&fit=crop&w=300&q=80', isAvailable: true, category: 'กะเพรา' },
-			{ id: 'km3', storeId: 'store-kaprao', name: 'ข้าวผัดต้มยำกุ้ง', price: 60, description: 'ข้าวผัดรสต้มยำ กุ้งสดตัวใหญ่', imageUrl: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=300&q=80', isAvailable: true, category: 'ข้าวผัด' },
+			{ id: 'km1', storeId: 'store-kaprao', name: 'ข้าวกะเพราหมูกรอบไข่ดาว', price: 55, description: 'หมูกรอบผัดกะเพราเผ็ดจัด ไข่ดาวกรอบ', imageUrl: img('photo-1604908176997-125f25cc6f3d', 300), isAvailable: true, category: 'กะเพรา', isPopular: true },
+			{ id: 'km2', storeId: 'store-kaprao', name: 'ข้าวกะเพราไก่ไข่ดาว', price: 45, description: 'ไก่สับผัดกะเพรา ไข่ดาวฟู', imageUrl: img('photo-1562565652-a0d8f0c59eb4', 300), isAvailable: true, category: 'กะเพรา' },
+			{ id: 'km3', storeId: 'store-kaprao', name: 'ข้าวผัดต้มยำกุ้ง', price: 60, originalPrice: 65, description: 'ข้าวผัดรสต้มยำ กุ้งสดตัวใหญ่', imageUrl: img('photo-1512058564366-18510be2db19', 300), isAvailable: true, category: 'ข้าวผัด' },
+			{ id: 'km4', storeId: 'store-kaprao', name: 'ผัดซีอิ๊วหมู', price: 45, description: 'เส้นใหญ่ผัดหอมกระทะ', imageUrl: img('photo-1559314809-0d155014e29e', 300), isAvailable: false, category: 'เส้น' }
 		]
 	},
 	{
-		id: 'store-bobatea',
-		locationId: 'green-canteen',
+		id: 'store-boba',
+		zone: 'green-canteen',
 		name: 'BobaLab ชานมไข่มุก มจธ.',
 		category: 'เครื่องดื่ม',
-		description: 'ชานมไข่มุกหลากรสชาติ ไข่มุกนุ่ม Q ต้มสดทุกวัน',
-		imageUrl: 'https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=800&q=80',
+		description: 'ชานมไข่มุกหลากรส ไข่มุกนุ่มหนึบ ต้มสดทุกวัน',
+		imageUrl: img('photo-1558857563-b371033873b8', 800),
 		isOpen: true,
 		rating: 4.8,
 		reviewsCount: '2.1k',
-		queueStatus: 'สั้น (~5 นาที)',
-		dealText: 'แก้วที่ 2 ลด 50% ทุกวันพุธ!',
+		queueMinutes: 5,
+		lock: 'ชั้น 1',
+		deal: { label: 'สั่ง 2 แก้วขึ้นไป ลด 10 บาท', minQty: 2, amount: 10 },
 		menuItems: [
-			{ id: 'bb1', storeId: 'store-bobatea', name: 'ชานมไข่มุก Original', price: 45, description: 'ชานมเข้มข้น ไข่มุกนุ่มหนึบ', imageUrl: 'https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=300&q=80', isAvailable: true, category: 'ชานม' },
-			{ id: 'bb2', storeId: 'store-bobatea', name: 'โกโก้ไข่มุก', price: 50, description: 'โกโก้เข้มข้นกับไข่มุก Q', imageUrl: 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=300&q=80', isAvailable: true, category: 'โกโก้' },
-			{ id: 'bb3', storeId: 'store-bobatea', name: 'มัทฉะลาเต้', price: 55, description: 'มัทฉะจากอุจิ นมสดใหม่', imageUrl: 'https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&w=300&q=80', isAvailable: true, category: 'มัทฉะ' },
+			{ id: 'bb1', storeId: 'store-boba', name: 'ชานมไข่มุก Original', price: 45, description: 'ชานมเข้มข้น ไข่มุกนุ่มหนึบ', imageUrl: img('photo-1558857563-b371033873b8', 300), isAvailable: true, category: 'ชานม', isPopular: true },
+			{ id: 'bb2', storeId: 'store-boba', name: 'โกโก้ไข่มุก', price: 50, description: 'โกโก้เข้มข้นกับไข่มุก Q', imageUrl: img('photo-1572490122747-3968b75cc699', 300), isAvailable: true, category: 'โกโก้' },
+			{ id: 'bb3', storeId: 'store-boba', name: 'มัทฉะลาเต้', price: 55, description: 'มัทฉะเกรดพรีเมียม นมสดใหม่', imageUrl: img('photo-1515823064-d6e0c04616a7', 300), isAvailable: true, category: 'มัทฉะ' }
+		]
+	},
+	{
+		id: 'store-greenbowl',
+		zone: 'green-canteen',
+		name: 'Green Bowl สลัดคลีน',
+		category: 'อาหารคลีน',
+		description: 'สลัดและข้าวกล้องอกไก่ สายสุขภาพต้องโดน',
+		imageUrl: img('photo-1512621776951-a57141f2eefd', 800),
+		isOpen: true,
+		rating: 4.6,
+		reviewsCount: '420',
+		queueMinutes: 7,
+		lock: 'ล็อก 12',
+		menuItems: [
+			{ id: 'gb1', storeId: 'store-greenbowl', name: 'สลัดอกไก่ย่างซอสงา', price: 65, description: 'ผักสลัดสด อกไก่ย่างนุ่ม ซอสงาญี่ปุ่น', imageUrl: img('photo-1512621776951-a57141f2eefd', 300), isAvailable: true, category: 'สลัด', isPopular: true },
+			{ id: 'gb2', storeId: 'store-greenbowl', name: 'ข้าวกล้องแซลมอนเทอริยากิ', price: 89, originalPrice: 99, description: 'แซลมอนย่างซอสเทอริยากิ ข้าวกล้องหอมมะลิ', imageUrl: img('photo-1467003909585-2f8a72700288', 300), isAvailable: true, category: 'ข้าวกล่อง' }
 		]
 	},
 	{
 		id: 'store-somtam',
-		locationId: 'canteen-male',
-		name: 'ส้มตำป้าแจ๋ว (โรงชาย ล็อก 3)',
+		zone: 'canteen-male',
+		name: 'ส้มตำป้าแจ๋ว',
 		category: 'อาหารอีสาน',
 		description: 'ส้มตำ ลาบ น้ำตก ไก่ย่าง รสแซ่บนัว',
-		imageUrl: 'https://images.unsplash.com/photo-1562967916-eb82221dfb44?auto=format&fit=crop&w=800&q=80',
+		imageUrl: img('photo-1562967916-eb82221dfb44', 800),
 		isOpen: true,
 		rating: 4.6,
 		reviewsCount: '650',
-		queueStatus: 'ปานกลาง (~8 นาที)',
+		queueMinutes: 8,
+		lock: 'ล็อก 3',
 		menuItems: [
-			{ id: 'st1', storeId: 'store-somtam', name: 'ส้มตำไทย', price: 40, description: 'ส้มตำรสจัดจ้าน ถั่วลิสง กุ้งแห้ง', imageUrl: 'https://images.unsplash.com/photo-1562967916-eb82221dfb44?auto=format&fit=crop&w=300&q=80', isAvailable: true, category: 'ส้มตำ' },
-			{ id: 'st2', storeId: 'store-somtam', name: 'ส้มตำปูปลาร้า', price: 50, description: 'แซ่บนัว ปูดองเค็ม ปลาร้าหอม', imageUrl: 'https://images.unsplash.com/photo-1562967916-eb82221dfb44?auto=format&fit=crop&w=300&q=80', isAvailable: true, category: 'ส้มตำ' },
-			{ id: 'st3', storeId: 'store-somtam', name: 'ไก่ย่าง 1/4 ตัว + ข้าวเหนียว', price: 60, description: 'ไก่ย่างหนังกรอบ เสิร์ฟกับน้ำจิ้มแจ่วและข้าวเหนียว', imageUrl: 'https://images.unsplash.com/photo-1532550907401-a500c9a57435?auto=format&fit=crop&w=300&q=80', isAvailable: true, category: 'ย่าง' },
+			{ id: 'st1', storeId: 'store-somtam', name: 'ส้มตำไทย', price: 40, description: 'ส้มตำรสจัดจ้าน ถั่วลิสง กุ้งแห้ง', imageUrl: img('photo-1562967916-eb82221dfb44', 300), isAvailable: true, category: 'ส้มตำ', isPopular: true },
+			{ id: 'st2', storeId: 'store-somtam', name: 'ส้มตำปูปลาร้า', price: 50, description: 'แซ่บนัว ปูดองเค็ม ปลาร้าหอม', imageUrl: img('photo-1559847844-5315695dadae', 300), isAvailable: true, category: 'ส้มตำ' },
+			{ id: 'st3', storeId: 'store-somtam', name: 'ไก่ย่าง 1/4 ตัว + ข้าวเหนียว', price: 60, description: 'ไก่ย่างหนังกรอบ น้ำจิ้มแจ่ว ข้าวเหนียวร้อนๆ', imageUrl: img('photo-1532550907401-a500c9a57435', 300), isAvailable: true, category: 'ไก่ย่าง' }
 		]
 	},
+	{
+		id: 'store-dormkitchen',
+		zone: 'dorm',
+		name: 'ครัวป้าติ๋ม หน้าหอใน',
+		category: 'ข้าวราดแกง',
+		description: 'ข้าวราดแกง 2 อย่าง ไข่เจียวฟูๆ อิ่มคุ้ม',
+		imageUrl: img('photo-1455619452474-d2be8b1e70cd', 800),
+		isOpen: true,
+		rating: 4.5,
+		reviewsCount: '310',
+		queueMinutes: 4,
+		lock: 'หอพัก S5',
+		menuItems: [
+			{ id: 'dk1', storeId: 'store-dormkitchen', name: 'ข้าวราดแกง 2 อย่าง', price: 40, description: 'เลือกกับข้าวหน้าร้านได้ ระบุในหมายเหตุ', imageUrl: img('photo-1455619452474-d2be8b1e70cd', 300), isAvailable: true, category: 'ข้าวราดแกง', isPopular: true },
+			{ id: 'dk2', storeId: 'store-dormkitchen', name: 'ข้าวไข่เจียวหมูสับ', price: 35, description: 'ไข่เจียวฟูกรอบ หมูสับแน่นๆ', imageUrl: img('photo-1525351484163-7529414344d8', 300), isAvailable: true, category: 'ไข่เจียว' }
+		]
+	}
 ];
 
 export function getStoreById(id: string): Store | undefined {
-	return MOCK_STORES.find(s => s.id === id);
+	return MOCK_STORES.find((s) => s.id === id);
 }
 
-export function getStoresByLocation(locationId: string): Store[] {
-	return MOCK_STORES.filter(s => s.locationId === locationId);
+/** Live search across store name, category and menu item names */
+export function searchStores(query: string, zone: StoreZone | 'all'): { store: Store; matchedItems: string[] }[] {
+	const q = query.trim().toLowerCase();
+	return MOCK_STORES.filter((s) => zone === 'all' || s.zone === zone)
+		.map((store) => {
+			if (!q) return { store, matchedItems: [] };
+			const storeHit = store.name.toLowerCase().includes(q) || store.category.toLowerCase().includes(q);
+			const matchedItems = store.menuItems.filter((m) => m.name.toLowerCase().includes(q)).map((m) => m.name);
+			return storeHit || matchedItems.length > 0 ? { store, matchedItems } : null;
+		})
+		.filter((r): r is { store: Store; matchedItems: string[] } => r !== null);
 }

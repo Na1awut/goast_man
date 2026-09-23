@@ -1,0 +1,16 @@
+{
+	"name": "Goose Man (ห่านบางมด) — KMUTT Campus P2P Delivery",
+	"short_name": "Goose Man",
+	"description": "ขี้เกียจเดินฝ่าแดด? ให้ห่านบางมดหิ้วให้! ฝากเพื่อน นศ. มจธ. หิ้วอาหารส่งถึงหน้าตึก",
+	"lang": "th",
+	"start_url": "/",
+	"scope": "/",
+	"display": "standalone",
+	"orientation": "portrait",
+	"background_color": "#FFFFFF",
+	"theme_color": "#FA4616",
+	"icons": [
+		{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+		{ "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+	]
+}

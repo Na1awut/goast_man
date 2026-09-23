@@ -3,51 +3,85 @@
 // KMUTT Campus P2P Delivery Platform
 // ============================================================
 
+// --- Navigation ---
+export type Screen =
+	| 'LOGIN'
+	| 'HOME'
+	| 'STORES'
+	| 'STORE_DETAIL'
+	| 'CUSTOM_ORDER'
+	| 'CHECKOUT'
+	| 'PAYMENT'
+	| 'TRACKING'
+	| 'CHAT'
+	| 'SUCCESS'
+	| 'ORDERS'
+	| 'PROFILE';
+
+export type TabId = 'HOME' | 'ORDERS' | 'STORES' | 'CHAT' | 'PROFILE';
+
 // --- User / Auth ---
 export interface User {
 	id: string;
 	email: string;
 	fullName: string;
+	nickname: string;
 	studentId: string;
+	faculty: string;
 	avatarUrl: string;
 	phoneNumber: string;
 	promptPayNo: string;
 	role: 'STUDENT' | 'ADMIN';
 	status: 'ACTIVE' | 'SUSPENDED';
-	riderRatingAvg: number;
+	buyerRatingAvg: number;
 	createdAt: string;
 }
 
 // --- Location ---
 export type HubZone = 'CANTEEN' | 'ACADEMIC' | 'OFFICE' | 'DORM' | 'OFF_CAMPUS';
 
-export interface LocationHub {
+export interface DropoffPoint {
 	id: string;
 	name: string;
-	code: string;
-	building: string;
-	floor: string;
+	shortName: string;
+	note: string;
 	zone: HubZone;
-	hubType: 'PICKUP' | 'DROPOFF';
-	description: string;
-	isActive: boolean;
-	stores?: Store[];
+}
+
+export interface PickupHub {
+	id: string;
+	name: string;
+	shortName: string;
+	icon: 'store' | 'cart' | 'utensils';
+	zone: HubZone;
 }
 
 // --- Store & Menu ---
+export type StoreZone = 'canteen-male' | 'green-canteen' | 'dorm';
+
+export interface PartnerDeal {
+	/** Human-readable promo label shown on cards */
+	label: string;
+	/** Minimum number of items in cart before the deal applies */
+	minQty: number;
+	/** Flat baht discount off the food subtotal */
+	amount: number;
+}
+
 export interface Store {
 	id: string;
-	locationId: string;
+	zone: StoreZone;
 	name: string;
 	category: string;
 	description: string;
 	imageUrl: string;
 	isOpen: boolean;
-	rating?: number;
-	reviewsCount?: string;
-	queueStatus?: string;
-	dealText?: string;
-	menuItems?: MenuItem[];
+	rating: number;
+	reviewsCount: string;
+	queueMinutes: number;
+	lock: string;
+	deal?: PartnerDeal;
+	menuItems: MenuItem[];
 }
 
 export interface MenuItem {
@@ -59,47 +93,60 @@ export interface MenuItem {
 	description: string;
 	imageUrl: string;
 	isAvailable: boolean;
-	category?: string;
+	isPopular?: boolean;
+	category: string;
 }
 
 // --- Cart ---
 export interface CartItem {
 	menuItem: MenuItem;
 	quantity: number;
-	note?: string;
+}
+
+// --- Rider ---
+export interface Rider {
+	id: string;
+	name: string;
+	fullName: string;
+	faculty: string;
+	rating: number;
+	jobs: number;
+	phone: string;
 }
 
 // --- Order ---
 export type OrderStatus = 'PENDING' | 'ACCEPTED' | 'DELIVERING' | 'COMPLETED' | 'CANCELLED';
+export type PaymentMethod = 'PROMPTPAY' | 'CASH';
+export type OrderKind = 'STORE' | 'CUSTOM';
 
 export interface Order {
 	id: string;
 	orderCode: string;
+	kind: OrderKind;
 	customerId: string;
-	customerEmail: string;
-	riderId?: string;
-	riderEmail?: string;
-	riderName?: string;
-	riderFaculty?: string;
-	riderRating?: number;
-	riderPhone?: string;
-	pickupHubId: string;
-	pickupHubName: string;
-	dropoffNodeId: string;
-	dropoffNodeName: string;
+	storeId?: string;
+	rider?: Rider;
+	pickupName: string;
+	dropoffName: string;
 	itemDetails: string;
-	estimatedPrice: number;
+	items?: CartItem[];
+	foodTotal: number;
 	deliveryFee: number;
-	discount?: number;
+	codeDiscount: number;
+	partnerDiscount: number;
+	promoCode?: string;
 	totalPrice: number;
+	paymentMethod: PaymentMethod;
 	status: OrderStatus;
 	otpCode: string;
 	note?: string;
 	createdAt: string;
-	updatedAt?: string;
 	acceptedAt?: string;
 	deliveringAt?: string;
 	completedAt?: string;
+	rating?: number;
+	feedbackTags?: string[];
+	tip?: number;
 }
 
 // --- Chat ---
@@ -111,20 +158,10 @@ export interface ChatMessage {
 	imageUrl?: string;
 }
 
-// --- Wallet ---
-export interface UserWallet {
+// --- Notifications ---
+export interface AppNotification {
 	id: string;
-	userId: string;
-	balance: number;
-	totalEarnings: number;
-	completedJobsCount: number;
+	text: string;
+	time: string;
+	read: boolean;
 }
-
-// --- Zone labels for display ---
-export const ZONE_LABELS: Record<HubZone, string> = {
-	CANTEEN: 'โรงอาหาร',
-	ACADEMIC: 'อาคารเรียน',
-	OFFICE: 'อาคารสำนักงาน',
-	DORM: 'หอพักนักศึกษา',
-	OFF_CAMPUS: 'นอกมอ / รอบมอ'
-};

@@ -1,1 +1,210 @@
 @import 'tailwindcss';
+
+/* ============================================================
+   Goose Man (ห่านบางมด) — Design tokens
+   Flat surfaces, one accent colour, line icons. Keep it quiet.
+   ============================================================ */
+@theme {
+	--font-sans: 'Prompt', 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+	/* KMUTT Orange (primary) */
+	--color-brand-50: #fff3ee;
+	--color-brand-100: #ffe4d8;
+	--color-brand-200: #ffc4ab;
+	--color-brand-300: #fd9c77;
+	--color-brand: #fa4616;
+	--color-brand-600: #e23a0c;
+	--color-brand-700: #b92f09;
+
+	/* Goose beak amber — ratings only */
+	--color-beak-50: #fffbeb;
+	--color-beak: #f59e0b;
+
+	/* Fresh emerald — success / online */
+	--color-fresh-50: #ecfdf5;
+	--color-fresh: #10b981;
+	--color-fresh-700: #047857;
+
+	/* PromptPay slate blue — payment brand mark only */
+	--color-promptpay: #113767;
+
+	/* Neutral canvas behind cards */
+	--color-canvas: #f5f5f7;
+}
+
+:root {
+	--appbar-h: calc(3.5rem + env(safe-area-inset-top, 0px));
+	--nav-h: calc(4.25rem + env(safe-area-inset-bottom, 0px));
+	-webkit-tap-highlight-color: transparent;
+}
+
+/* Keep focused / scrolled-to controls clear of sticky bars */
+html {
+	scroll-padding-top: calc(var(--appbar-h) + 0.5rem);
+	scroll-padding-bottom: calc(var(--nav-h) + 1rem);
+}
+
+body {
+	background: #e9e9ee;
+}
+
+/* Browser surfaces carry the palette too */
+::selection {
+	background: var(--color-brand-100);
+	color: var(--color-brand-700);
+}
+input,
+textarea {
+	caret-color: var(--color-brand);
+}
+:focus-visible {
+	outline: 2px solid var(--color-brand);
+	outline-offset: 2px;
+}
+* {
+	scrollbar-color: #d4d4dc transparent;
+	scrollbar-width: thin;
+}
+
+/* ---------- Mascot poses ---------- */
+.goose {
+	transform-origin: 60% 100%;
+}
+/* Carrying the bag: a two-step waddle */
+.goose-walk {
+	animation: goose-walk 0.7s steps(2, jump-none) infinite alternate;
+}
+@keyframes goose-walk {
+	from {
+		transform: translateY(0) rotate(-2.5deg);
+	}
+	to {
+		transform: translateY(-3px) rotate(2.5deg);
+	}
+}
+/* Waiting at the counter: the occasional look around */
+.goose-wait {
+	animation: goose-wait 3.2s ease-in-out infinite;
+}
+@keyframes goose-wait {
+	0%,
+	70%,
+	100% {
+		transform: scaleX(1);
+	}
+	78%,
+	92% {
+		transform: scaleX(-1);
+	}
+}
+/* Arrival */
+.goose-hop {
+	animation: goose-hop 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes goose-hop {
+	0% {
+		transform: translateY(24px) scale(0.9);
+		opacity: 0;
+	}
+	60% {
+		transform: translateY(-6px) scale(1);
+		opacity: 1;
+	}
+	100% {
+		transform: translateY(0);
+	}
+}
+
+/* A check mark that draws itself */
+.check-draw path {
+	stroke-dasharray: 24;
+	stroke-dashoffset: 24;
+	animation: check-draw 0.45s 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes check-draw {
+	to {
+		stroke-dashoffset: 0;
+	}
+}
+
+/* Count / badge tick when a number changes */
+.tick {
+	animation: tick 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes tick {
+	from {
+		transform: scale(1.35);
+	}
+	to {
+		transform: scale(1);
+	}
+}
+
+/* Typing indicator: dots light up in turn */
+.typing-dot {
+	animation: typing-dot 1.2s ease-in-out infinite;
+	opacity: 0.3;
+}
+@keyframes typing-dot {
+	0%,
+	60%,
+	100% {
+		opacity: 0.3;
+		transform: translateY(0);
+	}
+	30% {
+		opacity: 1;
+		transform: translateY(-2px);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.goose-walk,
+	.goose-wait {
+		animation: none;
+	}
+	.check-draw path {
+		stroke-dashoffset: 0;
+		animation: none;
+	}
+}
+
+.no-scrollbar {
+	scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+	display: none;
+}
+
+.skeleton {
+	background: linear-gradient(90deg, #f1f5f9 25%, #e8ebef 50%, #f1f5f9 75%);
+	background-size: 200% 100%;
+	animation: skeleton 1.4s linear infinite;
+}
+@keyframes skeleton {
+	from {
+		background-position: 200% 0;
+	}
+	to {
+		background-position: -200% 0;
+	}
+}
+
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+input[type='number'] {
+	-moz-appearance: textfield;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}

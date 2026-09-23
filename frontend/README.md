@@ -1,42 +1,43 @@
-# sv
+# Goose Man (ห่านบางมด) — Buyer Web App 🪿
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
-
-## Creating a project
-
-If you're seeing this, you've probably already done this step. Congrats!
+Mobile-first PWA for KMUTT students to order food that a fellow student carries ("หิ้ว") to their building.
+SvelteKit + Svelte 5 runes + Tailwind CSS v4. Client-rendered (`ssr = false`), mock data in memory.
 
 ```sh
-# create a new project
-npx sv create my-app
+npm install
+npm run dev      # http://localhost:5173
+npm run check    # svelte-check / TypeScript
+npm run build && npm run preview
 ```
 
-To recreate this project with the same configuration:
+## Structure
 
-```sh
-# recreate this project
-npx sv@0.17.0 create --template minimal --types ts --add tailwindcss="plugins:none" --install npm frontend
+```text
+src/
+├── routes/+page.svelte      # App shell: header, screen switcher, bottom nav, sheets, toasts
+├── routes/layout.css        # Design tokens (@theme): brand #FA4616, beak, fresh, promptpay
+└── lib/
+    ├── screens/             # One component per screen (Login, Home, Stores, StoreDetail,
+    │                        #   CustomOrder, Checkout, Tracking, Chat, Success, Orders, Profile)
+    ├── components/          # Shared UI (TopHeader, BottomNav, Sheet, PromptPayModal, …)
+    ├── stores/*.svelte.ts   # Rune-based singletons: auth, nav, cart, campus, orders, storeView, toast
+    ├── data/                # Mock catalogue: stores, locations, riders (mirrors backend seeder)
+    ├── pricing.ts           # Pure pricing rules (fees, promo codes, partner deals, net total)
+    └── types/index.ts
 ```
 
-## Developing
+## Demo behaviour
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+- **Sign in**: simulated Google OAuth; only `@kmutt.ac.th` / `@mail.kmutt.ac.th` are accepted (`isKmuttEmail`).
+- **Cart**: one store per order — adding from another store clears the cart and shows a toast.
+- **Pricing**: `netTotal = max(0, food + fee − promo − partner deal)`. Store fee 15 ฿, custom order fee 20 ฿.
+  Promo codes: `KMUTTFIRST` (−15 ฿), `GOOSEFREE` (free delivery).
+- **Runner simulation**: accepted after 3 s, delivering after 8 s (`orders.svelte.ts`), with toasts,
+  inbox notifications and chat system messages. Use the 🧪 button on Tracking to simulate OTP entry.
+- **PromptPay**: the QR is a visual mock with a 10-minute countdown — not a scannable EMVCo payload.
 
-```sh
-npm run dev
+## Connecting the backend
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+The order lifecycle mirrors the Go backend state machine (`PENDING → ACCEPTED → DELIVERING → COMPLETED`).
+To go live, replace `auth.signInWithGoogle` with `/api/v1/auth/google`, `orders.place` with a POST to
+`/api/v1/orders`, and the `#simulateRunner` timers with `ORDER_*` events from `ws://…/api/v1/ws`.
