@@ -10,6 +10,7 @@ database, Google sign-in and realtime. Without them it runs on in-memory demo da
 npm install
 npm run dev      # http://localhost:5173
 npm run check    # svelte-check / TypeScript
+npm test         # vitest (route planner)
 npm run build && npm run preview
 ```
 
@@ -20,14 +21,16 @@ src/
 ├── routes/+page.svelte      # App shell: startup, screen switcher, bottom nav, sheets, toasts
 ├── routes/layout.css        # Design tokens (@theme): brand #FA4616, beak, fresh, promptpay
 └── lib/
-    ├── screens/             # One component per screen (Login, Home, Stores, StoreDetail, CustomOrder,
-    │                        #   Checkout, Payment, Tracking, Chat, Success, Orders, Profile, Partner)
+    ├── screens/             # One component per screen (Login, Onboarding, Home, Stores, StoreDetail, CustomOrder,
+    │                        #   Checkout, Payment, Tracking, Chat, Success, Orders, Profile, EditProfile, Partner)
     ├── components/          # Shared UI (AppBar, BottomNav, Sheet, Goose walk cycle, RouteStrip, PartnerBadge, …)
     ├── stores/*.svelte.ts   # Rune-based singletons: auth, nav, catalog, cart, checkout, campus, orders, storeView, toast
     ├── api/live.ts          # Every Supabase call + row ↔ type mapping (live mode only)
     ├── supabase.ts          # Client, isLive flag, database error → Thai message
-    ├── data/                # Demo catalogue (also generates supabase/seed.sql): stores, locations, riders
+    ├── data/                # Demo catalogue (also generates supabase/seed.sql): stores, locations, riders; legal text
+    ├── routing/             # Rider route planner (exact stop ordering, add-on suggestions) — for the future rider app
     ├── pricing.ts           # Pure pricing rules (fees, promo codes, best promotion, net total)
+    ├── profile.ts           # Profile validation, TERMS_VERSION (bump to re-prompt consent)
     └── types/index.ts
 ```
 
