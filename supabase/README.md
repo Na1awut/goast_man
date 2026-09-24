@@ -11,6 +11,7 @@
 |---|---|
 | `migrations/20260924000000_init.sql` | ตาราง, สิทธิ์การเข้าถึง (RLS), ฟังก์ชันสั่งอาหาร/รับงาน/ยืนยัน OTP, Realtime, ที่เก็บรูป |
 | `migrations/20260925000000_profile_onboarding.sql` | หน้ากรอกข้อมูลครั้งแรก, ตรวจเบอร์/รหัสนักศึกษา, บันทึกการยินยอม PDPA |
+| `migrations/20260926000000_riders.sql` | รายชื่อคนหิ้ว, จำกัด 4 งานต่อรอบ, คืนงาน, ข้อมูลหน้าคนหิ้ว |
 | `seed.sql` | ร้าน เมนู และโปรโมชันตัวอย่าง (สร้างจาก `frontend/src/lib/data/stores.ts`) |
 | `generate-seed.mjs` | สร้าง `seed.sql` ใหม่หลังแก้ข้อมูลร้านในแอป: `node supabase/generate-seed.mjs` |
 
@@ -21,7 +22,8 @@
 2. เปิด **SQL Editor** แล้วรันไฟล์ตามลำดับนี้ (วางเนื้อหาทีละไฟล์ → **Run**)
    1. `migrations/20260924000000_init.sql`
    2. `migrations/20260925000000_profile_onboarding.sql`
-   3. `seed.sql`
+   3. `migrations/20260926000000_riders.sql`
+   4. `seed.sql`
 
 ### 2. เปิดล็อกอินด้วย Google
 1. ที่ [Google Cloud Console](https://console.cloud.google.com/apis/credentials) สร้าง **OAuth client ID** (ประเภท Web application)
@@ -51,6 +53,32 @@ PUBLIC_SUPABASE_ANON_KEY=<anon public key>
 
 ข้อความอยู่ที่ `frontend/src/lib/data/legal.ts` ถ้าแก้เนื้อหา ให้เปลี่ยน `TERMS_VERSION` ใน `frontend/src/lib/profile.ts` ด้วย
 ผู้ใช้ทุกคนจะถูกพาไปหน้ายอมรับเงื่อนไขใหม่อีกครั้งตอนเปิดแอป
+
+## คนหิ้ว (Rider)
+
+ตอนนี้ให้เฉพาะทีมเราหิ้ว ใครจะหิ้วได้ต้องมีอีเมลอยู่ในตาราง `rider_roster` (รันใน SQL Editor):
+
+```sql
+-- เพิ่มคนหิ้ว (ใช้อีเมล มจธ. ที่เขาล็อกอิน สมัครก่อนหรือหลังเพิ่มก็ได้)
+insert into rider_roster (email, note) values ('somchai.k@mail.kmutt.ac.th', 'ทีมงาน');
+
+-- ดูรายชื่อ
+select * from rider_roster order by added_at;
+
+-- เอาออก (งานที่ถืออยู่ยังส่งต่อจนจบได้ แต่รับงานใหม่ไม่ได้)
+delete from rider_roster where email = 'somchai.k@mail.kmutt.ac.th';
+```
+
+คนหิ้วเข้าหน้า **โปรไฟล์ → โหมดคนหิ้ว** ในแอป ถือได้ไม่เกิน 4 งานต่อรอบ และเมื่อเริ่มส่งของแล้วจะรับงานใหม่ไม่ได้จนกว่าจะส่งครบ
+
+**เปิดให้นักศึกษาทุกคนหิ้วในอนาคต:** แก้ฟังก์ชันเดียว ไม่ต้องแก้แอป
+
+```sql
+create or replace function public.is_rider() returns boolean
+language sql stable security definer set search_path = public as $$
+	select public.current_role_is('STUDENT')
+$$;
+```
 
 ## เพิ่มร้าน Partner
 
@@ -91,7 +119,5 @@ update promotions set approved = true where id = '<promotion-id>';
 
 ## ยังไม่มี (ต้องทำต่อ)
 
-- **แอปฝั่งคนหิ้ว:** ฟังก์ชัน `accept_order`, `mark_delivering`, `confirm_delivery` พร้อมใช้แล้ว แต่ยังไม่มีหน้าจอให้นักศึกษากดรับงาน
-  ระหว่างนี้ ออเดอร์จริงจะค้างอยู่ที่ "กำลังหาคนหิ้ว" จนกว่าจะมีคนเรียกฟังก์ชันเหล่านี้
 - **จำนวนเพื่อนที่ออนไลน์:** ยังไม่มีข้อมูลจริง ในโหมดจริงแอปจึงซ่อนตัวเลขนี้ไว้ แทนการแสดงตัวเลขปลอม
 - **PromptPay:** QR ยังเป็นภาพจำลอง ยังไม่ได้ต่อกับระบบรับชำระเงินจริง
