@@ -13,11 +13,14 @@ const TAB_OF: Record<Screen, TabId | null> = {
 	CHAT: 'CHAT',
 	SUCCESS: 'ORDERS',
 	ORDERS: 'ORDERS',
-	PROFILE: 'PROFILE'
+	PROFILE: 'PROFILE',
+	PARTNER: 'PROFILE',
+	ONBOARDING: null,
+	EDIT_PROFILE: 'PROFILE'
 };
 
 /** Only top-level tab screens show the bottom bar; task screens get the full height for their action bar */
-const NAV_SCREENS: Screen[] = ['HOME', 'STORES', 'ORDERS', 'PROFILE'];
+const NAV_SCREENS: Screen[] = ['HOME', 'STORES', 'ORDERS', 'PROFILE', 'PARTNER'];
 
 class NavStore {
 	screen = $state<Screen>('LOGIN');
@@ -34,7 +37,7 @@ class NavStore {
 	}
 
 	/** Replace the whole stack, e.g. from a tab bar or after checkout */
-	reset(screen: Screen, history: Screen[] = screen === 'HOME' || screen === 'LOGIN' ? [] : ['HOME']) {
+	reset(screen: Screen, history: Screen[] = screen === 'HOME' || screen === 'LOGIN' || screen === 'ONBOARDING' ? [] : ['HOME']) {
 		this.history = history;
 		this.screen = screen;
 		scrollTop();

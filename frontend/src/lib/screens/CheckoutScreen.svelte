@@ -15,6 +15,7 @@
 	import { storeView } from '$lib/stores/storeView.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { haptic } from '$lib/feedback';
+	import { OrderError } from '$lib/stores/orders.svelte';
 	import { formatBaht } from '$lib/utils';
 
 	const saved = $derived(checkout.codeDiscount + cart.partnerDiscount);
@@ -32,11 +33,15 @@
 			promoError = `ไม่พบโค้ด ${input.trim().toUpperCase()}`;
 			return;
 		}
+		if (code === 'GOOSEFREE' && checkout.feeAfterPromotion === 0) {
+			promoError = 'ออเดอร์นี้ฟรีค่าหิ้วจากโปรของร้านอยู่แล้ว';
+			return;
+		}
 		cart.promo = code;
 		haptic([10, 40, 10]);
 		promoInput = '';
 		promoError = '';
-		toast.show(`ใช้โค้ด ${code} แล้ว (${PROMO_CODES[code].describe(checkout.deliveryFee)})`, 'success');
+		toast.show(`ใช้โค้ด ${code} แล้ว (${PROMO_CODES[code].describe(checkout.feeAfterPromotion)})`, 'success');
 	}
 
 	function selectDropoff(e: Event) {
@@ -50,12 +55,16 @@
 		else nav.go('STORE_DETAIL');
 	}
 
-	function placeOrder() {
+	async function placeOrder() {
 		if (checkout.payment === 'PROMPTPAY') {
 			checkout.startPayment();
 			nav.go('PAYMENT');
-		} else if (checkout.place()) {
-			nav.reset('TRACKING');
+			return;
+		}
+		try {
+			if (await checkout.place()) nav.reset('TRACKING');
+		} catch (err) {
+			toast.show(err instanceof OrderError ? err.message : 'สั่งไม่สำเร็จ ลองใหม่อีกครั้ง', 'error', { duration: 5000 });
 		}
 	}
 </script>
@@ -160,8 +169,8 @@
 				{#if checkout.codeDiscount > 0}
 					<div class="flex justify-between text-slate-600"><span>ส่วนลดจากโค้ด [{cart.promo}]</span><span class="font-medium text-fresh-700 tabular-nums">-{formatBaht(checkout.codeDiscount)}</span></div>
 				{/if}
-				{#if cart.partnerDiscount > 0}
-					<div class="flex justify-between text-slate-600"><span>ส่วนลดร้านค้าพาร์ทเนอร์</span><span class="font-medium text-fresh-700 tabular-nums">-{formatBaht(cart.partnerDiscount)}</span></div>
+				{#if cart.partnerDiscount > 0 && cart.appliedPromotion}
+					<div class="flex justify-between gap-3 text-slate-600"><span class="min-w-0 truncate">{cart.appliedPromotion.promotion.kind === 'CO_PROMO' ? 'โปรร่วม' : 'โปรร้าน'}: {cart.appliedPromotion.promotion.title}</span><span class="font-medium text-fresh-700 tabular-nums">-{formatBaht(cart.partnerDiscount)}</span></div>
 				{/if}
 				<div class="flex items-center justify-between border-t border-slate-100 pt-3">
 					<span class="font-semibold text-slate-900">ยอดชำระสุทธิ</span>
@@ -198,8 +207,8 @@
 		</div>
 
 		<BottomBar>
-			<button type="button" onclick={placeOrder} class="w-full rounded-2xl bg-brand py-4 text-sm font-semibold text-white active:bg-brand-600">
-				สั่งอาหารและหาเพื่อนหิ้ว ({formatBaht(checkout.total)})
+			<button type="button" onclick={placeOrder} disabled={checkout.placing} class="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand py-4 text-sm font-semibold text-white active:bg-brand-600 disabled:opacity-80">
+				{#if checkout.placing}<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span> กำลังส่งออเดอร์...{:else}สั่งอาหารและหาเพื่อนหิ้ว ({formatBaht(checkout.total)}){/if}
 			</button>
 		</BottomBar>
 	{/if}

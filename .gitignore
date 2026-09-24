@@ -14,7 +14,14 @@ backend/.env
 *.dylib
 *.test
 *.out
-
+*.egent
+*.agents
+*.claude
+*.codex
+*.cursor
+*.gemini
+*.impeccable
+*.opencode
 # OS & IDE
 .DS_Store
 Thumbs.db

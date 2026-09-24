@@ -10,9 +10,12 @@
 	import ChatScreen from '$lib/screens/ChatScreen.svelte';
 	import CheckoutScreen from '$lib/screens/CheckoutScreen.svelte';
 	import CustomOrderScreen from '$lib/screens/CustomOrderScreen.svelte';
+	import EditProfileScreen from '$lib/screens/EditProfileScreen.svelte';
 	import HomeScreen from '$lib/screens/HomeScreen.svelte';
 	import LoginScreen from '$lib/screens/LoginScreen.svelte';
+	import OnboardingScreen from '$lib/screens/OnboardingScreen.svelte';
 	import OrdersScreen from '$lib/screens/OrdersScreen.svelte';
+	import PartnerScreen from '$lib/screens/PartnerScreen.svelte';
 	import PaymentScreen from '$lib/screens/PaymentScreen.svelte';
 	import ProfileScreen from '$lib/screens/ProfileScreen.svelte';
 	import StoreDetailScreen from '$lib/screens/StoreDetailScreen.svelte';
@@ -22,9 +25,13 @@
 	import { auth } from '$lib/stores/auth.svelte';
 	import { campus } from '$lib/stores/campus.svelte';
 	import { cart } from '$lib/stores/cart.svelte';
+	import { catalog } from '$lib/stores/catalog.svelte';
+	import { toast } from '$lib/stores/toast.svelte';
+	import { AuthError } from '$lib/stores/auth.svelte';
 	import { nav } from '$lib/stores/nav.svelte';
 	import { orders } from '$lib/stores/orders.svelte';
-	import { prefersReducedMotion } from '$lib/utils';
+	import { friendlyError } from '$lib/supabase';
+	import { prefersReducedMotion, withTimeout } from '$lib/utils';
 
 	const SCREENS: Record<Exclude<Screen, 'LOGIN'>, Component> = {
 		HOME: HomeScreen,
@@ -37,7 +44,10 @@
 		CHAT: ChatScreen,
 		SUCCESS: SuccessScreen,
 		ORDERS: OrdersScreen,
-		PROFILE: ProfileScreen
+		PROFILE: ProfileScreen,
+		PARTNER: PartnerScreen,
+		ONBOARDING: OnboardingScreen,
+		EDIT_PROFILE: EditProfileScreen
 	};
 
 	let ready = $state(false);
@@ -46,18 +56,34 @@
 	onMount(() => {
 		reduceMotion = prefersReducedMotion();
 		campus.init();
-		cart.init();
-		if (auth.init()) {
-			orders.init();
-			nav.reset('HOME');
-		}
-		ready = true;
+		void start();
 		return () => orders.reset();
 	});
 
+	const AUTH_TIMEOUT_MS = 8000;
+
+	async function start() {
+		// Data loads behind the UI: screens show their own loading states, so a slow
+		// campus network never traps anyone on the splash screen.
+		void catalog.load().then(() => cart.init());
+		try {
+			if (await withTimeout(auth.init(), AUTH_TIMEOUT_MS)) {
+				nav.reset(auth.needsProfile ? 'ONBOARDING' : auth.isPartner ? 'PARTNER' : 'HOME');
+				void orders.init(auth.user!.id);
+			}
+		} catch (err) {
+			toast.show(err instanceof AuthError ? err.message : friendlyError(err), 'error', { duration: 6000 });
+		} finally {
+			ready = true;
+		}
+	}
+
 	// Guard: never render an authenticated screen without a session
 	$effect(() => {
-		if (ready && !auth.isAuthenticated && nav.screen !== 'LOGIN') nav.reset('LOGIN');
+		if (!ready) return;
+		if (!auth.isAuthenticated && nav.screen !== 'LOGIN') nav.reset('LOGIN');
+		// No part of the app is usable until the profile and consent are complete
+		else if (auth.isAuthenticated && auth.needsProfile && nav.screen !== 'ONBOARDING') nav.reset('ONBOARDING');
 	});
 
 	const ActiveScreen = $derived(nav.screen === 'LOGIN' ? null : SCREENS[nav.screen]);

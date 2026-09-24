@@ -6,13 +6,15 @@
 	import { CUSTOM_DELIVERY_FEE, CUSTOM_MAX_PRICE } from '$lib/pricing';
 	import { campus } from '$lib/stores/campus.svelte';
 	import { nav } from '$lib/stores/nav.svelte';
-	import { customDraft, orders } from '$lib/stores/orders.svelte';
+	import { customDraft, OrderError, orders } from '$lib/stores/orders.svelte';
+	import { toast } from '$lib/stores/toast.svelte';
 	import { formatBaht } from '$lib/utils';
 
 	let items = $state('');
 	let price = $state<number | null>(null);
 	let note = $state('');
 	let submitted = $state(false);
+	let sending = $state(false);
 
 	const pickup = $derived(PICKUP_HUBS.find((h) => h.id === customDraft.pickupId) ?? PICKUP_HUBS[0]);
 	const food = $derived(typeof price === 'number' && Number.isFinite(price) ? Math.max(0, Math.round(price)) : 0);
@@ -26,24 +28,31 @@
 
 	const steps = ['ข้อมูลคำสั่งซื้อ', 'หาคนหิ้ว', 'จัดส่งสำเร็จ'];
 
-	function submit(e: SubmitEvent) {
+	async function submit(e: SubmitEvent) {
 		e.preventDefault();
 		submitted = true;
-		if (!isValid) return;
-		orders.place({
-			kind: 'CUSTOM',
-			pickupName: pickup.name,
-			dropoffName: campus.dropoff.name,
-			itemDetails: items.trim().replace(/\n+/g, ', '),
-			foodTotal: food,
-			deliveryFee: CUSTOM_DELIVERY_FEE,
-			codeDiscount: 0,
-			partnerDiscount: 0,
-			totalPrice: total,
-			paymentMethod: 'CASH',
-			note: note.trim() || undefined
-		});
-		nav.reset('TRACKING');
+		if (!isValid || sending) return;
+		sending = true;
+		try {
+			await orders.place({
+				kind: 'CUSTOM',
+				pickupName: pickup.name,
+				dropoffName: campus.dropoff.name,
+				itemDetails: items.trim().replace(/\n+/g, ', '),
+				foodTotal: food,
+				deliveryFee: CUSTOM_DELIVERY_FEE,
+				codeDiscount: 0,
+				partnerDiscount: 0,
+				totalPrice: total,
+				paymentMethod: 'CASH',
+				note: note.trim() || undefined
+			});
+			nav.reset('TRACKING');
+		} catch (err) {
+			toast.show(err instanceof OrderError ? err.message : 'สั่งไม่สำเร็จ ลองใหม่อีกครั้ง', 'error', { duration: 5000 });
+		} finally {
+			sending = false;
+		}
 	}
 </script>
 
@@ -146,8 +155,8 @@
 	</div>
 
 	<BottomBar>
-		<button type="submit" class="w-full rounded-2xl bg-brand py-4 text-sm font-semibold text-white active:bg-brand-600">
-			ยืนยันและหาเพื่อนหิ้ว ({formatBaht(total)})
+		<button type="submit" disabled={sending} class="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand py-4 text-sm font-semibold text-white active:bg-brand-600 disabled:opacity-80">
+			{#if sending}<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span> กำลังส่งออเดอร์...{:else}ยืนยันและหาเพื่อนหิ้ว ({formatBaht(total)}){/if}
 		</button>
 	</BottomBar>
 </form>

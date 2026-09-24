@@ -1,5 +1,5 @@
-// Mock partner store catalogue (mirrors backend seeder.go)
-import type { Store, StoreZone } from '$lib/types';
+// Demo store catalogue. Also the source for supabase/seed.sql (npm run seed:sql).
+import type { Promotion, Store, StoreZone } from '$lib/types';
 
 const img = (id: string, w: number) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=75`;
 
@@ -29,7 +29,13 @@ export const MOCK_STORES: Store[] = [
 		reviewsCount: '1.2k',
 		queueMinutes: 10,
 		lock: 'ล็อก 8',
-		deal: { label: 'สั่งผ่านแอป ลดค่าอาหาร 5 บาททันที', minQty: 1, amount: 5 },
+		isPartner: true,
+		tagline: 'ต้มสดทุกเช้า น้ำจิ้มสูตรบ้านป้าณี',
+		fastLaneMinutes: 5,
+		promotions: [
+			{ id: 'promo-panee-deal', storeId: 'store-panee', kind: 'DEAL', title: 'สั่งผ่านแอป ลดค่าอาหาร 5 บาททันที', description: 'ลดทุกออเดอร์ที่สั่งผ่าน Goose Man', minQty: 1, discount: 5, freeDelivery: false, active: true, approved: true },
+			{ id: 'promo-panee-co', storeId: 'store-panee', kind: 'CO_PROMO', title: 'Goose Man × ป้าณี ฟรีค่าหิ้ว', description: 'สั่ง 3 ชิ้นขึ้นไป ไม่เสียค่าหิ้วเลย', minQty: 3, discount: 0, freeDelivery: true, active: true, approved: true }
+		],
 		menuItems: [
 			{ id: 'pm1', storeId: 'store-panee', name: 'ข้าวมันไก่ผสม (ต้ม+ทอด) พิเศษ', price: 55, originalPrice: 60, description: 'แถมน้ำซุปร้อนๆ ระบุไม่ใส่แตงกวาได้', imageUrl: img('photo-1626082927389-6cd097cdc6ec', 300), isAvailable: true, category: 'ข้าวมันไก่', isPopular: true },
 			{ id: 'pm2', storeId: 'store-panee', name: 'ข้าวมันไก่ต้มเนื้อน่องฉ่ำ', price: 45, originalPrice: 50, description: 'เนื้อน่องนุ่มฉ่ำ น้ำจิ้มเต้าเจี้ยวพริกสด', imageUrl: img('photo-1546069901-ba9599a7e63c', 300), isAvailable: true, category: 'ข้าวมันไก่ต้ม' },
@@ -49,7 +55,12 @@ export const MOCK_STORES: Store[] = [
 		reviewsCount: '890',
 		queueMinutes: 15,
 		lock: 'ล็อก 3',
-		deal: { label: 'สั่ง 2 กล่องขึ้นไป ลด 10 บาท', minQty: 2, amount: 10 },
+		isPartner: true,
+		tagline: 'ไข่ดาวกรอบทุกใบ เผ็ดได้ตามสั่ง',
+		fastLaneMinutes: 8,
+		promotions: [
+			{ id: 'promo-kaprao-deal', storeId: 'store-kaprao', kind: 'DEAL', title: 'สั่ง 2 กล่องขึ้นไป ลด 10 บาท', description: 'ชวนเพื่อนสั่งด้วยกันคุ้มกว่า', minQty: 2, discount: 10, freeDelivery: false, active: true, approved: true }
+		],
 		menuItems: [
 			{ id: 'km1', storeId: 'store-kaprao', name: 'ข้าวกะเพราหมูกรอบไข่ดาว', price: 55, description: 'หมูกรอบผัดกะเพราเผ็ดจัด ไข่ดาวกรอบ', imageUrl: img('photo-1604908176997-125f25cc6f3d', 300), isAvailable: true, category: 'กะเพรา', isPopular: true },
 			{ id: 'km2', storeId: 'store-kaprao', name: 'ข้าวกะเพราไก่ไข่ดาว', price: 45, description: 'ไก่สับผัดกะเพรา ไข่ดาวฟู', imageUrl: img('photo-1562565652-a0d8f0c59eb4', 300), isAvailable: true, category: 'กะเพรา' },
@@ -69,7 +80,13 @@ export const MOCK_STORES: Store[] = [
 		reviewsCount: '2.1k',
 		queueMinutes: 5,
 		lock: 'ชั้น 1',
-		deal: { label: 'สั่ง 2 แก้วขึ้นไป ลด 10 บาท', minQty: 2, amount: 10 },
+		isPartner: true,
+		tagline: 'ไข่มุกต้มใหม่ทุก 2 ชั่วโมง',
+		fastLaneMinutes: 3,
+		promotions: [
+			{ id: 'promo-boba-deal', storeId: 'store-boba', kind: 'DEAL', title: 'สั่ง 2 แก้วขึ้นไป ลด 10 บาท', description: 'แก้วเดียวไม่พอ ชวนเพื่อนอีกแก้ว', minQty: 2, discount: 10, freeDelivery: false, active: true, approved: true },
+			{ id: 'promo-boba-co', storeId: 'store-boba', kind: 'CO_PROMO', title: 'Goose Man × BobaLab ลด 20 บาท', description: 'สั่ง 3 แก้วขึ้นไปผ่านแอป ลดทันที 20 บาท', minQty: 3, discount: 20, freeDelivery: false, active: true, approved: true }
+		],
 		menuItems: [
 			{ id: 'bb1', storeId: 'store-boba', name: 'ชานมไข่มุก Original', price: 45, description: 'ชานมเข้มข้น ไข่มุกนุ่มหนึบ', imageUrl: img('photo-1558857563-b371033873b8', 300), isAvailable: true, category: 'ชานม', isPopular: true },
 			{ id: 'bb2', storeId: 'store-boba', name: 'โกโก้ไข่มุก', price: 50, description: 'โกโก้เข้มข้นกับไข่มุก Q', imageUrl: img('photo-1572490122747-3968b75cc699', 300), isAvailable: true, category: 'โกโก้' },
@@ -88,6 +105,8 @@ export const MOCK_STORES: Store[] = [
 		reviewsCount: '420',
 		queueMinutes: 7,
 		lock: 'ล็อก 12',
+		isPartner: false,
+		promotions: [],
 		menuItems: [
 			{ id: 'gb1', storeId: 'store-greenbowl', name: 'สลัดอกไก่ย่างซอสงา', price: 65, description: 'ผักสลัดสด อกไก่ย่างนุ่ม ซอสงาญี่ปุ่น', imageUrl: img('photo-1512621776951-a57141f2eefd', 300), isAvailable: true, category: 'สลัด', isPopular: true },
 			{ id: 'gb2', storeId: 'store-greenbowl', name: 'ข้าวกล้องแซลมอนเทอริยากิ', price: 89, originalPrice: 99, description: 'แซลมอนย่างซอสเทอริยากิ ข้าวกล้องหอมมะลิ', imageUrl: img('photo-1467003909585-2f8a72700288', 300), isAvailable: true, category: 'ข้าวกล่อง' }
@@ -105,6 +124,8 @@ export const MOCK_STORES: Store[] = [
 		reviewsCount: '650',
 		queueMinutes: 8,
 		lock: 'ล็อก 3',
+		isPartner: false,
+		promotions: [],
 		menuItems: [
 			{ id: 'st1', storeId: 'store-somtam', name: 'ส้มตำไทย', price: 40, description: 'ส้มตำรสจัดจ้าน ถั่วลิสง กุ้งแห้ง', imageUrl: img('photo-1562967916-eb82221dfb44', 300), isAvailable: true, category: 'ส้มตำ', isPopular: true },
 			{ id: 'st2', storeId: 'store-somtam', name: 'ส้มตำปูปลาร้า', price: 50, description: 'แซ่บนัว ปูดองเค็ม ปลาร้าหอม', imageUrl: img('photo-1559847844-5315695dadae', 300), isAvailable: true, category: 'ส้มตำ' },
@@ -123,6 +144,8 @@ export const MOCK_STORES: Store[] = [
 		reviewsCount: '310',
 		queueMinutes: 4,
 		lock: 'หอพัก S5',
+		isPartner: false,
+		promotions: [],
 		menuItems: [
 			{ id: 'dk1', storeId: 'store-dormkitchen', name: 'ข้าวราดแกง 2 อย่าง', price: 40, description: 'เลือกกับข้าวหน้าร้านได้ ระบุในหมายเหตุ', imageUrl: img('photo-1455619452474-d2be8b1e70cd', 300), isAvailable: true, category: 'ข้าวราดแกง', isPopular: true },
 			{ id: 'dk2', storeId: 'store-dormkitchen', name: 'ข้าวไข่เจียวหมูสับ', price: 35, description: 'ไข่เจียวฟูกรอบ หมูสับแน่นๆ', imageUrl: img('photo-1525351484163-7529414344d8', 300), isAvailable: true, category: 'ไข่เจียว' }
@@ -130,14 +153,27 @@ export const MOCK_STORES: Store[] = [
 	}
 ];
 
-export function getStoreById(id: string): Store | undefined {
-	return MOCK_STORES.find((s) => s.id === id);
+// ---------- Pure helpers over a store list (the live list lives in stores/catalog) ----------
+
+export function findStore(stores: Store[], id: string): Store | undefined {
+	return stores.find((s) => s.id === id);
+}
+
+/** Promotions a buyer can use right now */
+export function livePromotions(store: Store, now = Date.now()): Promotion[] {
+	return store.promotions.filter((p) => p.active && p.approved && (!p.endsAt || new Date(p.endsAt).getTime() > now));
+}
+
+/** Partner stores first, then by rating: the "listed first" partner perk */
+export function sortForBrowsing(stores: Store[]): Store[] {
+	return [...stores].sort((a, b) => Number(b.isPartner) - Number(a.isPartner) || b.rating - a.rating);
 }
 
 /** Live search across store name, category and menu item names */
-export function searchStores(query: string, zone: StoreZone | 'all'): { store: Store; matchedItems: string[] }[] {
+export function searchStores(stores: Store[], query: string, zone: StoreZone | 'all'): { store: Store; matchedItems: string[] }[] {
 	const q = query.trim().toLowerCase();
-	return MOCK_STORES.filter((s) => zone === 'all' || s.zone === zone)
+	return sortForBrowsing(stores)
+		.filter((s) => zone === 'all' || s.zone === zone)
 		.map((store) => {
 			if (!q) return { store, matchedItems: [] };
 			const storeHit = store.name.toLowerCase().includes(q) || store.category.toLowerCase().includes(q);

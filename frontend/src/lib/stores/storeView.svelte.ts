@@ -1,17 +1,17 @@
 // Browsing state for the store list + detail screens (Svelte 5 runes)
 import type { StoreZone } from '$lib/types';
-import { getStoreById, MOCK_STORES } from '$lib/data/stores';
+import { catalog } from './catalog.svelte';
 import { nav } from './nav.svelte';
 
 class StoreViewStore {
-	selectedId = $state(MOCK_STORES[0].id);
+	selectedId = $state<string | null>(null);
 	zone = $state<StoreZone | 'all'>('all');
 	query = $state('');
 	favorites = $state<string[]>([]);
 	/** Set by the home search field so the stores screen opens ready to type */
 	focusSearch = false;
 
-	selected = $derived(getStoreById(this.selectedId) ?? MOCK_STORES[0]);
+	selected = $derived(this.selectedId ? catalog.byId(this.selectedId) : undefined);
 
 	toggleFavorite(storeId: string) {
 		this.favorites = this.favorites.includes(storeId)

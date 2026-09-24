@@ -8,6 +8,7 @@
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
 	import { nav } from '$lib/stores/nav.svelte';
 	import { orders } from '$lib/stores/orders.svelte';
+	import { isLive } from '$lib/supabase';
 	import { formatBaht, formatTime } from '$lib/utils';
 
 	const order = $derived(orders.current);
@@ -121,7 +122,7 @@
 					<span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500"><Icon name="search_user" /></span>
 					<div class="min-w-0 flex-1">
 						<p class="text-sm font-medium text-slate-900">กำลังหาเพื่อนรับหิ้ว</p>
-						<p class="text-xs text-slate-500">ออนไลน์อยู่ใกล้ๆ {orders.onlineRiders} คน</p>
+						<p class="text-xs text-slate-500">{orders.onlineRiders !== null ? `ออนไลน์อยู่ใกล้ๆ ${orders.onlineRiders} คน` : 'เพื่อนที่อยู่ใกล้ร้านจะเห็นงานนี้ทันที'}</p>
 					</div>
 					<button type="button" onclick={() => orders.cancel(order.id)} class="text-sm text-slate-500 underline underline-offset-2">ยกเลิก</button>
 				</section>
@@ -183,7 +184,7 @@
 				</a>
 			{/if}
 
-			{#if order.status === 'DELIVERING'}
+			{#if order.status === 'DELIVERING' && !isLive}
 				<button
 					type="button"
 					onclick={simulateOtp}

@@ -1,6 +1,7 @@
 // Pure pricing rules — kept free of UI state so they can be unit-tested
 // and mirrored on the backend.
-import type { CartItem, Store } from '$lib/types';
+import type { CartItem, Promotion, Store } from '$lib/types';
+import { livePromotions } from '$lib/data/stores';
 
 export const STORE_DELIVERY_FEE = 15;
 export const CUSTOM_DELIVERY_FEE = 20;
@@ -19,16 +20,40 @@ export function normalizePromo(input: string): PromoCode | null {
 	return code in PROMO_CODES ? (code as PromoCode) : null;
 }
 
+/** `deliveryFee` is the fee still payable after any partner free-delivery promotion */
 export function promoDiscount(code: PromoCode | null, deliveryFee: number): number {
 	if (code === 'KMUTTFIRST') return 15;
 	if (code === 'GOOSEFREE') return deliveryFee;
 	return 0;
 }
 
-export function partnerDiscount(store: Store | null, items: CartItem[]): number {
-	if (!store?.deal) return 0;
+/** "ลด 10 ฿ + ฟรีค่าหิ้ว", plus the minimum when there is one */
+export function describeBenefit(p: Pick<Promotion, 'discount' | 'freeDelivery' | 'minQty'>, withMinimum = true): string {
+	const benefit = [p.discount > 0 ? `ลด ${p.discount} ฿` : '', p.freeDelivery ? 'ฟรีค่าหิ้ว' : ''].filter(Boolean).join(' + ');
+	if (!withMinimum) return benefit;
+	return p.minQty > 1 ? `${benefit} เมื่อสั่ง ${p.minQty} ชิ้นขึ้นไป` : `${benefit} ทุกออเดอร์`;
+}
+
+export interface AppliedPromotion {
+	promotion: Promotion;
+	/** Total baht this promotion saves: food discount plus a waived fee */
+	saving: number;
+}
+
+/**
+ * The single best live promotion for this cart. Promotions do not stack.
+ * Mirrors the ORDER BY in supabase place_order(), which is the source of truth.
+ */
+export function bestPromotion(store: Store | null, items: CartItem[], deliveryFee: number): AppliedPromotion | null {
+	if (!store) return null;
 	const qty = items.reduce((sum, i) => sum + i.quantity, 0);
-	return qty >= store.deal.minQty ? store.deal.amount : 0;
+	let best: AppliedPromotion | null = null;
+	for (const promotion of livePromotions(store)) {
+		if (qty < promotion.minQty) continue;
+		const saving = promotion.discount + (promotion.freeDelivery ? deliveryFee : 0);
+		if (!best || saving > best.saving) best = { promotion, saving };
+	}
+	return best;
 }
 
 export function netTotal(parts: {

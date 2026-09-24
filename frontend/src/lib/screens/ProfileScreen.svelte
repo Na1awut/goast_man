@@ -2,7 +2,10 @@
 	import AppBar from '$lib/components/AppBar.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import Icon, { type IconName } from '$lib/components/Icon.svelte';
+	import LegalSheet from '$lib/components/LegalSheet.svelte';
 	import Sheet from '$lib/components/Sheet.svelte';
+	import { LEGAL, type LegalPage } from '$lib/data/legal';
+	import { levelLabel } from '$lib/profile';
 	import { auth } from '$lib/stores/auth.svelte';
 	import { campus } from '$lib/stores/campus.svelte';
 	import { cart } from '$lib/stores/cart.svelte';
@@ -11,49 +14,21 @@
 	import { toast } from '$lib/stores/toast.svelte';
 	import { formatBaht } from '$lib/utils';
 
-	type InfoPage = 'terms' | 'privacy' | 'contact';
-
-	const INFO: Record<InfoPage, { title: string; icon: IconName; body: string[] }> = {
-		terms: {
-			title: 'เงื่อนไขการใช้งาน',
-			icon: 'file',
-			body: [
-				'ใช้ได้เฉพาะนักศึกษาและบุคลากร มจธ. ที่ยืนยันตัวตนผ่านอีเมล @kmutt.ac.th',
-				'แจ้งรหัส OTP ให้คนหิ้วเมื่อได้รับของครบเท่านั้น',
-				'ออเดอร์ฝากซื้อ ชำระค่าของตามใบเสร็จจริงให้คนหิ้ว',
-				'ห้ามฝากซื้อสินค้าผิดกฎหมาย เครื่องดื่มแอลกอฮอล์ หรือบุหรี่'
-			]
-		},
-		privacy: {
-			title: 'นโยบายความเป็นส่วนตัว',
-			icon: 'lock',
-			body: [
-				'เก็บเฉพาะชื่อ อีเมล รหัสนักศึกษา และเบอร์โทร เพื่อใช้จับคู่ออเดอร์',
-				'คนหิ้วเห็นเบอร์โทรของคุณเฉพาะระหว่างออเดอร์ที่กำลังดำเนินการ',
-				'ประวัติแชทถูกลบอัตโนมัติ 30 วันหลังออเดอร์เสร็จสิ้น'
-			]
-		},
-		contact: {
-			title: 'ติดต่อเรา',
-			icon: 'help',
-			body: [
-				'ปัญหาระหว่างออเดอร์: แชทหรือโทรหาคนหิ้วจากหน้าติดตามคำสั่งซื้อ',
-				'ของไม่ครบหรือไม่ถูกต้อง: อย่าเพิ่งบอก OTP จนกว่าจะได้ของครบ',
-				'จุดช่วยเหลือ: อาคาร LX ชั้น 1 (จ.-ศ. 11:00-14:00)'
-			]
-		}
-	};
-
-	let infoOpen = $state<InfoPage | null>(null);
+	let infoOpen = $state<LegalPage | null>(null);
+	const LEGAL_LINKS: { id: LegalPage; icon: IconName }[] = [
+		{ id: 'terms', icon: 'file' },
+		{ id: 'privacy', icon: 'lock' },
+		{ id: 'contact', icon: 'help' }
+	];
 	let confirmLogout = $state(false);
 
 	const user = $derived(auth.user);
 
-	function logout() {
+	async function logout() {
 		orders.reset();
 		cart.clear();
 		toast.reset();
-		auth.logout();
+		await auth.logout();
 		nav.reset('LOGIN');
 		toast.show('ออกจากระบบแล้ว');
 	}
@@ -70,9 +45,21 @@
 					<p class="text-lg font-semibold text-slate-900">{user.nickname}</p>
 					<p class="truncate text-sm text-slate-600">{user.fullName}</p>
 					<p class="truncate text-xs text-slate-500">{user.email}</p>
-					<span class="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-fresh-700"><Icon name="shield" class="h-3.5 w-3.5" /> ยืนยันตัวตน มจธ. แล้ว</span>
+					<span class="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-fresh-700"><Icon name="shield" class="h-3.5 w-3.5" /> {auth.isPartner ? 'บัญชีร้านค้า Partner' : 'ยืนยันตัวตน มจธ. แล้ว'}</span>
 				</div>
+				<button type="button" onclick={() => nav.go('EDIT_PROFILE')} class="ml-auto shrink-0 self-start rounded-full border border-slate-200 px-3 py-1.5 text-sm text-slate-700">แก้ไข</button>
 			</section>
+
+			{#if auth.isPartner}
+				<button type="button" onclick={() => nav.go('PARTNER')} class="flex w-full items-center gap-3 rounded-2xl bg-brand p-4 text-left text-white">
+					<span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15"><Icon name="store" /></span>
+					<span class="min-w-0 flex-1">
+						<span class="block text-sm font-semibold">จัดการร้านของฉัน</span>
+						<span class="block truncate text-xs text-white/85">แบนเนอร์หน้าร้าน, Fast lane และโปรโมชัน</span>
+					</span>
+					<Icon name="chevron-right" class="h-5 w-5" />
+				</button>
+			{/if}
 
 			<section class="grid grid-cols-3 divide-x divide-slate-100 rounded-2xl border border-slate-100 bg-white py-4 text-center">
 				{#each [
@@ -90,10 +77,10 @@
 			<section class="divide-y divide-slate-100 rounded-2xl border border-slate-100 bg-white px-4">
 				{#each [
 					{ icon: 'cap' as const, label: 'รหัสนักศึกษา', value: user.studentId },
-					{ icon: 'building' as const, label: 'คณะ', value: user.faculty },
+					{ icon: 'building' as const, label: user.studyLevel === 'staff' ? 'หน่วยงาน' : 'คณะ', value: [user.faculty, user.studyLevel === 'staff' ? '' : levelLabel(user.studyLevel)].filter(Boolean).join(' · ') },
 					{ icon: 'phone' as const, label: 'เบอร์โทรศัพท์', value: user.phoneNumber },
 					{ icon: 'qr' as const, label: 'PromptPay No.', value: user.promptPayNo }
-				] as row (row.label)}
+				].filter((row) => row.value) as row (row.label)}
 					<div class="flex items-center gap-3 py-3">
 						<Icon name={row.icon} class="h-5 w-5 text-slate-400" />
 						<div class="min-w-0">
@@ -113,10 +100,10 @@
 			</section>
 
 			<section class="divide-y divide-slate-100 rounded-2xl border border-slate-100 bg-white px-4">
-				{#each Object.entries(INFO) as [id, info] (id)}
-					<button type="button" onclick={() => (infoOpen = id as InfoPage)} class="flex w-full items-center gap-3 py-3.5 text-left text-sm text-slate-800">
-						<Icon name={info.icon} class="h-5 w-5 text-slate-400" />
-						<span class="flex-1">{info.title}</span>
+				{#each LEGAL_LINKS as link (link.id)}
+					<button type="button" onclick={() => (infoOpen = link.id)} class="flex w-full items-center gap-3 py-3.5 text-left text-sm text-slate-800">
+						<Icon name={link.icon} class="h-5 w-5 text-slate-400" />
+						<span class="flex-1">{LEGAL[link.id].title}</span>
 						<Icon name="chevron-right" class="h-4 w-4 text-slate-300" />
 					</button>
 				{/each}
@@ -129,13 +116,7 @@
 		</div>
 	</div>
 
-	<Sheet open={infoOpen !== null} title={infoOpen ? INFO[infoOpen].title : ''} onclose={() => (infoOpen = null)}>
-		{#if infoOpen}
-			<ul class="list-disc space-y-2 pb-2 pl-5 text-sm text-slate-700 marker:text-brand">
-				{#each INFO[infoOpen].body as line (line)}<li>{line}</li>{/each}
-			</ul>
-		{/if}
-	</Sheet>
+	<LegalSheet page={infoOpen} onclose={() => (infoOpen = null)} />
 
 	<Sheet open={confirmLogout} title="ออกจากระบบ?" onclose={() => (confirmLogout = false)}>
 		<p class="text-sm text-slate-600">

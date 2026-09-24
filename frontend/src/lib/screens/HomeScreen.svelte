@@ -2,15 +2,18 @@
 	import banner from '$lib/assets/banner.webp';
 	import GooseMark from '$lib/components/GooseMark.svelte';
 	import Icon, { type IconName } from '$lib/components/Icon.svelte';
+	import PartnerBadge from '$lib/components/PartnerBadge.svelte';
+	import PromoLine from '$lib/components/PromoLine.svelte';
 	import SmartImage from '$lib/components/SmartImage.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
 	import { DROPOFF_POINTS, PICKUP_HUBS } from '$lib/data/locations';
-	import { getStoreById, MOCK_STORES } from '$lib/data/stores';
-	import { STORE_DELIVERY_FEE } from '$lib/pricing';
+	import { livePromotions } from '$lib/data/stores';
+	import { describeBenefit, STORE_DELIVERY_FEE } from '$lib/pricing';
 	import type { PickupHub, StoreZone } from '$lib/types';
 	import { auth } from '$lib/stores/auth.svelte';
 	import { campus } from '$lib/stores/campus.svelte';
 	import { cart } from '$lib/stores/cart.svelte';
+	import { catalog } from '$lib/stores/catalog.svelte';
 	import { nav } from '$lib/stores/nav.svelte';
 	import { customDraft, orders } from '$lib/stores/orders.svelte';
 	import { storeView } from '$lib/stores/storeView.svelte';
@@ -34,7 +37,8 @@
 	const TILE_LABEL: Record<string, string> = { '7eleven-dorm': 'เซเว่น หอใน' };
 	const pickupSub = (hub: PickupHub) => {
 		const zone = PICKUP_ZONE[hub.id];
-		return zone ? `${MOCK_STORES.filter((s) => s.zone === zone).length} ร้าน` : 'ฝากซื้อ';
+		if (!zone) return 'ฝากซื้อ';
+		return catalog.loading ? '…' : `${catalog.stores.filter((s) => s.zone === zone).length} ร้าน`;
 	};
 
 	function choosePickup(hub: PickupHub) {
@@ -66,7 +70,7 @@
 
 	// --- Order again: the latest finished partner-store order that still has line items
 	const lastOrder = $derived(orders.completed.find((o) => o.kind === 'STORE' && o.storeId && o.items?.length));
-	const lastStore = $derived(lastOrder?.storeId ? getStoreById(lastOrder.storeId) : undefined);
+	const lastStore = $derived(lastOrder?.storeId ? catalog.byId(lastOrder.storeId) : undefined);
 
 	function orderAgain() {
 		if (!lastOrder?.items || !lastStore) return;
@@ -83,8 +87,15 @@
 	}
 
 	// --- Store lists
-	const deals = MOCK_STORES.filter((s) => s.deal);
-	const popular = [...MOCK_STORES].sort((a, b) => b.rating - a.rating).slice(0, 4);
+	/** Each store's own best deal (joint promotions have their own section above) */
+	const deals = $derived(
+		catalog.browsing.flatMap((store) => {
+			const deal = livePromotions(store).find((p) => p.kind === 'DEAL');
+			return deal ? [{ store, deal }] : [];
+		})
+	);
+	const popular = $derived([...catalog.stores].sort((a, b) => b.rating - a.rating).slice(0, 4));
+
 
 	function openSearch() {
 		storeView.focusSearch = true;
@@ -123,9 +134,11 @@
 				<h1 class="text-xl font-semibold text-slate-900">สวัสดี {auth.user?.nickname ?? ''}</h1>
 				<p class="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-slate-500">
 					{greeting}
-					<span class="inline-flex items-center gap-1.5 text-slate-600">
-						<span class="h-1.5 w-1.5 rounded-full bg-fresh"></span>เพื่อนพร้อมหิ้ว <span class="font-medium text-slate-900 tabular-nums">{orders.onlineRiders}</span> คน
-					</span>
+					{#if orders.onlineRiders !== null}
+						<span class="inline-flex items-center gap-1.5 text-slate-600">
+							<span class="h-1.5 w-1.5 rounded-full bg-fresh"></span>เพื่อนพร้อมหิ้ว <span class="font-medium text-slate-900 tabular-nums">{orders.onlineRiders}</span> คน
+						</span>
+					{/if}
 				</p>
 			</div>
 			<button type="button" onclick={openSearch} class="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-left text-sm text-slate-400">
@@ -161,17 +174,64 @@
 
 		<!-- Banner -->
 		<section class="overflow-hidden rounded-2xl border border-slate-100 bg-white">
-			<img src={banner} alt="Goose Rider บริการรับส่งสินค้าและอาหารภายใน มจธ. บางมด" width="851" height="315" class="block aspect-[851/315] w-full object-cover" />
+			<img src={banner} alt="Goose Rider เพื่อนแท้เรื่องส่งของ ก้าวเดียวถึงมือคุณ" width="1200" height="444" class="block aspect-[2658/984] w-full object-cover" />
 			<div class="flex items-center gap-3 px-4 py-3">
 				<div class="min-w-0 flex-1">
 					<p class="text-sm font-semibold text-slate-900">ขี้เกียจเดินฝ่าแดด? ให้ห่านบางมดหิ้วให้</p>
 					<p class="text-xs text-slate-500">ค่าหิ้วเริ่มต้นเพียง {STORE_DELIVERY_FEE}.-</p>
 				</div>
-				<button type="button" onclick={() => nav.go('CUSTOM_ORDER')} class="flex shrink-0 items-center gap-1 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white">
+				<button type="button" onclick={() => nav.go('STORES')} class="flex shrink-0 items-center gap-1 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white">
 					ฝากหิ้วเลย <Icon name="arrow-right" class="h-4 w-4" />
 				</button>
 			</div>
 		</section>
+
+		{#if catalog.error}
+			<div class="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+				<Icon name="alert" class="h-5 w-5 text-amber-600" />
+				<p class="min-w-0 flex-1 text-sm text-amber-900">{catalog.error}</p>
+				<button type="button" onclick={() => catalog.load()} class="shrink-0 rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-amber-900 ring-1 ring-amber-200">ลองใหม่</button>
+			</div>
+		{:else if catalog.loading}
+			<div class="space-y-3" aria-label="กำลังโหลดร้านค้า">
+				<div class="skeleton h-5 w-40 rounded"></div>
+				<div class="flex gap-3 overflow-hidden">
+					{#each [0, 1] as i (i)}<div class="skeleton h-40 w-60 shrink-0 rounded-2xl"></div>{/each}
+				</div>
+			</div>
+		{/if}
+
+		<!-- Joint promotions: Goose Man × partner -->
+		{#if catalog.coPromotions.length}
+			<section class="space-y-3" aria-labelledby="co-promo-title">
+				<h2 id="co-promo-title" class="text-base font-semibold text-slate-900">โปรร่วมกับ Goose Man</h2>
+				<div class="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1">
+					{#each catalog.coPromotions as { store, promotion } (promotion.id)}
+						<button type="button" onclick={() => storeView.open(store.id)} class="w-72 shrink-0 snap-start overflow-hidden rounded-2xl bg-brand text-left text-white">
+							{#if promotion.bannerUrl}
+								<SmartImage src={promotion.bannerUrl} alt={promotion.title} class="aspect-[2/1] w-full" />
+							{:else}
+								<div class="relative flex h-36 items-stretch">
+									<div class="flex min-w-0 flex-1 flex-col justify-between py-4 pr-2 pl-4">
+										<span class="flex min-w-0 items-center gap-1.5 text-xs font-medium text-white/90">
+											<GooseMark class="h-6 w-6 shrink-0 rounded-md" />
+											<span class="shrink-0">×</span>
+											<span class="truncate">{store.name}</span>
+										</span>
+										<span class="min-w-0">
+											<span class="line-clamp-2 text-lg leading-tight font-bold">{describeBenefit(promotion, false)}</span>
+											<span class="mt-0.5 block truncate text-xs text-white/85">{promotion.minQty > 1 ? `เมื่อสั่ง ${promotion.minQty} ชิ้นขึ้นไป` : 'ทุกออเดอร์ผ่านแอป'}</span>
+										</span>
+									</div>
+									<SmartImage src={store.imageUrl} alt="" class="w-28 shrink-0 [clip-path:ellipse(100%_90%_at_100%_50%)]" />
+								</div>
+							{/if}
+							<p class="truncate bg-brand-700 px-4 py-2 text-xs text-white/90">{promotion.title}</p>
+						</button>
+					{/each}
+				</div>
+			</section>
+		{/if}
 
 		<!-- Where to buy -->
 		<section class="space-y-3">
@@ -227,52 +287,58 @@
 		{/if}
 
 		<!-- Deals -->
-		<section class="space-y-3">
-			<div class="flex items-baseline justify-between">
-				<h2 class="text-base font-semibold text-slate-900">ดีลเฉพาะเด็กบางมด</h2>
-				<button type="button" onclick={() => nav.go('STORES')} class="text-sm font-medium text-brand">ดูทั้งหมด</button>
-			</div>
-			<div class="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1">
-				{#each deals as store (store.id)}
-					<button type="button" onclick={() => storeView.open(store.id)} class="w-60 shrink-0 snap-start overflow-hidden rounded-2xl border border-slate-100 bg-white text-left">
-						<div class="relative">
-							<SmartImage src={store.imageUrl} alt={store.name} class="h-28 w-full" />
-							<span class="absolute bottom-2 left-2 flex items-center gap-1 rounded-md bg-white px-1.5 py-0.5 text-[11px] font-medium text-slate-700">
-								<Icon name="clock" class="h-3 w-3" /> ~{store.queueMinutes} นาที
-							</span>
-						</div>
-						<div class="space-y-0.5 p-3">
-							<p class="truncate text-sm font-semibold text-slate-900">{store.name}</p>
-							<p class="flex items-center gap-1 truncate text-xs font-medium text-brand">
-								<Icon name="tag" class="h-3.5 w-3.5" />{store.deal?.label}
-							</p>
-						</div>
-					</button>
-				{/each}
-			</div>
-		</section>
+		{#if deals.length}
+			<section class="space-y-3">
+				<div class="flex items-baseline justify-between">
+					<h2 class="text-base font-semibold text-slate-900">ดีลเฉพาะเด็กบางมด</h2>
+					<button type="button" onclick={() => nav.go('STORES')} class="text-sm font-medium text-brand">ดูทั้งหมด</button>
+				</div>
+				<div class="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1">
+					{#each deals as { store, deal } (store.id)}
+						<button type="button" onclick={() => storeView.open(store.id)} class="w-60 shrink-0 snap-start overflow-hidden rounded-2xl border border-slate-100 bg-white text-left">
+							<div class="relative">
+								<SmartImage src={store.imageUrl} alt={store.name} class="h-28 w-full" />
+								<span class="absolute bottom-2 left-2 flex items-center gap-1 rounded-md bg-white px-1.5 py-0.5 text-[11px] font-medium text-slate-700">
+									<Icon name="clock" class="h-3 w-3" /> ~{store.queueMinutes} นาที
+								</span>
+							</div>
+							<div class="space-y-0.5 p-3">
+								<p class="flex items-center gap-1.5">
+									<span class="truncate text-sm font-semibold text-slate-900">{store.name}</span>
+									{#if store.isPartner}<PartnerBadge compact />{/if}
+								</p>
+								<PromoLine promotion={deal} class="text-xs font-medium text-brand" />
+							</div>
+						</button>
+					{/each}
+				</div>
+			</section>
+
+		{/if}
 
 		<!-- Popular -->
-		<section class="space-y-3">
-			<h2 class="text-base font-semibold text-slate-900">ร้านที่เพื่อนสั่งบ่อย</h2>
-			<ul class="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-100 bg-white">
-				{#each popular as store, i (store.id)}
-					<li>
-						<button type="button" onclick={() => storeView.open(store.id)} class="flex w-full items-center gap-3 p-3 text-left active:bg-slate-50">
-							<span class="w-4 text-center text-sm font-semibold text-slate-400 tabular-nums">{i + 1}</span>
-							<SmartImage src={store.imageUrl} alt={store.name} class="h-12 w-12 shrink-0 rounded-lg" />
-							<span class="min-w-0 flex-1">
-								<span class="block truncate text-sm font-medium text-slate-900">{store.name}</span>
-								<span class="flex items-center gap-1 text-xs text-slate-500">
-									<Icon name="star" class="h-3.5 w-3.5 text-beak" filled strokeWidth={0} />{store.rating}
-									<span class="text-slate-300">·</span>{store.category}
+		{#if popular.length}
+			<section class="space-y-3">
+				<h2 class="text-base font-semibold text-slate-900">ร้านที่เพื่อนสั่งบ่อย</h2>
+				<ul class="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-100 bg-white">
+					{#each popular as store, i (store.id)}
+						<li>
+							<button type="button" onclick={() => storeView.open(store.id)} class="flex w-full items-center gap-3 p-3 text-left active:bg-slate-50">
+								<span class="w-4 text-center text-sm font-semibold text-slate-400 tabular-nums">{i + 1}</span>
+								<SmartImage src={store.imageUrl} alt={store.name} class="h-12 w-12 shrink-0 rounded-lg" />
+								<span class="min-w-0 flex-1">
+									<span class="block truncate text-sm font-medium text-slate-900">{store.name}</span>
+									<span class="flex items-center gap-1 text-xs text-slate-500">
+										<Icon name="star" class="h-3.5 w-3.5 text-beak" filled strokeWidth={0} />{store.rating}
+										<span class="text-slate-300">·</span>{store.category}
+									</span>
 								</span>
-							</span>
-							<Icon name="chevron-right" class="h-4 w-4 text-slate-300" />
-						</button>
-					</li>
-				{/each}
-			</ul>
-		</section>
+								<Icon name="chevron-right" class="h-4 w-4 text-slate-300" />
+							</button>
+						</li>
+					{/each}
+				</ul>
+			</section>
+		{/if}
 	</div>
 </div>

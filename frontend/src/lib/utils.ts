@@ -44,6 +44,11 @@ export function isKmuttEmail(email: string): boolean {
 	return !!domain && KMUTT_DOMAINS.includes(domain);
 }
 
+/** Rejects with Error('TIMEOUT') if `promise` has not settled within `ms` */
+export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+	return Promise.race([promise, new Promise<never>((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), ms))]);
+}
+
 export function prefersReducedMotion(): boolean {
 	return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }

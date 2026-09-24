@@ -16,7 +16,10 @@ export type Screen =
 	| 'CHAT'
 	| 'SUCCESS'
 	| 'ORDERS'
-	| 'PROFILE';
+	| 'PROFILE'
+	| 'PARTNER'
+	| 'ONBOARDING'
+	| 'EDIT_PROFILE';
 
 export type TabId = 'HOME' | 'ORDERS' | 'STORES' | 'CHAT' | 'PROFILE';
 
@@ -28,10 +31,17 @@ export interface User {
 	nickname: string;
 	studentId: string;
 	faculty: string;
+	/** '1'..'8', 'grad' or 'staff' */
+	studyLevel?: string;
+	/** Terms version the user accepted, and when */
+	termsVersion?: string;
+	consentedAt?: string;
 	avatarUrl: string;
 	phoneNumber: string;
 	promptPayNo: string;
-	role: 'STUDENT' | 'ADMIN';
+	role: 'STUDENT' | 'PARTNER' | 'ADMIN';
+	/** Set for PARTNER accounts: the store this account manages */
+	partnerStoreId?: string;
 	status: 'ACTIVE' | 'SUSPENDED';
 	buyerRatingAvg: number;
 	createdAt: string;
@@ -59,13 +69,28 @@ export interface PickupHub {
 // --- Store & Menu ---
 export type StoreZone = 'canteen-male' | 'green-canteen' | 'dorm';
 
-export interface PartnerDeal {
-	/** Human-readable promo label shown on cards */
-	label: string;
-	/** Minimum number of items in cart before the deal applies */
+/**
+ * DEAL     = the store's own promotion, live as soon as it is saved.
+ * CO_PROMO = a joint promotion with Goose Man; live only once approved.
+ */
+export type PromoKind = 'DEAL' | 'CO_PROMO';
+
+export interface Promotion {
+	id: string;
+	storeId: string;
+	kind: PromoKind;
+	title: string;
+	description: string;
+	/** Items needed in the cart before it applies */
 	minQty: number;
-	/** Flat baht discount off the food subtotal */
-	amount: number;
+	/** Baht off the food subtotal */
+	discount: number;
+	/** Waives the delivery fee */
+	freeDelivery: boolean;
+	bannerUrl?: string;
+	endsAt?: string;
+	active: boolean;
+	approved: boolean;
 }
 
 export interface Store {
@@ -80,7 +105,14 @@ export interface Store {
 	reviewsCount: string;
 	queueMinutes: number;
 	lock: string;
-	deal?: PartnerDeal;
+	/** Partner stores get a verified badge, list priority, a storefront and promotions */
+	isPartner: boolean;
+	/** Storefront banner set by the partner (falls back to imageUrl) */
+	bannerUrl?: string;
+	tagline?: string;
+	/** Prep time for app orders at a partner's fast lane */
+	fastLaneMinutes?: number;
+	promotions: Promotion[];
 	menuItems: MenuItem[];
 }
 

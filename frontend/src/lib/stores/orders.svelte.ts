@@ -1,25 +1,39 @@
-// Orders, simulated runner matching and per-order chat (Svelte 5 runes)
+// Orders and per-order chat (Svelte 5 runes)
 //
-// The simulation mirrors the backend state machine
-// PENDING → ACCEPTED → DELIVERING → COMPLETED so the timers can later be
-// replaced by ORDER_ACCEPTED / ORDER_DELIVERING / ORDER_COMPLETED WebSocket events.
-import type { CartItem, ChatMessage, Order, OrderKind, PaymentMethod } from '$lib/types';
+// Live mode: Supabase is the source of truth. Orders are created by the
+// place_order / place_custom_order RPCs (server-side pricing), and status
+// changes arrive over Realtime from the rider app.
+//
+// Demo mode: an in-memory copy of the same state machine
+// PENDING → ACCEPTED → DELIVERING → COMPLETED, driven by timers.
+import type { CartItem, ChatMessage, MenuItem, Order, OrderKind, OrderStatus, PaymentMethod } from '$lib/types';
+import * as api from '$lib/api/live';
 import { pickRider, RIDER_POOL } from '$lib/data/riders';
-import { getStoreById } from '$lib/data/stores';
+import { findStore, MOCK_STORES } from '$lib/data/stores';
+import { friendlyError, isLive } from '$lib/supabase';
 import { nowTime, randomDigits4, uid } from '$lib/utils';
+import { catalog } from './catalog.svelte';
 import { toast } from './toast.svelte';
 
 const ACCEPT_AFTER_MS = 3000;
 const DELIVERING_AFTER_MS = 8000;
 const CHAT_REPLY_AFTER_MS = 2000;
 
-/** Resolve [menuItemId, qty] pairs against the catalogue (seed data only) */
+/** Resolve [menuItemId, qty] pairs against the demo catalogue (seed data only) */
 function seedItems(storeId: string, lines: [string, number][]): CartItem[] {
-	const store = getStoreById(storeId);
+	const store = findStore(MOCK_STORES, storeId);
 	return lines.flatMap(([id, quantity]) => {
 		const menuItem = store?.menuItems.find((m) => m.id === id);
 		return menuItem ? [{ menuItem, quantity }] : [];
 	});
+}
+
+function findMenuItem(id: string): MenuItem | undefined {
+	for (const store of catalog.stores) {
+		const item = store.menuItems.find((m) => m.id === id);
+		if (item) return item;
+	}
+	return undefined;
 }
 
 export const ACTIVE_STATUSES: Order['status'][] = ['PENDING', 'ACCEPTED', 'DELIVERING'];
@@ -41,6 +55,16 @@ export interface NewOrderInput {
 	note?: string;
 }
 
+/** Thrown by place()/cancel() with a message ready to show */
+export class OrderError extends Error {}
+
+const STATUS_TOAST: Partial<Record<OrderStatus, (o: Order) => string>> = {
+	ACCEPTED: (o) => `${o.rider?.name ?? 'เพื่อน'} รับงานหิ้ว ${o.orderCode} แล้ว`,
+	DELIVERING: (o) => `${o.rider?.name ?? 'คนหิ้ว'} ซื้อของครบแล้ว กำลังเดินมาส่ง เตรียมรหัส OTP ไว้ได้เลย`,
+	COMPLETED: (o) => `ส่งมอบ ${o.orderCode} เรียบร้อย`,
+	CANCELLED: (o) => `ออเดอร์ ${o.orderCode} ถูกยกเลิก`
+};
+
 function autoReply(text: string): string {
 	const t = text.toLowerCase();
 	if (/ขอบคุณ|thank/.test(t)) return 'ยินดีครับ ขอให้อร่อยนะครับ';
@@ -55,7 +79,8 @@ class OrdersStore {
 	currentOrderId = $state<string | null>(null);
 	chats = $state<Record<string, ChatMessage[]>>({});
 	typingOrderId = $state<string | null>(null);
-	onlineRiders = $state(42);
+	/** Demo only. Live mode has no rider presence feed yet, so the count is hidden rather than invented. */
+	onlineRiders = $state<number | null>(isLive ? null : 42);
 
 	active = $derived(this.orders.filter((o) => ACTIVE_STATUSES.includes(o.status)));
 	history = $derived(this.orders.filter((o) => !ACTIVE_STATUSES.includes(o.status)));
@@ -66,17 +91,58 @@ class OrdersStore {
 
 	#timers = new Map<string, ReturnType<typeof setTimeout>[]>();
 	#ridersTicker: ReturnType<typeof setInterval> | null = null;
+	#unsubscribeOrders: (() => void) | null = null;
+	#unsubscribeChat: (() => void) | null = null;
+	#customerId: string | null = null;
 
-	init() {
-		this.#seedHistory();
-		this.#startRidersTicker();
+	async init(customerId: string) {
+		this.#customerId = customerId;
+		if (!isLive) {
+			this.#seedHistory();
+			this.#startRidersTicker();
+			return;
+		}
+		try {
+			this.orders = await api.fetchMyOrders(findMenuItem);
+		} catch (err) {
+			toast.show(friendlyError(err), 'error');
+		}
+		this.#unsubscribeOrders?.();
+		this.#unsubscribeOrders = api.subscribeMyOrders(customerId, (orderId) => void this.#refresh(orderId, true));
+	}
+
+	/** Re-read one order from the server (after a realtime event or our own RPC) */
+	async #refresh(orderId: string, announce = false): Promise<Order | undefined> {
+		const [fresh] = await api.fetchMyOrders(findMenuItem, orderId);
+		if (!fresh) return;
+		const before = this.orders.find((o) => o.id === orderId);
+		this.orders = before ? this.orders.map((o) => (o.id === orderId ? fresh : o)) : [fresh, ...this.orders];
+		if (announce && before && before.status !== fresh.status) {
+			const text = STATUS_TOAST[fresh.status]?.(fresh);
+			if (text) toast.show(text, fresh.status === 'CANCELLED' ? 'warning' : 'success', { notify: true });
+		}
+		return fresh;
 	}
 
 	open(orderId: string) {
 		this.currentOrderId = orderId;
+		if (!isLive) return;
+		this.#unsubscribeChat?.();
+		this.#unsubscribeChat = api.subscribeChat(orderId, (message) => this.#appendChat(orderId, message));
+		api
+			.fetchChat(orderId)
+			.then((messages) => (this.chats[orderId] = messages))
+			.catch((err) => toast.show(friendlyError(err), 'error'));
 	}
 
-	place(input: NewOrderInput): Order {
+	#appendChat(orderId: string, message: ChatMessage) {
+		const list = (this.chats[orderId] ??= []);
+		if (!list.some((m) => m.id === message.id)) list.push(message);
+	}
+
+	async place(input: NewOrderInput): Promise<Order> {
+		if (isLive) return this.#placeLive(input);
+
 		let orderCode: string;
 		do {
 			orderCode = `#KM-${randomDigits4()}`;
@@ -86,7 +152,7 @@ class OrdersStore {
 			...input,
 			id: uid('ord'),
 			orderCode,
-			customerId: 'u-demo-001',
+			customerId: this.#customerId ?? 'u-demo-001',
 			status: 'PENDING',
 			otpCode: randomDigits4(),
 			createdAt: new Date().toISOString()
@@ -96,6 +162,40 @@ class OrdersStore {
 		this.chats[order.id] = [{ id: uid('msg'), sender: 'SYSTEM', text: `สร้างออเดอร์ ${orderCode} แล้ว กำลังหาเพื่อนรับหิ้ว`, time: nowTime() }];
 		toast.show(`สร้างออเดอร์ ${orderCode} แล้ว กำลังหาเพื่อนรับหิ้ว`, 'success', { notify: true });
 		this.#simulateRunner(order.id);
+		return order;
+	}
+
+	async #placeLive(input: NewOrderInput): Promise<Order> {
+		let id: string;
+		try {
+			id =
+				input.kind === 'STORE' && input.storeId && input.items
+					? await api.placeStoreOrder({
+							storeId: input.storeId,
+							items: input.items.map((i) => ({ menuItemId: i.menuItem.id, quantity: i.quantity })),
+							dropoffName: input.dropoffName,
+							note: input.note,
+							paymentMethod: input.paymentMethod,
+							promoCode: input.promoCode
+						})
+					: await api.placeCustomOrder({
+							pickupName: input.pickupName,
+							itemDetails: input.itemDetails,
+							estimated: input.foodTotal,
+							dropoffName: input.dropoffName,
+							note: input.note
+						});
+		} catch (err) {
+			throw new OrderError(friendlyError(err));
+		}
+		const order = await this.#refresh(id);
+		if (!order) throw new OrderError('สร้างออเดอร์แล้ว แต่โหลดข้อมูลไม่สำเร็จ ลองเปิดหน้าคำสั่งซื้อ');
+		this.open(order.id);
+		// The server total is authoritative; say so if it differs from the preview
+		if (order.totalPrice !== input.totalPrice) {
+			toast.show(`ยอดสุทธิจากระบบคือ ${order.totalPrice} ฿ (ต่างจากที่แสดงก่อนหน้า)`, 'warning', { duration: 6000 });
+		}
+		toast.show(`สร้างออเดอร์ ${order.orderCode} แล้ว กำลังหาเพื่อนรับหิ้ว`, 'success', { notify: true });
 		return order;
 	}
 
@@ -142,8 +242,9 @@ class OrdersStore {
 		});
 	}
 
-	/** Demo hook: the runner typed the correct OTP on their device */
+	/** Demo hook: the runner typed the correct OTP on their device. Live OTP entry happens in the rider app. */
 	confirmDelivery(orderId: string, otp: string): boolean {
+		if (isLive) return false;
 		const order = this.#get(orderId);
 		if (!order || order.status !== 'DELIVERING' || order.otpCode !== otp) return false;
 		order.status = 'COMPLETED';
@@ -154,7 +255,17 @@ class OrdersStore {
 		return true;
 	}
 
-	cancel(orderId: string): boolean {
+	async cancel(orderId: string): Promise<boolean> {
+		if (isLive) {
+			try {
+				await api.cancelOrder(orderId);
+			} catch (err) {
+				toast.show(friendlyError(err), 'error');
+				return false;
+			}
+			await this.#refresh(orderId, true);
+			return true;
+		}
 		const order = this.#get(orderId);
 		if (order?.status !== 'PENDING') return false;
 		order.status = 'CANCELLED';
@@ -163,25 +274,42 @@ class OrdersStore {
 		return true;
 	}
 
-	rate(orderId: string, rating: number, tags: string[], tip: number) {
+	async rate(orderId: string, rating: number, tags: string[], tip: number) {
 		const order = this.#get(orderId);
 		if (!order) return;
 		// 0 = skipped rating; the tip is still recorded
 		order.rating = rating > 0 ? Math.min(5, Math.max(1, Math.round(rating))) : undefined;
 		order.feedbackTags = tags;
 		order.tip = Math.max(0, tip);
+		if (isLive) {
+			try {
+				await api.rateOrder(orderId, rating, tags, tip);
+			} catch (err) {
+				toast.show(friendlyError(err), 'error');
+			}
+		}
 	}
 
-	sendChat(orderId: string, text: string, imageUrl?: string) {
+	async sendChat(orderId: string, text: string, image?: { url: string; file: File }) {
 		const message = text.trim();
 		const order = this.#get(orderId);
-		if ((!message && !imageUrl) || !order) return;
-		(this.chats[orderId] ??= []).push({ id: uid('msg'), sender: 'CUSTOMER', text: message, time: nowTime(), imageUrl });
+		if ((!message && !image) || !order) return;
 
+		if (isLive) {
+			if (!this.#customerId) return;
+			try {
+				this.#appendChat(orderId, await api.sendChat(orderId, this.#customerId, message, image?.file));
+			} catch (err) {
+				toast.show(friendlyError(err), 'error');
+			}
+			return;
+		}
+
+		(this.chats[orderId] ??= []).push({ id: uid('msg'), sender: 'CUSTOMER', text: message, time: nowTime(), imageUrl: image?.url });
 		if (!order.rider || order.status === 'COMPLETED' || order.status === 'CANCELLED') return;
 		this.typingOrderId = orderId;
 		this.#schedule(orderId, CHAT_REPLY_AFTER_MS, () => {
-			this.chats[orderId]?.push({ id: uid('msg'), sender: 'RIDER', text: imageUrl && !message ? 'เห็นรูปแล้วครับ' : autoReply(message), time: nowTime() });
+			this.chats[orderId]?.push({ id: uid('msg'), sender: 'RIDER', text: image && !message ? 'เห็นรูปแล้วครับ' : autoReply(message), time: nowTime() });
 			if (this.typingOrderId === orderId) this.typingOrderId = null;
 		});
 	}
@@ -190,7 +318,7 @@ class OrdersStore {
 		if (this.#ridersTicker) return;
 		this.#ridersTicker = setInterval(() => {
 			const delta = Math.floor(Math.random() * 5) - 2;
-			this.onlineRiders = Math.min(68, Math.max(28, this.onlineRiders + delta));
+			this.onlineRiders = Math.min(68, Math.max(28, (this.onlineRiders ?? 42) + delta));
 		}, 4000);
 	}
 
@@ -199,6 +327,10 @@ class OrdersStore {
 		this.#timers.clear();
 		if (this.#ridersTicker) clearInterval(this.#ridersTicker);
 		this.#ridersTicker = null;
+		this.#unsubscribeOrders?.();
+		this.#unsubscribeChat?.();
+		this.#unsubscribeOrders = this.#unsubscribeChat = null;
+		this.#customerId = null;
 		this.orders = [];
 		this.chats = {};
 		this.currentOrderId = null;
@@ -233,7 +365,7 @@ class OrdersStore {
 				deliveringAt: hoursAgo(25.8),
 				completedAt: hoursAgo(25.6),
 				rating: 5,
-				feedbackTags: ['ส่งไวมาก ⚡'],
+				feedbackTags: ['ส่งไวมาก'],
 				tip: 5
 			},
 			{

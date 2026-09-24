@@ -70,18 +70,6 @@ textarea {
 .goose {
 	transform-origin: 60% 100%;
 }
-/* Carrying the bag: a two-step waddle */
-.goose-walk {
-	animation: goose-walk 0.7s steps(2, jump-none) infinite alternate;
-}
-@keyframes goose-walk {
-	from {
-		transform: translateY(0) rotate(-2.5deg);
-	}
-	to {
-		transform: translateY(-3px) rotate(2.5deg);
-	}
-}
 /* Waiting at the counter: the occasional look around */
 .goose-wait {
 	animation: goose-wait 3.2s ease-in-out infinite;
@@ -159,7 +147,6 @@ textarea {
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.goose-walk,
 	.goose-wait {
 		animation: none;
 	}

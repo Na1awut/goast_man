@@ -7,6 +7,7 @@
 	import { checkout } from '$lib/stores/checkout.svelte';
 	import { nav } from '$lib/stores/nav.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
+	import { OrderError } from '$lib/stores/orders.svelte';
 	import { formatBaht } from '$lib/utils';
 
 	const PAY_WINDOW_SECONDS = 10 * 60;
@@ -46,9 +47,14 @@
 	function confirmPaid() {
 		if (verifying) return;
 		verifying = true;
-		setTimeout(() => {
-			verifying = false;
-			if (checkout.place()) nav.reset('TRACKING');
+		setTimeout(async () => {
+			try {
+				if (await checkout.place()) nav.reset('TRACKING');
+			} catch (err) {
+				toast.show(err instanceof OrderError ? err.message : 'สั่งไม่สำเร็จ ลองใหม่อีกครั้ง', 'error', { duration: 5000 });
+			} finally {
+				verifying = false;
+			}
 		}, 1200);
 	}
 

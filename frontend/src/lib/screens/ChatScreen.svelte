@@ -20,17 +20,17 @@
 	let draft = $state('');
 	let input = $state<HTMLInputElement>();
 
-	function send(text = draft, imageUrl?: string) {
-		if (!order || !canChat || (!text.trim() && !imageUrl)) return;
-		orders.sendChat(order.id, text, imageUrl);
+	function send(text = draft, image?: { url: string; file: File }) {
+		if (!order || !canChat || (!text.trim() && !image)) return;
+		orders.sendChat(order.id, text, image);
 		draft = '';
-		if (!imageUrl) input?.focus();
+		if (!image) input?.focus();
 	}
 
 	function onPhoto(e: Event) {
 		const el = e.currentTarget as HTMLInputElement;
 		const file = el.files?.[0];
-		if (file) send('', URL.createObjectURL(file));
+		if (file) send('', { url: URL.createObjectURL(file), file });
 		el.value = '';
 	}
 
