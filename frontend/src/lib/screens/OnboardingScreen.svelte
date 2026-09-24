@@ -5,6 +5,7 @@
 	import { cart } from '$lib/stores/cart.svelte';
 	import { nav } from '$lib/stores/nav.svelte';
 	import { orders } from '$lib/stores/orders.svelte';
+	import { rider } from '$lib/stores/rider.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 
 	const returning = !!auth.user?.consentedAt;
@@ -17,6 +18,7 @@
 	/** Signed in with the wrong Google account */
 	async function switchAccount() {
 		orders.reset();
+		rider.reset();
 		cart.clear();
 		await auth.logout();
 		nav.reset('LOGIN');

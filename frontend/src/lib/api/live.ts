@@ -1,7 +1,7 @@
 // Every Supabase call the app makes lives here, so stores stay mode-agnostic and
 // the row ↔ type mapping has exactly one home. Only imported on live paths.
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import type { CartItem, ChatMessage, MenuItem, Order, OrderStatus, PaymentMethod, Promotion, Rider, Store, User } from '$lib/types';
+import type { CartItem, ChatMessage, MenuItem, Order, OrderStatus, PaymentMethod, Promotion, Rider, RiderJob, Store, User } from '$lib/types';
 import { db } from '$lib/supabase';
 import { formatTime } from '$lib/utils';
 
@@ -162,7 +162,9 @@ export async function currentUser(): Promise<User | null> {
 	const uid = data.session?.user.id;
 	if (!uid) return null;
 	const profile = check(await db().from('profiles').select('*').eq('id', uid).maybeSingle());
-	return profile ? mapProfile(profile) : null;
+	if (!profile) return null;
+	const isRider = check(await db().rpc('is_rider')) as boolean;
+	return { ...mapProfile(profile), isRider };
 }
 
 /**
@@ -376,4 +378,67 @@ export async function savePromotion(p: PromotionDraft): Promise<Promotion> {
 
 export async function deletePromotion(id: string): Promise<void> {
 	check(await db().from('promotions').delete().eq('id', id));
+}
+
+// ---------- Rider (คนหิ้ว) ----------
+
+function mapRiderJob(r: Row): RiderJob {
+	return {
+		id: r.id,
+		orderCode: r.order_code,
+		kind: r.kind,
+		storeId: r.store_id ?? undefined,
+		pickupName: r.pickup_name,
+		dropoffName: r.dropoff_name,
+		itemDetails: r.item_details,
+		items: (r.items as RiderJob['items'] | null) ?? [],
+		foodTotal: r.food_total,
+		deliveryFee: r.delivery_fee,
+		totalPrice: r.total_price,
+		paymentMethod: r.payment_method,
+		status: r.status,
+		note: r.note ?? undefined,
+		createdAt: r.created_at,
+		acceptedAt: r.accepted_at ?? undefined,
+		customer: r.customer ? { nickname: r.customer.nickname, phone: r.customer.phone } : undefined
+	};
+}
+
+export interface RiderBoard {
+	capacity: number;
+	open: RiderJob[];
+	mine: RiderJob[];
+}
+
+/** null when this account is not on the rider roster */
+export async function fetchRiderBoard(): Promise<RiderBoard | null> {
+	const board = check(await db().rpc('rider_board')) as Row | null;
+	if (!board) return null;
+	return { capacity: board.capacity, open: (board.open as Row[]).map(mapRiderJob), mine: (board.mine as Row[]).map(mapRiderJob) };
+}
+
+export async function acceptJob(orderId: string): Promise<void> {
+	check(await db().rpc('accept_order', { p_order_id: orderId }));
+}
+
+export async function releaseJob(orderId: string): Promise<void> {
+	check(await db().rpc('release_order', { p_order_id: orderId }));
+}
+
+export async function markPickedUp(orderId: string): Promise<void> {
+	check(await db().rpc('mark_delivering', { p_order_id: orderId }));
+}
+
+/** true when the OTP matched and the order is now COMPLETED */
+export async function confirmDelivery(orderId: string, otp: string): Promise<boolean> {
+	return check(await db().rpc('confirm_delivery', { p_order_id: orderId, p_otp: otp })) as boolean;
+}
+
+/** Any change to orders a rider can see (RLS filters the feed): new jobs, jobs taken, own round */
+export function subscribeRiderBoard(onChange: () => void): () => void {
+	const channel = db()
+		.channel('rider-board')
+		.on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => onChange())
+		.subscribe();
+	return () => void db().removeChannel(channel);
 }

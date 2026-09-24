@@ -59,6 +59,7 @@ export interface NewOrderInput {
 export class OrderError extends Error {}
 
 const STATUS_TOAST: Partial<Record<OrderStatus, (o: Order) => string>> = {
+	PENDING: (o) => `คนหิ้วคืนงาน ${o.orderCode} กำลังหาเพื่อนคนใหม่`,
 	ACCEPTED: (o) => `${o.rider?.name ?? 'เพื่อน'} รับงานหิ้ว ${o.orderCode} แล้ว`,
 	DELIVERING: (o) => `${o.rider?.name ?? 'คนหิ้ว'} ซื้อของครบแล้ว กำลังเดินมาส่ง เตรียมรหัส OTP ไว้ได้เลย`,
 	COMPLETED: (o) => `ส่งมอบ ${o.orderCode} เรียบร้อย`,

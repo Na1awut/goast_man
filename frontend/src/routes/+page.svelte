@@ -18,6 +18,7 @@
 	import PartnerScreen from '$lib/screens/PartnerScreen.svelte';
 	import PaymentScreen from '$lib/screens/PaymentScreen.svelte';
 	import ProfileScreen from '$lib/screens/ProfileScreen.svelte';
+	import RiderScreen from '$lib/screens/RiderScreen.svelte';
 	import StoreDetailScreen from '$lib/screens/StoreDetailScreen.svelte';
 	import StoresScreen from '$lib/screens/StoresScreen.svelte';
 	import SuccessScreen from '$lib/screens/SuccessScreen.svelte';
@@ -30,6 +31,7 @@
 	import { AuthError } from '$lib/stores/auth.svelte';
 	import { nav } from '$lib/stores/nav.svelte';
 	import { orders } from '$lib/stores/orders.svelte';
+	import { rider } from '$lib/stores/rider.svelte';
 	import { friendlyError } from '$lib/supabase';
 	import { prefersReducedMotion, withTimeout } from '$lib/utils';
 
@@ -47,7 +49,8 @@
 		PROFILE: ProfileScreen,
 		PARTNER: PartnerScreen,
 		ONBOARDING: OnboardingScreen,
-		EDIT_PROFILE: EditProfileScreen
+		EDIT_PROFILE: EditProfileScreen,
+		RIDER: RiderScreen
 	};
 
 	let ready = $state(false);
@@ -57,7 +60,10 @@
 		reduceMotion = prefersReducedMotion();
 		campus.init();
 		void start();
-		return () => orders.reset();
+		return () => {
+			orders.reset();
+			rider.reset();
+		};
 	});
 
 	const AUTH_TIMEOUT_MS = 8000;

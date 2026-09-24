@@ -11,6 +11,7 @@
 	import { cart } from '$lib/stores/cart.svelte';
 	import { nav } from '$lib/stores/nav.svelte';
 	import { orders } from '$lib/stores/orders.svelte';
+	import { rider } from '$lib/stores/rider.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { formatBaht } from '$lib/utils';
 
@@ -26,6 +27,7 @@
 
 	async function logout() {
 		orders.reset();
+		rider.reset();
 		cart.clear();
 		toast.reset();
 		await auth.logout();
@@ -49,6 +51,17 @@
 				</div>
 				<button type="button" onclick={() => nav.go('EDIT_PROFILE')} class="ml-auto shrink-0 self-start rounded-full border border-slate-200 px-3 py-1.5 text-sm text-slate-700">แก้ไข</button>
 			</section>
+
+			{#if user.isRider}
+				<button type="button" onclick={() => nav.go('RIDER')} class="flex w-full items-center gap-3 rounded-2xl border border-brand-100 bg-white p-4 text-left">
+					<span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand"><Icon name="walk" /></span>
+					<span class="min-w-0 flex-1">
+						<span class="block text-sm font-semibold text-slate-900">โหมดคนหิ้ว</span>
+						<span class="block truncate text-xs text-slate-500">รับงาน จัดลำดับจุดรับ-ส่ง และยืนยันส่งของ</span>
+					</span>
+					<Icon name="chevron-right" class="h-5 w-5 text-slate-400" />
+				</button>
+			{/if}
 
 			{#if auth.isPartner}
 				<button type="button" onclick={() => nav.go('PARTNER')} class="flex w-full items-center gap-3 rounded-2xl bg-brand p-4 text-left text-white">

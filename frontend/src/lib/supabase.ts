@@ -54,7 +54,13 @@ export function friendlyError(error: unknown): string {
 		BAD_NICKNAME: 'ชื่อเล่นไม่ถูกต้อง',
 		BAD_FACULTY: 'กรุณาเลือกคณะ',
 		BAD_STUDY_LEVEL: 'กรุณาเลือกชั้นปี',
-		CONSENT_REQUIRED: 'ต้องยอมรับเงื่อนไขก่อนใช้งาน'
+		CONSENT_REQUIRED: 'ต้องยอมรับเงื่อนไขก่อนใช้งาน',
+		RIDER_ONLY: 'บัญชีนี้ยังไม่ได้อยู่ในรายชื่อคนหิ้ว',
+		RIDER_FULL: 'รอบนี้ถือครบ 4 งานแล้ว ส่งให้ครบก่อนค่อยรับเพิ่ม',
+		FINISH_ROUND_FIRST: 'เริ่มส่งของแล้ว ส่งรอบนี้ให้ครบก่อนค่อยรับงานใหม่',
+		ALREADY_TAKEN: 'มีเพื่อนรับงานนี้ไปแล้ว',
+		BAD_STATE: 'สถานะงานเปลี่ยนไปแล้ว ลองรีเฟรชอีกครั้ง',
+		OTP_LOCKED: 'ใส่รหัสผิดครบ 5 ครั้งแล้ว งานนี้ถูกล็อก ติดต่อทีม Goose Man'
 	};
 	const code = Object.keys(known).find((k) => text.includes(k));
 	return code ? known[code] : 'เชื่อมต่อไม่สำเร็จ ลองใหม่อีกครั้ง';

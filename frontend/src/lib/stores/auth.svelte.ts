@@ -23,6 +23,8 @@ export const DEMO_USER: User = {
 	phoneNumber: '',
 	promptPayNo: '',
 	role: 'STUDENT',
+	// The demo account is on the rider roster, so โหมดคนหิ้ว can be tried out
+	isRider: true,
 	status: 'ACTIVE',
 	buyerRatingAvg: 4.95,
 	createdAt: '2025-08-01T00:00:00.000Z'

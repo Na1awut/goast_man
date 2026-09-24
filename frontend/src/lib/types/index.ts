@@ -19,7 +19,8 @@ export type Screen =
 	| 'PROFILE'
 	| 'PARTNER'
 	| 'ONBOARDING'
-	| 'EDIT_PROFILE';
+	| 'EDIT_PROFILE'
+	| 'RIDER';
 
 export type TabId = 'HOME' | 'ORDERS' | 'STORES' | 'CHAT' | 'PROFILE';
 
@@ -40,6 +41,8 @@ export interface User {
 	phoneNumber: string;
 	promptPayNo: string;
 	role: 'STUDENT' | 'PARTNER' | 'ADMIN';
+	/** On the rider roster: may run errands (โหมดคนหิ้ว) */
+	isRider?: boolean;
 	/** Set for PARTNER accounts: the store this account manages */
 	partnerStoreId?: string;
 	status: 'ACTIVE' | 'SUSPENDED';
@@ -179,6 +182,28 @@ export interface Order {
 	rating?: number;
 	feedbackTags?: string[];
 	tip?: number;
+}
+
+// --- Rider (คนหิ้ว) ---
+/** A job as the rider sees it. Customer contact is only present once the rider holds the job. */
+export interface RiderJob {
+	id: string;
+	orderCode: string;
+	kind: OrderKind;
+	storeId?: string;
+	pickupName: string;
+	dropoffName: string;
+	itemDetails: string;
+	items: { name: string; price: number; quantity: number }[];
+	foodTotal: number;
+	deliveryFee: number;
+	totalPrice: number;
+	paymentMethod: PaymentMethod;
+	status: OrderStatus;
+	note?: string;
+	createdAt: string;
+	acceptedAt?: string;
+	customer?: { nickname: string; phone: string };
 }
 
 // --- Chat ---

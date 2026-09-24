@@ -16,11 +16,12 @@ const TAB_OF: Record<Screen, TabId | null> = {
 	PROFILE: 'PROFILE',
 	PARTNER: 'PROFILE',
 	ONBOARDING: null,
-	EDIT_PROFILE: 'PROFILE'
+	EDIT_PROFILE: 'PROFILE',
+	RIDER: 'PROFILE'
 };
 
 /** Only top-level tab screens show the bottom bar; task screens get the full height for their action bar */
-const NAV_SCREENS: Screen[] = ['HOME', 'STORES', 'ORDERS', 'PROFILE', 'PARTNER'];
+const NAV_SCREENS: Screen[] = ['HOME', 'STORES', 'ORDERS', 'PROFILE', 'PARTNER', 'RIDER'];
 
 class NavStore {
 	screen = $state<Screen>('LOGIN');
