@@ -10,8 +10,24 @@ database, Google sign-in and realtime. Without them it runs on in-memory demo da
 npm install
 npm run dev      # http://localhost:5173
 npm run check    # svelte-check / TypeScript
+npm test         # vitest (route planner)
 npm run build && npm run preview
 ```
+
+## Deploy (GitHub Pages)
+
+`.github/workflows/deploy.yml` tests, builds (`adapter-static`, SPA) and publishes on every push to `main`.
+
+1. **Settings → Pages → Source:** GitHub Actions. Until a domain is set the site is at `https://<user>.github.io/<repo>/`.
+2. **Live mode (optional):** Settings → Secrets and variables → Actions → *Secrets*: `PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY`.
+   Without them the site runs on demo data.
+3. **Custom domain** (e.g. a free one from the GitHub Student Developer Pack):
+   - DNS at the registrar: subdomain → `CNAME` to `<user>.github.io`; apex → `A` records
+     `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`
+   - Settings → Pages → Custom domain: enter it, then tick **Enforce HTTPS** once the certificate is issued
+   - Settings → Secrets and variables → Actions → *Variables*: `CUSTOM_DOMAIN` = the domain (builds then serve from `/`), and re-run the workflow
+4. **Supabase:** Authentication → URL Configuration → add the site URL (with the `/<repo>/` path when on github.io)
+   to Redirect URLs, or Google sign-in cannot return to the app.
 
 ## Structure
 
@@ -20,14 +36,16 @@ src/
 ├── routes/+page.svelte      # App shell: startup, screen switcher, bottom nav, sheets, toasts
 ├── routes/layout.css        # Design tokens (@theme): brand #FA4616, beak, fresh, promptpay
 └── lib/
-    ├── screens/             # One component per screen (Login, Home, Stores, StoreDetail, CustomOrder,
-    │                        #   Checkout, Payment, Tracking, Chat, Success, Orders, Profile, Partner)
+    ├── screens/             # One component per screen (Login, Onboarding, Home, Stores, StoreDetail, CustomOrder,
+    │                        #   Checkout, Payment, Tracking, Chat, Success, Orders, Profile, EditProfile, Partner)
     ├── components/          # Shared UI (AppBar, BottomNav, Sheet, Goose walk cycle, RouteStrip, PartnerBadge, …)
     ├── stores/*.svelte.ts   # Rune-based singletons: auth, nav, catalog, cart, checkout, campus, orders, storeView, toast
     ├── api/live.ts          # Every Supabase call + row ↔ type mapping (live mode only)
     ├── supabase.ts          # Client, isLive flag, database error → Thai message
-    ├── data/                # Demo catalogue (also generates supabase/seed.sql): stores, locations, riders
+    ├── data/                # Demo catalogue (also generates supabase/seed.sql): stores, locations, riders; legal text
+    ├── routing/             # Rider route planner (exact stop ordering, add-on suggestions) — for the future rider app
     ├── pricing.ts           # Pure pricing rules (fees, promo codes, best promotion, net total)
+    ├── profile.ts           # Profile validation, TERMS_VERSION (bump to re-prompt consent)
     └── types/index.ts
 ```
 

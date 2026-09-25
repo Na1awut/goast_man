@@ -2,6 +2,7 @@
 // the row ↔ type mapping has exactly one home. Only imported on live paths.
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { CartItem, ChatMessage, MenuItem, Order, OrderStatus, PaymentMethod, Promotion, Rider, RiderJob, Store, User } from '$lib/types';
+import { base } from '$app/paths';
 import { db } from '$lib/supabase';
 import { formatTime } from '$lib/utils';
 
@@ -176,7 +177,7 @@ export async function signInWithGoogle(asPartner: boolean): Promise<void> {
 	const { error } = await db().auth.signInWithOAuth({
 		provider: 'google',
 		options: {
-			redirectTo: window.location.origin,
+			redirectTo: window.location.origin + base + '/',
 			queryParams: asPartner ? { prompt: 'select_account' } : { hd: 'kmutt.ac.th', prompt: 'select_account' }
 		}
 	});
