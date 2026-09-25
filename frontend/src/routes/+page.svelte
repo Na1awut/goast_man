@@ -95,7 +95,7 @@
 	const ActiveScreen = $derived(nav.screen === 'LOGIN' ? null : SCREENS[nav.screen]);
 </script>
 
-<div class="relative mx-auto flex min-h-dvh w-full max-w-md flex-col bg-canvas">
+<div class="relative mx-auto flex min-h-dvh w-full flex-col bg-canvas {ready && !ActiveScreen ? 'max-w-none' : 'max-w-md'}">
 	{#if !ready}
 		<div class="flex min-h-dvh items-center justify-center bg-white">
 			<GooseMark class="h-28 w-28" large />
