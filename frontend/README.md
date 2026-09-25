@@ -1,4 +1,6 @@
-# Goose Man (ห่านบางมด) — Buyer Web App
+# Goose Man (ห่านบางมด) — Web App
+
+> Full team guide in Thai: [`../PROJECT_GUIDE.md`](../PROJECT_GUIDE.md)
 
 Mobile-first PWA for KMUTT students to order food that a fellow student carries ("หิ้ว") to their building.
 SvelteKit + Svelte 5 runes + Tailwind CSS v4, backed by Supabase. Client-rendered (`ssr = false`).
@@ -10,8 +12,10 @@ database, Google sign-in and realtime. Without them it runs on in-memory demo da
 npm install
 npm run dev      # http://localhost:5173
 npm run check    # svelte-check / TypeScript
-npm test         # vitest (route planner)
+npm test         # vitest (route planner, menu photos)
+npm run test:sql # migrations + seed on PGlite, then the database rules
 npm run build && npm run preview
+npm run test:e2e # browser test against the preview on :4173 (needs Chrome)
 ```
 
 ## Deploy (GitHub Pages)
@@ -37,13 +41,15 @@ src/
 ├── routes/layout.css        # Design tokens (@theme): brand #FA4616, beak, fresh, promptpay
 └── lib/
     ├── screens/             # One component per screen (Login, Onboarding, Home, Stores, StoreDetail, CustomOrder,
-    │                        #   Checkout, Payment, Tracking, Chat, Success, Orders, Profile, EditProfile, Partner)
+    │                        #   Checkout, Payment, Tracking, Chat, Success, Orders, Profile, EditProfile, Partner, Rider)
     ├── components/          # Shared UI (AppBar, BottomNav, Sheet, Goose walk cycle, RouteStrip, PartnerBadge, …)
-    ├── stores/*.svelte.ts   # Rune-based singletons: auth, nav, catalog, cart, checkout, campus, orders, storeView, toast
+    ├── stores/*.svelte.ts   # Rune-based singletons: auth, nav, catalog, cart, checkout, campus, orders, profileGate,
+    │                        #   rider, storeView, toast
     ├── api/live.ts          # Every Supabase call + row ↔ type mapping (live mode only)
     ├── supabase.ts          # Client, isLive flag, database error → Thai message
-    ├── data/                # Demo catalogue (also generates supabase/seed.sql): stores, locations, riders; legal text
-    ├── routing/             # Rider route planner (exact stop ordering, add-on suggestions) — for the future rider app
+    ├── data/                # Real KFC (main) store catalogue (also generates supabase/seed.sql), mockup menu photos,
+    │                        #   locations, demo riders, legal text
+    ├── routing/             # Rider route planner (exact stop ordering, add-on suggestions), used by the rider screen
     ├── pricing.ts           # Pure pricing rules (fees, promo codes, best promotion, net total)
     ├── profile.ts           # Profile validation, TERMS_VERSION (bump to re-prompt consent)
     └── types/index.ts
@@ -55,7 +61,7 @@ src/
 - **Promotions:** `DEAL` (store's own, live at once) and `CO_PROMO` (joint with Goose Man, shown on Home only after approval).
   One best promotion applies per order (`bestPromotion` in `pricing.ts`, mirrored by `place_order()` in SQL).
 - **Partner accounts** open *จัดการร้านของฉัน* to edit the banner, tagline, fast lane and promotions.
-  Demo: tap **สำหรับร้านค้า Partner** on the login screen (signs in as ป้าณี's shop; co-promos auto-approve after a few seconds).
+  Demo: tap **เข้าสู่ระบบร้านค้า** on the login screen (signs in as the demo owner of `kfc-05`; co-promos auto-approve after a few seconds).
 
 ## Demo behaviour
 
@@ -71,5 +77,6 @@ src/
 
 - Orders are created by the `place_order` / `place_custom_order` RPCs; the server total is authoritative.
 - Status changes arrive over Supabase Realtime. They are made by the rider-side RPCs
-  (`accept_order`, `mark_delivering`, `confirm_delivery`); the rider app itself is not built yet.
+  (`accept_order`, `mark_delivering`, `confirm_delivery`). The rider screen exists but has no entry point yet:
+  riders must be verified by the team first (`rider_roster`).
 - The demo OTP button and the online-rider count are hidden in live mode (there is no real data behind them).

@@ -75,9 +75,10 @@ select * from rider_roster order by added_at;
 delete from rider_roster where email = 'somchai.k@mail.kmutt.ac.th';
 ```
 
-คนหิ้วเข้าหน้า **โปรไฟล์ → โหมดคนหิ้ว** ในแอป ถือได้ไม่เกิน 4 งานต่อรอบ และเมื่อเริ่มส่งของแล้วจะรับงานใหม่ไม่ได้จนกว่าจะส่งครบ
+คนหิ้วต้องผ่านการ verify จากทีมก่อนจึงเพิ่มชื่อในตารางนี้ ถือได้ไม่เกิน 4 งานต่อรอบ และเมื่อเริ่มส่งของแล้วจะรับงานใหม่ไม่ได้จนกว่าจะส่งครบ
+(หน้าโหมดคนหิ้วในแอปสร้างไว้แล้ว แต่ตอนนี้ยังไม่มีทางเข้า ดู `PROJECT_GUIDE.md` ข้อ 19)
 
-**เปิดให้นักศึกษาทุกคนหิ้วในอนาคต:** แก้ฟังก์ชันเดียว ไม่ต้องแก้แอป
+**ถ้าวันหนึ่งจะเปิดให้นักศึกษาทุกคนหิ้วโดยไม่ต้อง verify:** แก้ฟังก์ชันเดียว ไม่ต้องแก้แอป (นโยบายตอนนี้คือต้อง verify ก่อน)
 
 ```sql
 create or replace function public.is_rider() returns boolean
@@ -91,7 +92,7 @@ $$;
 เจ้าของร้านไม่ใช่นักศึกษา จึงต้อง **เชิญด้วยอีเมล** ก่อน (รันใน SQL Editor):
 
 ```sql
-insert into partner_invites (email, store_id) values ('owner@gmail.com', 'store-panee');
+insert into partner_invites (email, store_id) values ('owner@gmail.com', 'kfc-05');
 ```
 
 เจ้าของร้านกด **"สำหรับร้านค้า Partner เข้าสู่ระบบที่นี่"** ในหน้าล็อกอิน ด้วยอีเมลนั้น
