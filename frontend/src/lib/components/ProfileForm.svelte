@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { LegalPage } from '$lib/data/legal';
-	import { DROPOFF_POINTS } from '$lib/data/locations';
 	import {
 		digitsOnly,
 		FACULTIES,
@@ -12,14 +11,15 @@
 		type StudyLevel
 	} from '$lib/profile';
 	import { auth, AuthError } from '$lib/stores/auth.svelte';
-	import { campus } from '$lib/stores/campus.svelte';
 	import Avatar from './Avatar.svelte';
 	import BottomBar from './BottomBar.svelte';
 	import Icon from './Icon.svelte';
 	import LegalSheet from './LegalSheet.svelte';
 
 	// One form for first-run onboarding and later edits, so the rules never diverge.
-	let { mode, onsaved }: { mode: 'onboarding' | 'edit'; onsaved: () => void } = $props();
+	// Only details that stay the same for every order live here; the drop-off
+	// point, payment and note are chosen on each order.
+	let { mode, onsaved, submitLabel }: { mode: 'onboarding' | 'edit'; onsaved: () => void; submitLabel?: string } = $props();
 
 	const OTHER = '__other__';
 	const user = auth.user!;
@@ -36,7 +36,6 @@
 	let facultyChoice = $state(knownFaculty ? user.faculty : user.faculty ? OTHER : '');
 	let facultyOther = $state(knownFaculty ? '' : user.faculty);
 	let consent = $state(false);
-	let dropoffId = $state(campus.dropoff.id);
 
 	let submitted = $state(false);
 	let saving = $state(false);
@@ -65,8 +64,6 @@
 		saving = true;
 		try {
 			await auth.completeProfile(input);
-			const point = DROPOFF_POINTS.find((p) => p.id === dropoffId);
-			if (point) campus.select(point);
 			onsaved();
 		} catch (err) {
 			serverError = err instanceof AuthError ? err.message : 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง';
@@ -178,21 +175,6 @@
 			</label>
 		</section>
 
-		{#if mode === 'onboarding' && isStudent}
-			<section class="space-y-2 rounded-2xl border border-slate-100 bg-white p-4">
-				<label class="block">
-					<span class="mb-1 block text-sm font-semibold text-slate-900">ส่งของไปที่ไหนบ่อยที่สุด</span>
-					<span class="relative block">
-						<select bind:value={dropoffId} class="{field} appearance-none pr-10 focus:ring-brand">
-							{#each DROPOFF_POINTS as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
-						</select>
-						<Icon name="chevron-down" class="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-slate-500" />
-					</span>
-					<span class="mt-1 block text-xs text-slate-500">เปลี่ยนได้ทุกครั้งที่สั่ง</span>
-				</label>
-			</section>
-		{/if}
-
 		{#if mustConsent}
 			<section class="rounded-2xl border bg-white p-4 {show('consent') ? 'border-red-300' : 'border-slate-100'}">
 				<label class="flex cursor-pointer items-start gap-3">
@@ -215,7 +197,7 @@
 
 	<BottomBar>
 		<button type="submit" disabled={saving} class="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand py-4 text-sm font-semibold text-white active:bg-brand-600 disabled:opacity-80">
-			{#if saving}<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span> กำลังบันทึก...{:else}{mode === 'onboarding' ? 'เริ่มใช้งาน Goose Man' : 'บันทึกข้อมูล'}{/if}
+			{#if saving}<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span> กำลังบันทึก...{:else}{submitLabel ?? (mode === 'onboarding' ? 'เริ่มใช้งาน Goose Man' : 'บันทึกข้อมูล')}{/if}
 		</button>
 	</BottomBar>
 </form>

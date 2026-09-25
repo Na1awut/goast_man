@@ -10,6 +10,7 @@
 	import { campus } from '$lib/stores/campus.svelte';
 	import { cart } from '$lib/stores/cart.svelte';
 	import { nav } from '$lib/stores/nav.svelte';
+	import { profileGate } from '$lib/stores/profileGate.svelte';
 	import { orders } from '$lib/stores/orders.svelte';
 	import { rider } from '$lib/stores/rider.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
@@ -44,7 +45,7 @@
 			<section class="flex items-center gap-4 rounded-2xl border border-slate-100 bg-white p-4">
 				<Avatar name={user.fullName} size="lg" tone="soft" />
 				<div class="min-w-0">
-					<p class="text-lg font-semibold text-slate-900">{user.nickname}</p>
+					<p class="text-lg font-semibold text-slate-900">{auth.displayName}</p>
 					<p class="truncate text-sm text-slate-600">{user.fullName}</p>
 					<p class="truncate text-xs text-slate-500">{user.email}</p>
 					<span class="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-fresh-700"><Icon name="shield" class="h-3.5 w-3.5" /> {auth.isPartner ? 'บัญชีร้านค้า Partner' : 'ยืนยันตัวตน มจธ. แล้ว'}</span>
@@ -53,7 +54,7 @@
 			</section>
 
 			{#if user.isRider}
-				<button type="button" onclick={() => nav.go('RIDER')} class="flex w-full items-center gap-3 rounded-2xl border border-brand-100 bg-white p-4 text-left">
+				<button type="button" onclick={() => profileGate.ensure('RIDER', 'RIDER') && nav.go('RIDER')} class="flex w-full items-center gap-3 rounded-2xl border border-brand-100 bg-white p-4 text-left">
 					<span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand"><Icon name="walk" /></span>
 					<span class="min-w-0 flex-1">
 						<span class="block text-sm font-semibold text-slate-900">โหมดคนหิ้ว</span>

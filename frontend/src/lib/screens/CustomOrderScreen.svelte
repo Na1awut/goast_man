@@ -6,22 +6,20 @@
 	import { CUSTOM_DELIVERY_FEE, CUSTOM_MAX_PRICE } from '$lib/pricing';
 	import { campus } from '$lib/stores/campus.svelte';
 	import { nav } from '$lib/stores/nav.svelte';
+	import { profileGate } from '$lib/stores/profileGate.svelte';
 	import { customDraft, OrderError, orders } from '$lib/stores/orders.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { formatBaht } from '$lib/utils';
 
-	let items = $state('');
-	let price = $state<number | null>(null);
-	let note = $state('');
 	let submitted = $state(false);
 	let sending = $state(false);
 
 	const pickup = $derived(PICKUP_HUBS.find((h) => h.id === customDraft.pickupId) ?? PICKUP_HUBS[0]);
-	const food = $derived(typeof price === 'number' && Number.isFinite(price) ? Math.max(0, Math.round(price)) : 0);
+	const food = $derived(typeof customDraft.price === 'number' && Number.isFinite(customDraft.price) ? Math.max(0, Math.round(customDraft.price)) : 0);
 	const total = $derived(food + CUSTOM_DELIVERY_FEE);
 
 	const errors = $derived({
-		items: items.trim().length < 3 ? 'ระบุรายการที่ต้องการอย่างน้อย 3 ตัวอักษร' : '',
+		items: customDraft.items.trim().length < 3 ? 'ระบุรายการที่ต้องการอย่างน้อย 3 ตัวอักษร' : '',
 		price: food <= 0 ? 'ใส่ราคาประมาณ เพื่อให้เพื่อนสำรองเงินได้พอ' : food > CUSTOM_MAX_PRICE ? `สูงสุด ${CUSTOM_MAX_PRICE} บาท เพราะเพื่อนต้องสำรองจ่ายก่อน` : ''
 	});
 	const isValid = $derived(!errors.items && !errors.price);
@@ -32,21 +30,24 @@
 		e.preventDefault();
 		submitted = true;
 		if (!isValid || sending) return;
+		// First order: ask for the buyer's details once; what was typed here stays
+		if (!profileGate.ensure('ORDER')) return;
 		sending = true;
 		try {
 			await orders.place({
 				kind: 'CUSTOM',
 				pickupName: pickup.name,
 				dropoffName: campus.dropoff.name,
-				itemDetails: items.trim().replace(/\n+/g, ', '),
+				itemDetails: customDraft.items.trim().replace(/\n+/g, ', '),
 				foodTotal: food,
 				deliveryFee: CUSTOM_DELIVERY_FEE,
 				codeDiscount: 0,
 				partnerDiscount: 0,
 				totalPrice: total,
 				paymentMethod: 'CASH',
-				note: note.trim() || undefined
+				note: customDraft.note.trim() || undefined
 			});
+			customDraft.clear();
 			nav.reset('TRACKING');
 		} catch (err) {
 			toast.show(err instanceof OrderError ? err.message : 'สั่งไม่สำเร็จ ลองใหม่อีกครั้ง', 'error', { duration: 5000 });
@@ -88,7 +89,7 @@
 			<label for="items" class="text-sm font-semibold text-slate-900">รายละเอียดอาหาร / ของกิน</label>
 			<textarea
 				id="items"
-				bind:value={items}
+				bind:value={customDraft.items}
 				rows="3"
 				maxlength="300"
 				placeholder="เช่น ข้าวมันไก่พิเศษเนื้อน่อง ไม่แตงกวา ร้านป้าณี"
@@ -111,7 +112,7 @@
 					inputmode="numeric"
 					min="1"
 					max={CUSTOM_MAX_PRICE}
-					bind:value={price}
+					bind:value={customDraft.price}
 					placeholder="0"
 					aria-invalid={submitted && !!errors.price}
 					class="w-24 rounded-xl bg-slate-100 px-3 py-2.5 text-right text-base font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-brand"
@@ -132,7 +133,7 @@
 
 		<input
 			type="text"
-			bind:value={note}
+			bind:value={customDraft.note}
 			maxlength="120"
 			placeholder="หมายเหตุถึงคนหิ้ว (ไม่บังคับ)"
 			aria-label="หมายเหตุถึงคนหิ้ว"

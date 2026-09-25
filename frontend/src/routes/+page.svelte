@@ -74,7 +74,7 @@
 		void catalog.load().then(() => cart.init());
 		try {
 			if (await withTimeout(auth.init(), AUTH_TIMEOUT_MS)) {
-				nav.reset(auth.needsProfile ? 'ONBOARDING' : auth.isPartner ? 'PARTNER' : 'HOME');
+				nav.reset(auth.mustOnboardNow ? 'ONBOARDING' : auth.isPartner ? 'PARTNER' : 'HOME');
 				void orders.init(auth.user!.id);
 			}
 		} catch (err) {
@@ -88,8 +88,9 @@
 	$effect(() => {
 		if (!ready) return;
 		if (!auth.isAuthenticated && nav.screen !== 'LOGIN') nav.reset('LOGIN');
-		// No part of the app is usable until the profile and consent are complete
-		else if (auth.isAuthenticated && auth.needsProfile && nav.screen !== 'ONBOARDING') nav.reset('ONBOARDING');
+		// Shop owners need their contact details before managing a store. Students are
+		// asked at their first order instead (profileGate), and the server checks too.
+		else if (auth.isAuthenticated && auth.mustOnboardNow && nav.screen !== 'ONBOARDING') nav.reset('ONBOARDING');
 	});
 
 	const ActiveScreen = $derived(nav.screen === 'LOGIN' ? null : SCREENS[nav.screen]);

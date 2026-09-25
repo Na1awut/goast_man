@@ -324,6 +324,7 @@ class OrdersStore {
 	}
 
 	reset() {
+		customDraft.clear();
 		this.#timers.forEach((list) => list.forEach(clearTimeout));
 		this.#timers.clear();
 		if (this.#ridersTicker) clearInterval(this.#ridersTicker);
@@ -398,9 +399,21 @@ class OrdersStore {
 
 export const orders = new OrdersStore();
 
-/** Draft state for the custom (ฝากซื้อ) form, so Home shortcuts can preselect a pickup */
+/**
+ * Draft of the custom (ฝากซื้อ) form: Home shortcuts preselect the pickup, and
+ * what was typed survives a detour to the first-order profile form
+ */
 class CustomDraft {
 	pickupId = $state('canteen-male');
+	items = $state('');
+	price = $state<number | null>(null);
+	note = $state('');
+
+	clear() {
+		this.items = '';
+		this.price = null;
+		this.note = '';
+	}
 }
 
 export const customDraft = new CustomDraft();

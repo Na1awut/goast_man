@@ -75,6 +75,13 @@ try {
 	ok('KFC + menu sizes migration applies cleanly', false, e.message);
 	process.exit(1);
 }
+try {
+	await db.exec(readFileSync(`${ROOT}/migrations/20260929000000_profile_at_first_order.sql`, 'utf8'));
+	ok('profile-at-first-order migration applies cleanly', true);
+} catch (e) {
+	ok('profile-at-first-order migration applies cleanly', false, e.message);
+	process.exit(1);
+}
 await db.exec(readFileSync(`${ROOT}/seed.sql`, 'utf8'));
 ok('seed loads the 12 KFC stores', Number((await one(`select count(*) n from stores where zone = 'kfc-main'`)).n) === 12);
 ok('seed has no made-up promotions', Number((await one('select count(*) n from promotions')).n) === 0);
@@ -119,6 +126,16 @@ const as = async (uid, fn) => {
 const placeOrder = (store, items, code = null) =>
 	one(`select place_order('${store}', '${JSON.stringify(items)}'::jsonb, 'อาคาร SIT ชั้น 1', 'โต๊ะหน้าลิฟต์', 'PROMPTPAY', ${code ? `'${code}'` : 'null'}) as id`);
 const orderRow = (id) => one(`select * from orders where id = '${id}'`);
+
+// ---------- Profile is asked for at the first order, not at sign-in ----------
+const cp = (args) => `select complete_profile(${args.map((v) => (v === null ? 'null' : `'${v}'`)).join(', ')})`;
+/** Fill in a student's profile, as the app does before their first order */
+const ready = (uid, nickname, phone, studentId) => as(uid, () => db.exec(cp([nickname, phone, null, studentId, 'คณะวิทยาศาสตร์', '2', '2026-09'])));
+await as(alice, async () => {
+	await expectError('no order before the profile is filled in', `select place_order('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":1}]', 'อาคาร SIT ชั้น 1', '', 'CASH', null)`, 'PROFILE_REQUIRED');
+	await expectError('no ฝากซื้อ before the profile is filled in', `select place_custom_order('เซเว่นหน้าหอใน มจธ.', 'นมจืด 2 กล่อง', 30, 'อาคาร SIT ชั้น 1', null)`, 'PROFILE_REQUIRED');
+});
+await ready(alice, 'Alice', '0811111111', '66070500101');
 
 // ---------- Pricing (must match frontend/src/lib/pricing.ts) ----------
 await as(alice, async () => {
@@ -179,6 +196,12 @@ await as(alice, async () => {
 await as(bob, async () => {
 	const visible = Number((await one(`select count(*) n from orders where status = 'PENDING'`)).n);
 	ok('rider can browse open jobs', visible >= 1);
+	await expectError('rider cannot take a job before the profile is filled in', `select accept_order('${orderId}')`, 'PROFILE_REQUIRED');
+	ok('job stays open after the refused accept', (await orderRow(orderId)).status === 'PENDING');
+});
+await ready(bob, 'Bob', '0822222222', '66070500201');
+await ready(carl, 'คาร์ล', '0833333333', '66070500301');
+await as(bob, async () => {
 	await db.exec(`select accept_order('${orderId}')`);
 });
 await as(carl, async () => {
@@ -271,7 +294,6 @@ await as(alice, async () => {
 });
 
 // ---------- Onboarding / profile completion ----------
-const cp = (args) => `select complete_profile(${args.map((v) => (v === null ? 'null' : `'${v}'`)).join(', ')})`;
 await as(carl, async () => {
 	await expectError('bad phone refused', cp(['คาร์ล', '12345', null, '66070500123', 'คณะวิศวกรรมศาสตร์', '3', '2026-09']), 'BAD_PHONE');
 	await expectError('student needs student id', cp(['คาร์ล', '0812345678', null, null, 'คณะวิศวกรรมศาสตร์', '3', '2026-09']), 'BAD_STUDENT_ID');
@@ -300,6 +322,8 @@ await as(alice, async () => {
 // ---------- Riders: roster, capacity, one outing, release, board ----------
 const dana = await newUser('dana@mail.kmutt.ac.th', 'Dana Rider');
 const erin = await newUser('erin@mail.kmutt.ac.th', 'Erin Student');
+await ready(dana, 'ดาน่า', '0844444444', '66070500401');
+await ready(erin, 'เอริน', '0855555555', '66070500501');
 await db.exec(`insert into rider_roster (email) values ('dana@mail.kmutt.ac.th')`);
 const jobs = [];
 await as(alice, async () => {

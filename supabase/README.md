@@ -10,9 +10,12 @@
 | ไฟล์ | คืออะไร |
 |---|---|
 | `migrations/20260924000000_init.sql` | ตาราง, สิทธิ์การเข้าถึง (RLS), ฟังก์ชันสั่งอาหาร/รับงาน/ยืนยัน OTP, Realtime, ที่เก็บรูป |
-| `migrations/20260925000000_profile_onboarding.sql` | หน้ากรอกข้อมูลครั้งแรก, ตรวจเบอร์/รหัสนักศึกษา, บันทึกการยินยอม PDPA |
+| `migrations/20260925000000_profile_onboarding.sql` | ฟอร์มข้อมูลผู้ใช้, ตรวจเบอร์/รหัสนักศึกษา, บันทึกการยินยอม PDPA |
 | `migrations/20260926000000_riders.sql` | รายชื่อคนหิ้ว, จำกัด 4 งานต่อรอบ, คืนงาน, ข้อมูลหน้าคนหิ้ว |
-| `seed.sql` | ร้าน เมนู และโปรโมชันตัวอย่าง (สร้างจาก `frontend/src/lib/data/stores.ts`) |
+| `migrations/20260927000000_store_images.sql` | โลโก้และรูปหน้าร้านที่ร้าน Partner ตั้งเอง |
+| `migrations/20260928000000_kfc_menu_sizes.sql` | โซนโรงอาหาร KFC (หลัก), เมนูขนาดธรรมดา/พิเศษ |
+| `migrations/20260929000000_profile_at_first_order.sql` | ไม่ต้องกรอกข้อมูลตอนล็อกอิน แต่ต้องมีข้อมูลครบก่อนสั่งหรือรับงาน |
+| `seed.sql` | ร้านจริง 12 ร้านของโรงอาหาร KFC (หลัก) และเมนู (สร้างจาก `frontend/src/lib/data/stores.ts`) |
 | `generate-seed.mjs` | สร้าง `seed.sql` ใหม่หลังแก้ข้อมูลร้านในแอป: `node supabase/generate-seed.mjs` |
 
 ## ตั้งค่าครั้งแรก
@@ -23,7 +26,10 @@
    1. `migrations/20260924000000_init.sql`
    2. `migrations/20260925000000_profile_onboarding.sql`
    3. `migrations/20260926000000_riders.sql`
-   4. `seed.sql`
+   4. `migrations/20260927000000_store_images.sql`
+   5. `migrations/20260928000000_kfc_menu_sizes.sql` (ต้องกด Run ไฟล์นี้แยกก่อน `seed.sql`)
+   6. `migrations/20260929000000_profile_at_first_order.sql`
+   7. `seed.sql`
 
 ### 2. เปิดล็อกอินด้วย Google
 1. ที่ [Google Cloud Console](https://console.cloud.google.com/apis/credentials) สร้าง **OAuth client ID** (ประเภท Web application)

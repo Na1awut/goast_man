@@ -11,7 +11,7 @@ const TOKEN_KEY = 'gooseman_token';
 
 /**
  * Demo student used when Supabase is not configured. Starts like a brand-new
- * Google account (email + name only), so the first sign-in shows onboarding.
+ * Google account (email + name only), so the first order asks for the profile.
  */
 export const DEMO_USER: User = {
 	id: 'u-demo-001',
@@ -63,8 +63,12 @@ class AuthStore {
 	signInError = $state('');
 	isAuthenticated = $derived(this.user !== null && (isLive || this.token !== null));
 	isPartner = $derived(this.user?.role === 'PARTNER' && !!this.user.partnerStoreId);
-	/** Signed in, but must finish the first-run profile + consent before using the app */
+	/** Profile or consent missing: asked for at the first order (see profileGate) */
 	needsProfile = $derived(this.user !== null && needsOnboarding(this.user));
+	/** Shop owners fill in their contact details straight after sign-in; students can browse first */
+	mustOnboardNow = $derived(this.needsProfile && this.user?.role === 'PARTNER');
+	/** What to call the user before they have picked a nickname */
+	displayName = $derived(this.user ? this.user.nickname || this.user.fullName.split(' ')[0] || '' : '');
 
 	/** Restore a session. Resolves true when someone is signed in. */
 	async init(): Promise<boolean> {

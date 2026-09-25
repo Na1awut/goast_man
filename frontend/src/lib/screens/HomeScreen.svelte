@@ -140,7 +140,7 @@
 		<!-- Greeting + search -->
 		<section class="space-y-3">
 			<div>
-				<h1 class="text-xl font-semibold text-slate-900">สวัสดี {auth.user?.nickname ?? ''}</h1>
+				<h1 class="text-xl font-semibold text-slate-900">สวัสดี {auth.displayName}</h1>
 				<p class="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-slate-500">
 					{greeting}
 					{#if orders.onlineRiders !== null}

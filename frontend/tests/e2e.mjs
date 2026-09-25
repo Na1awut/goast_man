@@ -80,27 +80,10 @@ await shot('01-login');
 
 await clickSel('button.google-button');
 await sleep(1400);
-await check('new account lands on onboarding', await bodyHas('ยินดีต้อนรับสู่ Goose Man'));
-await check('nickname prefilled from Google name', await page.$eval('input[autocomplete="nickname"]', (i) => i.value === 'กูส'));
-await shot('01b-onboarding');
-await click('เริ่มใช้งาน Goose Man');
-await check('onboarding validates', (await bodyHas('เบอร์มือถือ 10 หลัก')) && (await bodyHas('ต้องยอมรับเงื่อนไข')) && (await bodyHas('เลือกชั้นปี')));
-await check('tab bar hidden during onboarding', (await page.$('nav[aria-label="เมนูหลัก"]')) === null);
-await shot('01c-onboarding-errors');
-await page.type('input[autocomplete="tel-national"]', '0812345678');
-await check('phone formats as typed', await page.$eval('input[autocomplete="tel-national"]', (i) => i.value === '081-234-5678'));
-await pickLabel('ปี 3');
-await setSelect('คณะเทคโนโลยีสารสนเทศ (SIT)');
-await page.type('input[placeholder="เช่น 66070500123"]', '66070500123');
-await click('ใช้เบอร์เดียวกัน');
-await clickIn('main', 'นโยบายความเป็นส่วนตัว');
-await check('privacy notice opens from consent', await bodyHas('สิทธิ์ของคุณตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล'));
-await page.keyboard.press('Escape');
-await sleep(300);
-await page.click('main input[type=checkbox]');
-await click('เริ่มใช้งาน Goose Man');
-await sleep(600);
-await check('home after onboarding', await bodyHas('ขี้เกียจเดินฝ่าแดด'));
+// A new account may look around first: no profile form until the first order
+await check('new account goes straight to home', (await bodyHas('ขี้เกียจเดินฝ่าแดด')) && !(await bodyHas('ยินดีต้อนรับสู่ Goose Man')));
+await check('greets with the Google first name', await bodyHas('สวัสดี กูส'));
+await check('tab bar shown before the profile is filled in', (await page.$('nav[aria-label="เมนูหลัก"]')) !== null);
 await check('no emoji in UI (home)', await page.evaluate(() => !/[\u{1F300}-\u{1FAFF}]/u.test(document.body.innerText)));
 await sleep(3600);
 await shot('02-home');
@@ -172,6 +155,34 @@ await check('GOOSEFREE applied, net 90', await bodyHas('สั่งอาหา
 await shot('06-checkout');
 await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
 await shot('06b-checkout-bottom');
+
+// First order: the profile form comes up once, then back to the same checkout
+await check('checkout asks for buyer details once', await bodyHas('กรอกข้อมูลผู้สั่ง (ครั้งเดียว)'));
+await click('สั่งอาหารและหาเพื่อนหิ้ว');
+await sleep(400);
+await check('first order opens the profile form', (await bodyHas('ก่อนสั่งครั้งแรก')) && (await bodyHas('ครั้งต่อไปไม่ต้องกรอกอีก')));
+await check('nickname prefilled from Google name', await page.$eval('input[autocomplete="nickname"]', (i) => i.value === 'กูส'));
+await check('drop-off is not asked in the profile form', !(await bodyHas('ส่งของไปที่ไหนบ่อยที่สุด')));
+await shot('06c-first-order-profile');
+await click('บันทึกแล้วไปต่อ');
+await check('profile form validates', (await bodyHas('เบอร์มือถือ 10 หลัก')) && (await bodyHas('ต้องยอมรับเงื่อนไข')) && (await bodyHas('เลือกชั้นปี')));
+await check('tab bar hidden on the profile form', (await page.$('nav[aria-label="เมนูหลัก"]')) === null);
+await page.type('input[autocomplete="tel-national"]', '0812345678');
+await check('phone formats as typed', await page.$eval('input[autocomplete="tel-national"]', (i) => i.value === '081-234-5678'));
+await pickLabel('ปี 3');
+await setSelect('คณะเทคโนโลยีสารสนเทศ (SIT)');
+await page.type('input[placeholder="เช่น 66070500123"]', '66070500123');
+await click('ใช้เบอร์เดียวกัน');
+await clickIn('main', 'นโยบายความเป็นส่วนตัว');
+await check('privacy notice opens from consent', await bodyHas('สิทธิ์ของคุณตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล'));
+await page.keyboard.press('Escape');
+await sleep(300);
+await page.click('main input[type=checkbox]');
+await click('บันทึกแล้วไปต่อ');
+await sleep(600);
+await check('back on the same checkout, cart kept', (await bodyHas('สรุปคำสั่งซื้อ')) && (await bodyHas('สั่งอาหารและหาเพื่อนหิ้ว (90 ฿)')));
+await check('buyer details now fixed to the account', (await bodyHas('กูส · 081-234-5678')) && (await bodyHas('ผูกกับบัญชี')) && !(await bodyHas('กรอกข้อมูลผู้สั่ง (ครั้งเดียว)')));
+await shot('06d-checkout-with-buyer');
 
 // PromptPay page
 await click('สั่งอาหารและหาเพื่อนหิ้ว');

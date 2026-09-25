@@ -8,10 +8,13 @@
 	import QtyStepper from '$lib/components/QtyStepper.svelte';
 	import { DROPOFF_POINTS } from '$lib/data/locations';
 	import { lineName, normalizePromo, PROMO_CODES, unitPrice } from '$lib/pricing';
+	import { formatPhone } from '$lib/profile';
+	import { auth } from '$lib/stores/auth.svelte';
 	import { campus } from '$lib/stores/campus.svelte';
 	import { cart } from '$lib/stores/cart.svelte';
 	import { checkout } from '$lib/stores/checkout.svelte';
 	import { nav } from '$lib/stores/nav.svelte';
+	import { profileGate } from '$lib/stores/profileGate.svelte';
 	import { storeView } from '$lib/stores/storeView.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { haptic } from '$lib/feedback';
@@ -56,6 +59,8 @@
 	}
 
 	async function placeOrder() {
+		// First order: ask for the buyer's details once, then come back here
+		if (!profileGate.ensure('ORDER')) return;
 		if (checkout.payment === 'PROMPTPAY') {
 			checkout.startPayment();
 			nav.go('PAYMENT');
@@ -82,6 +87,27 @@
 	{:else}
 		{@const store = cart.store}
 		<div class="flex-1 space-y-3 px-4 pt-4 pb-6">
+			<!-- Buyer: details that stay with the account, not edited per order -->
+			{#if auth.needsProfile}
+				<button type="button" onclick={() => profileGate.ensure('ORDER')} class="flex w-full items-center gap-3 rounded-2xl border border-brand-100 bg-brand-50 p-4 text-left">
+					<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-brand"><Icon name="user" class="h-5 w-5" /></span>
+					<span class="min-w-0 flex-1">
+						<span class="block text-sm font-semibold text-slate-900">กรอกข้อมูลผู้สั่ง (ครั้งเดียว)</span>
+						<span class="block text-xs text-slate-600">ชื่อเล่นและเบอร์ให้คนหิ้วติดต่อ ครั้งต่อไปไม่ต้องกรอกอีก</span>
+					</span>
+					<Icon name="chevron-right" class="h-4 w-4 shrink-0 text-slate-400" />
+				</button>
+			{:else if auth.user}
+				<section class="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white p-4" aria-label="ผู้สั่ง">
+					<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500"><Icon name="user" class="h-5 w-5" /></span>
+					<span class="min-w-0 flex-1">
+						<span class="block truncate text-sm font-semibold text-slate-900">{auth.user.nickname} · <span class="font-normal tabular-nums">{formatPhone(auth.user.phoneNumber)}</span></span>
+						<span class="block truncate text-xs text-slate-500">{auth.user.faculty || auth.user.email}</span>
+					</span>
+					<span class="flex shrink-0 items-center gap-1 text-[11px] text-slate-400"><Icon name="lock" class="h-3.5 w-3.5" /> ผูกกับบัญชี</span>
+				</section>
+			{/if}
+
 			<!-- Drop-off -->
 			<section class="space-y-3 rounded-2xl border border-slate-100 bg-white p-4">
 				<h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900"><Icon name="pin" class="h-4 w-4 text-brand" /> จุดส่งมอบอาหารใน มจธ.</h2>

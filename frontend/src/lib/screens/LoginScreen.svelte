@@ -20,9 +20,9 @@
 		error = '';
 		try {
 			const user = await auth.signInWithGoogle({ asPartner });
-			nav.reset(auth.needsProfile ? 'ONBOARDING' : auth.isPartner ? 'PARTNER' : 'HOME');
+			nav.reset(auth.mustOnboardNow ? 'ONBOARDING' : auth.isPartner ? 'PARTNER' : 'HOME');
 			void orders.init(user.id);
-			if (!auth.needsProfile) toast.show(`เข้าสู่ระบบแล้ว สวัสดี ${user.nickname}`, 'success');
+			if (!auth.mustOnboardNow) toast.show(`เข้าสู่ระบบแล้ว สวัสดี ${auth.displayName}`, 'success');
 		} catch (err) {
 			error = err instanceof AuthError ? err.message : 'เข้าสู่ระบบไม่สำเร็จ ลองใหม่อีกครั้ง';
 		} finally {
