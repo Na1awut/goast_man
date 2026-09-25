@@ -12,6 +12,10 @@ export interface StorefrontDraft {
 	fastLaneMinutes?: number;
 	/** A new banner picked by the partner; `null` removes the current one */
 	bannerFile?: File | null;
+	/** A new logo; `null` removes it (screens then show the name's first letter) */
+	logoFile?: File | null;
+	/** A new store photo for lists and cards. A store always keeps a photo, so it can only be replaced */
+	photoFile?: File;
 }
 
 class CatalogStore {
@@ -62,10 +66,15 @@ class CatalogStore {
 	async updateStorefront(storeId: string, draft: StorefrontDraft) {
 		if (isLive) {
 			const current = this.byId(storeId);
-			let bannerUrl = current?.bannerUrl;
-			if (draft.bannerFile) bannerUrl = await api.uploadBanner(storeId, draft.bannerFile);
-			if (draft.bannerFile === null) bannerUrl = undefined;
-			await api.updateStorefront(draft.tagline, bannerUrl, draft.fastLaneMinutes);
+			// undefined = unchanged, null = removed, File = upload and use
+			const resolve = async (file: File | null | undefined, now: string | undefined, kind: 'banner' | 'logo' | 'photo') =>
+				file === undefined ? now : file === null ? undefined : api.uploadStoreImage(storeId, file, kind);
+			const [bannerUrl, logoUrl, imageUrl] = await Promise.all([
+				resolve(draft.bannerFile, current?.bannerUrl, 'banner'),
+				resolve(draft.logoFile, current?.logoUrl, 'logo'),
+				resolve(draft.photoFile, current?.imageUrl, 'photo')
+			]);
+			await api.updateStorefront({ tagline: draft.tagline, fastLaneMinutes: draft.fastLaneMinutes, bannerUrl, logoUrl, imageUrl });
 			await this.#reloadStore(storeId);
 			return;
 		}
@@ -74,6 +83,9 @@ class CatalogStore {
 			store.fastLaneMinutes = draft.fastLaneMinutes;
 			if (draft.bannerFile) store.bannerUrl = URL.createObjectURL(draft.bannerFile);
 			if (draft.bannerFile === null) store.bannerUrl = undefined;
+			if (draft.logoFile) store.logoUrl = URL.createObjectURL(draft.logoFile);
+			if (draft.logoFile === null) store.logoUrl = undefined;
+			if (draft.photoFile) store.imageUrl = URL.createObjectURL(draft.photoFile);
 		});
 	}
 

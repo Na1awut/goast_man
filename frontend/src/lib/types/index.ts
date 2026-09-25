@@ -112,6 +112,8 @@ export interface Store {
 	isPartner: boolean;
 	/** Storefront banner set by the partner (falls back to imageUrl) */
 	bannerUrl?: string;
+	/** Store logo set by the partner; screens fall back to the name's first letter */
+	logoUrl?: string;
 	tagline?: string;
 	/** Prep time for app orders at a partner's fast lane */
 	fastLaneMinutes?: number;

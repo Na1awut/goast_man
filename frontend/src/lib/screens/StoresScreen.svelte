@@ -6,6 +6,7 @@
 	import PartnerBadge from '$lib/components/PartnerBadge.svelte';
 	import PromoLine from '$lib/components/PromoLine.svelte';
 	import SmartImage from '$lib/components/SmartImage.svelte';
+	import StoreLogo from '$lib/components/StoreLogo.svelte';
 	import { livePromotions, searchStores, STORE_ZONES, ZONE_NAMES } from '$lib/data/stores';
 	import { catalog } from '$lib/stores/catalog.svelte';
 	import { cart } from '$lib/stores/cart.svelte';
@@ -81,7 +82,10 @@
 				{#each results as { store, matchedItems } (store.id)}
 					<li>
 						<button type="button" onclick={() => storeView.open(store.id)} class="flex w-full gap-3 rounded-2xl border border-slate-100 bg-white p-3 text-left">
-							<SmartImage src={store.imageUrl} alt={store.name} class="h-24 w-24 shrink-0 rounded-xl" />
+							<span class="relative h-24 w-24 shrink-0">
+								<SmartImage src={store.imageUrl} alt={store.name} class="h-full w-full rounded-xl" />
+								{#if store.isPartner}<StoreLogo {store} class="absolute -right-1.5 -bottom-1.5 h-8 w-8 text-xs ring-2 ring-white" />{/if}
+							</span>
 							<div class="flex min-w-0 flex-1 flex-col">
 								<p class="flex items-center gap-1.5">
 									<span class="truncate text-sm font-semibold text-slate-900">{store.name}</span>

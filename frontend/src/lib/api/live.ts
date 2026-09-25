@@ -57,6 +57,7 @@ function mapStore(r: Row): Store {
 		lock: r.lock ?? '',
 		isPartner: r.is_partner,
 		bannerUrl: r.banner_url ?? undefined,
+		logoUrl: r.logo_url ?? undefined,
 		tagline: r.tagline ?? undefined,
 		fastLaneMinutes: r.fast_lane_minutes ?? undefined,
 		promotions: ((r.promotions ?? []) as Row[])
@@ -346,14 +347,31 @@ export function subscribeChat(orderId: string, onMessage: (message: ChatMessage)
 
 // ---------- Partner storefront & promotions ----------
 
-export async function updateStorefront(tagline: string, bannerUrl: string | undefined, fastLaneMinutes: number | undefined): Promise<void> {
-	check(await db().rpc('update_storefront', { p_tagline: tagline, p_banner_url: bannerUrl ?? '', p_fast_lane_minutes: fastLaneMinutes ?? null }));
+export interface StorefrontArgs {
+	tagline: string;
+	fastLaneMinutes?: number;
+	bannerUrl?: string;
+	logoUrl?: string;
+	imageUrl?: string;
 }
 
-/** Uploads to store-banners/<storeId>/… and returns the public URL */
-export async function uploadBanner(storeId: string, file: File): Promise<string> {
+/** Images must be URLs from uploadStoreImage(); the server refuses anything else */
+export async function updateStorefront(a: StorefrontArgs): Promise<void> {
+	check(
+		await db().rpc('update_storefront', {
+			p_tagline: a.tagline,
+			p_banner_url: a.bannerUrl ?? '',
+			p_fast_lane_minutes: a.fastLaneMinutes ?? null,
+			p_logo_url: a.logoUrl ?? '',
+			p_image_url: a.imageUrl ?? ''
+		})
+	);
+}
+
+/** Uploads a banner, logo or store photo to store-banners/<storeId>/… and returns the public URL */
+export async function uploadStoreImage(storeId: string, file: File, kind: 'banner' | 'logo' | 'photo'): Promise<string> {
 	const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-	const path = `${storeId}/${Date.now()}.${ext}`;
+	const path = `${storeId}/${kind}-${Date.now()}.${ext}`;
 	check(await db().storage.from('store-banners').upload(path, file, { contentType: file.type, upsert: true }));
 	return db().storage.from('store-banners').getPublicUrl(path).data.publicUrl;
 }

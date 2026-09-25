@@ -1,6 +1,7 @@
 <script lang="ts">
 	import banner from '$lib/assets/banner.webp';
 	import GooseMark from '$lib/components/GooseMark.svelte';
+	import StoreLogo from '$lib/components/StoreLogo.svelte';
 	import Icon, { type IconName } from '$lib/components/Icon.svelte';
 	import PartnerBadge from '$lib/components/PartnerBadge.svelte';
 	import PromoLine from '$lib/components/PromoLine.svelte';
@@ -216,6 +217,7 @@
 										<span class="flex min-w-0 items-center gap-1.5 text-xs font-medium text-white/90">
 											<GooseMark class="h-6 w-6 shrink-0 rounded-md" />
 											<span class="shrink-0">×</span>
+											<StoreLogo {store} class="h-6 w-6 text-[11px]" />
 											<span class="truncate">{store.name}</span>
 										</span>
 										<span class="min-w-0">

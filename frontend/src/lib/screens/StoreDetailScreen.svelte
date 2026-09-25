@@ -4,6 +4,7 @@
 	import PartnerBadge from '$lib/components/PartnerBadge.svelte';
 	import QtyStepper from '$lib/components/QtyStepper.svelte';
 	import SmartImage from '$lib/components/SmartImage.svelte';
+	import StoreLogo from '$lib/components/StoreLogo.svelte';
 	import { livePromotions, ZONE_NAMES } from '$lib/data/stores';
 	import { cart } from '$lib/stores/cart.svelte';
 	import { nav } from '$lib/stores/nav.svelte';
@@ -82,6 +83,7 @@
 
 	<!-- Store info -->
 	<section class="relative -mt-4 rounded-t-3xl bg-white px-4 pt-5 pb-4">
+		<StoreLogo {store} class="-mt-14 mb-2 h-16 w-16 text-2xl shadow-sm ring-4 ring-white" />
 		<h1 class="text-xl font-bold text-slate-900">{store.name}</h1>
 		{#if store.tagline}<p class="mt-0.5 text-sm text-slate-600">{store.tagline}</p>{/if}
 		{#if store.isPartner}
