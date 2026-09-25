@@ -14,4 +14,5 @@ carries ("หิ้ว") the food to their building. KMUTT accounts only (`@kmut
 cd frontend && npm install && npm run dev   # http://localhost:5173
 ```
 
-**Team guide (Thai, start here):** [`PROJECT_GUIDE.md`](PROJECT_GUIDE.md): how everything works, how to run, test and deploy, and what is still open.
+**Team guide (Thai, start here):** [`PROJECT_GUIDE.md`](PROJECT_GUIDE.md): how everything works, how to run, test and deploy.
+**Plan (Thai):** [`PLAN.md`](PLAN.md): what has been done, recent updates, and what comes next.
