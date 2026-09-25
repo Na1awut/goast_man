@@ -11,10 +11,10 @@
 	import { toast } from '$lib/stores/toast.svelte';
 
 	const returning = !!auth.user?.consentedAt;
-	/** Opened on the way to an order or rider mode (profileGate), not straight after sign-in */
+	/** Opened on the way to the first order (profileGate), not straight after sign-in */
 	const gated = nav.history.length > 0;
 
-	const title = returning ? 'เงื่อนไขมีการอัปเดต' : gated ? (profileGate.reason === 'RIDER' ? 'ก่อนเริ่มรับงานหิ้ว' : 'ก่อนสั่งครั้งแรก') : 'ยินดีต้อนรับสู่ Goose Man';
+	const title = returning ? 'เงื่อนไขมีการอัปเดต' : gated ? 'ก่อนสั่งครั้งแรก' : 'ยินดีต้อนรับสู่ Goose Man';
 	const subtitle = returning
 		? 'อ่านและยอมรับอีกครั้งเพื่อใช้งานต่อ'
 		: gated
@@ -25,7 +25,7 @@
 
 	function done() {
 		if (gated) {
-			toast.show(profileGate.reason === 'RIDER' ? 'บันทึกแล้ว เริ่มรับงานได้เลย' : 'บันทึกแล้ว ตรวจรายการแล้วกดสั่งได้เลย', 'success');
+			toast.show('บันทึกแล้ว ตรวจรายการแล้วกดสั่งได้เลย', 'success');
 			profileGate.done();
 			return;
 		}

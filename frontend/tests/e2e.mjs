@@ -288,65 +288,10 @@ await sleep(500);
 await check('session restored on reload', await bodyHas('ขี้เกียจเดินฝ่าแดด'));
 await check('no horizontal overflow', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
 
-// ---------- Rider flow (the demo account is on the rider roster) ----------
-const acceptJob = (code) =>
-	page.evaluate((code) => {
-		const li = [...document.querySelectorAll('main li')].find((l) => l.innerText.includes(code) && [...l.querySelectorAll('button')].some((b) => b.innerText.trim() === 'รับงาน'));
-		const btn = li && [...li.querySelectorAll('button')].find((b) => b.innerText.trim() === 'รับงาน');
-		btn?.click();
-		return !!btn;
-	}, code);
-const stopKinds = () => page.$$eval('main ol > li', (lis) => lis.map((li) => (li.querySelector('p')?.innerText.trim().startsWith('รับ') ? 'P' : 'D')).join(''));
-const clickInLi = (code, text) =>
-	page.evaluate(
-		(code, text) => {
-			const li = [...document.querySelectorAll('main ol > li')].find((l) => l.innerText.includes(code) && [...l.querySelectorAll('button')].some((b) => b.innerText.includes(text)));
-			const btn = li && [...li.querySelectorAll('button')].find((b) => b.innerText.includes(text));
-			btn?.click();
-			return !!btn;
-		},
-		code,
-		text
-	);
-
+// Rider mode is for riders verified by the team, not something to open from the profile
 await clickIn('nav', 'โปรไฟล์');
-await clickIn('main', 'โหมดคนหิ้ว');
-await sleep(400);
-await check('rider board lists open jobs', (await bodyHas('งานที่รอคนรับ')) && (await bodyHas('#KM-3121')) && (await bodyHas('5 งาน')));
-await check('empty-handed rider sees nearby jobs', await bodyHas('งานใกล้คุณ'));
-await shot('19-rider-board');
-
-await check('accept first job', await acceptJob('#KM-3121'));
-await sleep(500);
-await check('round shows a planned route', (await bodyHas('1/4 งาน')) && (await bodyHas('ส่งครบในประมาณ')) && (await stopKinds()) === 'PD');
-await check('suggestions switch to on-the-way jobs', await bodyHas('รับเพิ่มได้ ทางเดียวกัน'));
-await check('accept second job', await acceptJob('#KM-3124'));
-await sleep(500);
-await check('both canteen pickups come before the deliveries', (await stopKinds()) === 'PPDD', await stopKinds());
-await check('customer contact shown once held', await bodyHas('มายด์'));
-await shot('20-rider-round');
-
-await check('release opens a confirmation', await clickInLi('#KM-3124', 'คืนงาน'));
 await sleep(300);
-await page.click('[role=dialog] button.bg-red-600');
-await sleep(500);
-await check('released job back on the board', (await bodyHas('1/4 งาน')) && (await stopKinds()) === 'PD');
-
-await check('pick up the food', await clickInLi('#KM-3121', 'รับของแล้ว'));
-await sleep(500);
-await check('no new jobs while delivering', await bodyHas('เริ่มส่งของแล้ว ส่งรอบนี้ให้ครบก่อน'));
-await check('open deliver sheet', await clickInLi('#KM-3121', 'ส่งของ'));
-await sleep(300);
-await page.type('[role=dialog] input', '0000');
-await page.click('[role=dialog] button[type=submit]');
-await sleep(400);
-await check('wrong OTP refused', await bodyHas('รหัสไม่ถูกต้อง'));
-await page.type('[role=dialog] input', '1234');
-await shot('21-rider-otp');
-await page.click('[role=dialog] button[type=submit]');
-await sleep(600);
-await check('right OTP completes the job', (await bodyHas('ส่งมอบ #KM-3121 เรียบร้อย')) && (await bodyHas('0/4 งาน')));
-await check('no horizontal overflow (rider)', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+await check('profile has no rider-mode entry', !(await bodyHas('โหมดคนหิ้ว')));
 await clickIn('nav', 'หน้าแรก');
 
 await page.setViewport({ width: 1280, height: 800 });

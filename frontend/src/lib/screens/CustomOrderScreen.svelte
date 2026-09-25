@@ -31,7 +31,7 @@
 		submitted = true;
 		if (!isValid || sending) return;
 		// First order: ask for the buyer's details once; what was typed here stays
-		if (!profileGate.ensure('ORDER')) return;
+		if (!profileGate.ensure()) return;
 		sending = true;
 		try {
 			await orders.place({

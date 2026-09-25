@@ -60,7 +60,7 @@
 
 	async function placeOrder() {
 		// First order: ask for the buyer's details once, then come back here
-		if (!profileGate.ensure('ORDER')) return;
+		if (!profileGate.ensure()) return;
 		if (checkout.payment === 'PROMPTPAY') {
 			checkout.startPayment();
 			nav.go('PAYMENT');
@@ -89,7 +89,7 @@
 		<div class="flex-1 space-y-3 px-4 pt-4 pb-6">
 			<!-- Buyer: details that stay with the account, not edited per order -->
 			{#if auth.needsProfile}
-				<button type="button" onclick={() => profileGate.ensure('ORDER')} class="flex w-full items-center gap-3 rounded-2xl border border-brand-100 bg-brand-50 p-4 text-left">
+				<button type="button" onclick={() => profileGate.ensure()} class="flex w-full items-center gap-3 rounded-2xl border border-brand-100 bg-brand-50 p-4 text-left">
 					<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-brand"><Icon name="user" class="h-5 w-5" /></span>
 					<span class="min-w-0 flex-1">
 						<span class="block text-sm font-semibold text-slate-900">กรอกข้อมูลผู้สั่ง (ครั้งเดียว)</span>
