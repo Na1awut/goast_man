@@ -6,7 +6,7 @@
 // The OTP for demo jobs is DEMO_OTP.
 import type { RiderJob } from '$lib/types';
 import * as api from '$lib/api/live';
-import { MOCK_STORES, findStore } from '$lib/data/stores';
+import { STORE_CATALOGUE, findStore } from '$lib/data/stores';
 import { PLACES, planRound, START_OPTIONS, suggestAddOns, toRouteOrder, travelFn, type Route, type RouteOrder } from '$lib/routing';
 import { friendlyError, isLive } from '$lib/supabase';
 import { catalog } from './catalog.svelte';
@@ -226,7 +226,7 @@ const DEMO_CUSTOMERS: Record<string, { nickname: string; phone: string }> = {
 };
 
 function storeJob(id: string, code: string, storeId: string, lines: [string, number][], dropoffName: string, payment: RiderJob['paymentMethod'], minutesAgo: number): RiderJob {
-	const store = findStore(MOCK_STORES, storeId)!;
+	const store = findStore(STORE_CATALOGUE, storeId)!;
 	const items = lines.map(([menuId, quantity]) => {
 		const m = store.menuItems.find((x) => x.id === menuId)!;
 		return { name: m.name, price: m.price, quantity };
@@ -252,7 +252,7 @@ function storeJob(id: string, code: string, storeId: string, lines: [string, num
 
 function demoJobs(): RiderJob[] {
 	return [
-		storeJob('demo-job-4', '#KM-3107', 'store-kaprao', [['km1', 1]], 'อาคาร SIT ชั้น 1', 'PROMPTPAY', 6),
+		storeJob('demo-job-4', '#KM-3107', 'kfc-04', [['kfc-04-1', 1]], 'อาคาร SIT ชั้น 1', 'PROMPTPAY', 6),
 		{
 			id: 'demo-job-5',
 			orderCode: '#KM-3115',
@@ -269,8 +269,8 @@ function demoJobs(): RiderJob[] {
 			note: 'ถ้าขนมปังหมด เอาแซนด์วิชแทนได้',
 			createdAt: new Date(Date.now() - 5 * 60_000).toISOString()
 		},
-		storeJob('demo-job-1', '#KM-3121', 'store-panee', [['pm1', 2]], 'อาคารเรียนรวม CB2', 'CASH', 3),
-		storeJob('demo-job-2', '#KM-3124', 'store-somtam', [['st1', 1], ['st3', 1]], 'หอสมุด มจธ. (KMUTT Library)', 'CASH', 2),
-		storeJob('demo-job-3', '#KM-3130', 'store-boba', [['bb1', 2]], 'อาคาร LX ชั้น 1 หน้าตู้เต่าบิน', 'PROMPTPAY', 1)
+		storeJob('demo-job-1', '#KM-3121', 'kfc-05', [['kfc-05-4', 2]], 'อาคารเรียนรวม CB2', 'CASH', 3),
+		storeJob('demo-job-2', '#KM-3124', 'kfc-03', [['kfc-03-1', 1], ['kfc-03-11', 1]], 'หอสมุด มจธ. (KMUTT Library)', 'CASH', 2),
+		storeJob('demo-job-3', '#KM-3130', 'kfc-10', [['kfc-10-1', 2]], 'อาคาร LX ชั้น 1 หน้าตู้เต่าบิน', 'PROMPTPAY', 1)
 	];
 }

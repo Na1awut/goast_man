@@ -1,7 +1,7 @@
 // The store catalogue every screen reads (Svelte 5 runes).
-// Demo mode: the in-memory MOCK_STORES. Live mode: Supabase, reloaded on demand.
+// Demo mode: the in-memory STORE_CATALOGUE. Live mode: Supabase, reloaded on demand.
 import type { Promotion, Store } from '$lib/types';
-import { findStore, livePromotions, MOCK_STORES, sortForBrowsing } from '$lib/data/stores';
+import { findStore, livePromotions, STORE_CATALOGUE, sortForBrowsing } from '$lib/data/stores';
 import * as api from '$lib/api/live';
 import { friendlyError, isLive } from '$lib/supabase';
 import { uid } from '$lib/utils';
@@ -19,7 +19,7 @@ export interface StorefrontDraft {
 }
 
 class CatalogStore {
-	stores = $state<Store[]>(isLive ? [] : MOCK_STORES);
+	stores = $state<Store[]>(isLive ? [] : STORE_CATALOGUE);
 	loading = $state(isLive);
 	error = $state<string | null>(null);
 
@@ -59,6 +59,12 @@ class CatalogStore {
 	#patch(storeId: string, fn: (store: Store) => void) {
 		const store = this.stores.find((s) => s.id === storeId);
 		if (store) fn(store);
+	}
+
+	/** Demo mode only: let the demo shop owner's store act as a partner in this browser */
+	markDemoPartner(storeId: string) {
+		if (isLive) return;
+		this.#patch(storeId, (store) => (store.isPartner = true));
 	}
 
 	// ---------- Partner actions ----------

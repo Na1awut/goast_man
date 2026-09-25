@@ -13,6 +13,7 @@ export const DROPOFF_POINTS: DropoffPoint[] = [
 ];
 
 export const PICKUP_HUBS: PickupHub[] = [
+	{ id: 'kfc-main', name: 'โรงอาหาร KFC (หลัก)', shortName: 'KFC หลัก', icon: 'utensils', zone: 'CANTEEN' },
 	{ id: 'canteen-male', name: 'โรงอาหารพระจอมเกล้า (โรงชาย)', shortName: 'โรงชาย', icon: 'utensils', zone: 'CANTEEN' },
 	{ id: 'green-canteen', name: 'โรงอาหาร 190 ปี (Green Canteen)', shortName: 'Green Canteen', icon: 'utensils', zone: 'CANTEEN' },
 	{ id: '7eleven-dorm', name: 'เซเว่นหน้าหอใน มจธ.', shortName: 'เซเว่นหน้าหอใน', icon: 'cart', zone: 'OFF_CAMPUS' },

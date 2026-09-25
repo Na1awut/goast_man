@@ -9,7 +9,7 @@
 import type { CartItem, ChatMessage, MenuItem, Order, OrderKind, OrderStatus, PaymentMethod } from '$lib/types';
 import * as api from '$lib/api/live';
 import { pickRider, RIDER_POOL } from '$lib/data/riders';
-import { findStore, MOCK_STORES } from '$lib/data/stores';
+import { findStore, STORE_CATALOGUE } from '$lib/data/stores';
 import { friendlyError, isLive } from '$lib/supabase';
 import { nowTime, randomDigits4, uid } from '$lib/utils';
 import { catalog } from './catalog.svelte';
@@ -21,7 +21,7 @@ const CHAT_REPLY_AFTER_MS = 2000;
 
 /** Resolve [menuItemId, qty] pairs against the demo catalogue (seed data only) */
 function seedItems(storeId: string, lines: [string, number][]): CartItem[] {
-	const store = findStore(MOCK_STORES, storeId);
+	const store = findStore(STORE_CATALOGUE, storeId);
 	return lines.flatMap(([id, quantity]) => {
 		const menuItem = store?.menuItems.find((m) => m.id === id);
 		return menuItem ? [{ menuItem, quantity }] : [];
@@ -173,7 +173,7 @@ class OrdersStore {
 				input.kind === 'STORE' && input.storeId && input.items
 					? await api.placeStoreOrder({
 							storeId: input.storeId,
-							items: input.items.map((i) => ({ menuItemId: i.menuItem.id, quantity: i.quantity })),
+							items: input.items.map((i) => ({ menuItemId: i.menuItem.id, quantity: i.quantity, special: !!i.special })),
 							dropoffName: input.dropoffName,
 							note: input.note,
 							paymentMethod: input.paymentMethod,
@@ -346,18 +346,18 @@ class OrdersStore {
 				id: 'ord-seed-7720',
 				orderCode: '#KM-7720',
 				kind: 'STORE',
-				storeId: 'store-boba',
+				storeId: 'kfc-05',
 				customerId: 'u-demo-001',
 				rider: RIDER_POOL[1],
-				pickupName: 'BobaLab ชานมไข่มุก มจธ.',
+				pickupName: 'ร้านข้าวมันไก่ & ข้าวหมกไก่ (HALAL FOODS)',
 				dropoffName: 'อาคารเรียนรวม CB2',
-				itemDetails: 'ชานมไข่มุก Original ×1, มัทฉะลาเต้ ×1',
-				items: seedItems('store-boba', [['bb1', 1], ['bb3', 1]]),
-				foodTotal: 100,
+				itemDetails: 'ข้าวมันไก่ทอด ×1, ข้าวมันไก่ต้ม ×1',
+				items: seedItems('kfc-05', [['kfc-05-4', 1], ['kfc-05-3', 1]]),
+				foodTotal: 75,
 				deliveryFee: 15,
 				codeDiscount: 0,
-				partnerDiscount: 10,
-				totalPrice: 105,
+				partnerDiscount: 0,
+				totalPrice: 90,
 				paymentMethod: 'PROMPTPAY',
 				status: 'COMPLETED',
 				otpCode: '3391',

@@ -21,6 +21,16 @@ export function normalizePromo(input: string): PromoCode | null {
 }
 
 /** `deliveryFee` is the fee still payable after any partner free-delivery promotion */
+/** Price of one unit of a cart line: the พิเศษ size when chosen and offered */
+export function unitPrice(line: Pick<CartItem, 'menuItem' | 'special'>): number {
+	return line.special && line.menuItem.specialPrice ? line.menuItem.specialPrice : line.menuItem.price;
+}
+
+/** Display name of a cart line, with the size when it is พิเศษ */
+export function lineName(line: Pick<CartItem, 'menuItem' | 'special'>): string {
+	return line.special && line.menuItem.specialPrice ? `${line.menuItem.name} (พิเศษ)` : line.menuItem.name;
+}
+
 export function promoDiscount(code: PromoCode | null, deliveryFee: number): number {
 	if (code === 'KMUTTFIRST') return 15;
 	if (code === 'GOOSEFREE') return deliveryFee;

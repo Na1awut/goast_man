@@ -70,7 +70,7 @@ export interface PickupHub {
 }
 
 // --- Store & Menu ---
-export type StoreZone = 'canteen-male' | 'green-canteen' | 'dorm';
+export type StoreZone = 'kfc-main' | 'canteen-male' | 'green-canteen' | 'dorm';
 
 /**
  * DEAL     = the store's own promotion, live as soon as it is saved.
@@ -126,6 +126,8 @@ export interface MenuItem {
 	storeId: string;
 	name: string;
 	price: number;
+	/** Price of the พิเศษ (larger) size, for items the stall sells in two sizes */
+	specialPrice?: number;
 	originalPrice?: number;
 	description: string;
 	imageUrl: string;
@@ -138,6 +140,8 @@ export interface MenuItem {
 export interface CartItem {
 	menuItem: MenuItem;
 	quantity: number;
+	/** พิเศษ size; only for items with a specialPrice */
+	special?: boolean;
 }
 
 // --- Rider ---

@@ -19,6 +19,7 @@ const place = (id: string, lat: number, lng: number): Place => ({ id, lat, lng, 
 export const PLACES: Record<string, Place> = Object.fromEntries(
 	[
 		// Pickup hubs (PICKUP_HUBS in data/locations.ts)
+		place('kfc-main', 13.6509, 100.4952),
 		place('canteen-male', 13.6505, 100.4948),
 		place('green-canteen', 13.6519, 100.4935),
 		place('7eleven-dorm', 13.6488, 100.4955),
@@ -39,6 +40,7 @@ export const PLACES: Record<string, Place> = Object.fromEntries(
 
 /** Pickup place for a store, by the zone it trades in */
 export const STORE_ZONE_PLACE: Record<StoreZone, string> = {
+	'kfc-main': 'kfc-main',
 	'canteen-male': 'canteen-male',
 	'green-canteen': 'green-canteen',
 	dorm: 'dorm-food'

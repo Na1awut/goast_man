@@ -4,6 +4,7 @@ import { isKmuttEmail } from '$lib/utils';
 import { digitsOnly, needsOnboarding, TERMS_VERSION, type ProfileInput } from '$lib/profile';
 import * as api from '$lib/api/live';
 import { friendlyError, isLive } from '$lib/supabase';
+import { catalog } from './catalog.svelte';
 
 const USER_KEY = 'gooseman_user';
 const TOKEN_KEY = 'gooseman_token';
@@ -30,19 +31,23 @@ export const DEMO_USER: User = {
 	createdAt: '2025-08-01T00:00:00.000Z'
 };
 
-/** Demo shop owner: not a student, bound to one partner store */
+/**
+ * Demo shop owner: not a student, bound to one store. The real stores have not
+ * joined as partners, so the demo marks this one as a partner only in this
+ * browser while the demo owner is signed in (see catalog.markDemoPartner).
+ */
 export const DEMO_PARTNER: User = {
 	id: 'u-demo-partner',
-	email: 'panee.shop@example.com',
-	fullName: 'ป้าณี ร้านข้าวมันไก่',
-	nickname: 'ป้าณี',
+	email: 'demo.shop@example.com',
+	fullName: 'บัญชีร้านทดลอง',
+	nickname: 'ร้านทดลอง',
 	studentId: '',
 	faculty: '',
 	avatarUrl: '',
 	phoneNumber: '',
 	promptPayNo: '',
 	role: 'PARTNER',
-	partnerStoreId: 'store-panee',
+	partnerStoreId: 'kfc-05',
 	status: 'ACTIVE',
 	buyerRatingAvg: 5,
 	createdAt: '2025-08-01T00:00:00.000Z'
@@ -80,6 +85,7 @@ class AuthStore {
 			if (user.role !== 'PARTNER' && !isKmuttEmail(user.email)) throw new AuthError('invalid domain');
 			this.user = user;
 			this.token = token;
+			if (user.partnerStoreId) catalog.markDemoPartner(user.partnerStoreId);
 			return true;
 		} catch {
 			await this.logout();
@@ -103,6 +109,7 @@ class AuthStore {
 		}
 		this.user = user;
 		this.token = `demo-token-${Date.now()}`;
+		if (user.partnerStoreId) catalog.markDemoPartner(user.partnerStoreId);
 		localStorage.setItem(USER_KEY, JSON.stringify(user));
 		localStorage.setItem(TOKEN_KEY, this.token);
 		return user;

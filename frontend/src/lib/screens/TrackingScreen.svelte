@@ -9,6 +9,7 @@
 	import { nav } from '$lib/stores/nav.svelte';
 	import { orders } from '$lib/stores/orders.svelte';
 	import { isLive } from '$lib/supabase';
+	import { lineName, unitPrice } from '$lib/pricing';
 	import { formatBaht, formatTime } from '$lib/utils';
 
 	const order = $derived(orders.current);
@@ -157,8 +158,8 @@
 				</p>
 				{#if order.items?.length}
 					<ul class="mt-3 space-y-1.5">
-						{#each order.items as item (item.menuItem.id)}
-							<li class="flex justify-between gap-2 text-slate-700"><span class="truncate">{item.quantity}x {item.menuItem.name}</span><span class="shrink-0 tabular-nums">{formatBaht(item.menuItem.price * item.quantity)}</span></li>
+						{#each order.items as item (item.menuItem.id + (item.special ? ':special' : ''))}
+							<li class="flex justify-between gap-2 text-slate-700"><span class="truncate">{item.quantity}x {lineName(item)}</span><span class="shrink-0 tabular-nums">{formatBaht(unitPrice(item) * item.quantity)}</span></li>
 						{/each}
 					</ul>
 				{:else}

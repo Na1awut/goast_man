@@ -1,20 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import type { RiderJob } from '$lib/types';
-import { MOCK_STORES, findStore } from '$lib/data/stores';
+import { STORE_CATALOGUE, findStore } from '$lib/data/stores';
 import { travelFn } from './cost';
 import { DELIVERY_SLA_S, planRound, START_OPTIONS, toRouteOrder } from './jobs';
 import { PLACES } from './places';
 
 const NOW = Date.parse('2026-09-24T12:00:00Z');
 const minutesAgo = (m: number) => new Date(NOW - m * 60_000).toISOString();
-const byId = (id: string) => findStore(MOCK_STORES, id);
+const byId = (id: string) => findStore(STORE_CATALOGUE, id);
 
 const job = (extra: Partial<RiderJob>): RiderJob => ({
 	id: 'j1',
 	orderCode: '#KM-0001',
 	kind: 'STORE',
-	storeId: 'store-panee',
-	pickupName: 'ข้าวมันไก่ป้าณี (สูตรไหหลำ)',
+	storeId: 'kfc-05',
+	pickupName: 'ร้านข้าวมันไก่ & ข้าวหมกไก่ (HALAL FOODS)',
 	dropoffName: 'อาคารเรียนรวม CB2',
 	itemDetails: 'ข้าวมันไก่ ×1',
 	items: [],
@@ -30,7 +30,7 @@ const job = (extra: Partial<RiderJob>): RiderJob => ({
 describe('toRouteOrder', () => {
 	it('maps a store order to its canteen and drop-off building', () => {
 		const o = toRouteOrder(job({}), NOW, byId)!;
-		expect(o.pickup.id).toBe('canteen-male');
+		expect(o.pickup.id).toBe('kfc-main');
 		expect(o.dropoff.id).toBe('cb2');
 	});
 
@@ -41,7 +41,7 @@ describe('toRouteOrder', () => {
 	});
 
 	it('counts store prep time from when the order was placed', () => {
-		const queue = byId('store-panee')!.queueMinutes * 60;
+		const queue = byId('kfc-05')!.queueMinutes * 60;
 		expect(toRouteOrder(job({ createdAt: minutesAgo(2) }), NOW, byId)!.readyAt).toBeCloseTo(queue - 120);
 		expect(toRouteOrder(job({ createdAt: minutesAgo(30) }), NOW, byId)!.readyAt).toBe(0);
 	});

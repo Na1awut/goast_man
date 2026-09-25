@@ -7,7 +7,7 @@
 	import PromoLine from '$lib/components/PromoLine.svelte';
 	import SmartImage from '$lib/components/SmartImage.svelte';
 	import StoreLogo from '$lib/components/StoreLogo.svelte';
-	import { livePromotions, searchStores, STORE_ZONES, ZONE_NAMES } from '$lib/data/stores';
+	import { hasReviews, livePromotions, searchStores, STORE_ZONES, ZONE_NAMES } from '$lib/data/stores';
 	import { catalog } from '$lib/stores/catalog.svelte';
 	import { cart } from '$lib/stores/cart.svelte';
 	import { storeView } from '$lib/stores/storeView.svelte';
@@ -40,7 +40,7 @@
 		</label>
 
 		<div class="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4" role="tablist" aria-label="โซนอาหาร">
-			{#each STORE_ZONES as zone (zone.id)}
+			{#each STORE_ZONES.filter((z) => z.id === 'all' || catalog.stores.some((s) => s.zone === z.id)) as zone (zone.id)}
 				{@const active = storeView.zone === zone.id}
 				<button
 					type="button"
@@ -93,8 +93,12 @@
 								</p>
 								<p class="truncate text-xs text-slate-500">{store.category} · {ZONE_NAMES[store.zone]}</p>
 								<p class="mt-1 flex items-center gap-1 text-xs text-slate-600">
-									<Icon name="star" class="h-3.5 w-3.5 text-beak" filled strokeWidth={0} />
-									{store.rating} <span class="text-slate-400">({store.reviewsCount})</span>
+									{#if hasReviews(store)}
+										<Icon name="star" class="h-3.5 w-3.5 text-beak" filled strokeWidth={0} />
+										{store.rating} <span class="text-slate-400">({store.reviewsCount})</span>
+									{:else}
+										<span class="text-fresh-700">ร้านใหม่ในแอป</span>
+									{/if}
 									<span class="text-slate-300">·</span>
 									<Icon name="clock" class="h-3.5 w-3.5 text-slate-400" /> ~{store.queueMinutes} นาที
 								</p>

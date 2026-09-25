@@ -1,6 +1,6 @@
 // Checkout draft shared by the summary and PromptPay screens (Svelte 5 runes)
 import type { Order, PaymentMethod } from '$lib/types';
-import { netTotal, promoDiscount, STORE_DELIVERY_FEE } from '$lib/pricing';
+import { lineName, netTotal, promoDiscount, STORE_DELIVERY_FEE } from '$lib/pricing';
 import { campus } from './campus.svelte';
 import { cart } from './cart.svelte';
 import { orders } from './orders.svelte';
@@ -44,8 +44,8 @@ class CheckoutStore {
 				storeId: store.id,
 				pickupName: store.name,
 				dropoffName: campus.dropoff.name,
-				itemDetails: cart.items.map((i) => `${i.menuItem.name} ×${i.quantity}`).join(', '),
-				items: cart.items.map((i) => ({ menuItem: i.menuItem, quantity: i.quantity })),
+				itemDetails: cart.items.map((i) => `${lineName(i)} ×${i.quantity}`).join(', '),
+				items: cart.items.map((i) => ({ menuItem: i.menuItem, quantity: i.quantity, special: i.special })),
 				foodTotal: cart.subtotal,
 				deliveryFee: this.deliveryFee,
 				codeDiscount: this.codeDiscount,

@@ -1,6 +1,6 @@
 // Cart global store (Svelte 5 runes)
 import type { CartItem, MenuItem, Store } from '$lib/types';
-import { bestPromotion, STORE_DELIVERY_FEE, type PromoCode } from '$lib/pricing';
+import { bestPromotion, STORE_DELIVERY_FEE, unitPrice, type PromoCode } from '$lib/pricing';
 import { catalog } from './catalog.svelte';
 import { toast } from './toast.svelte';
 
@@ -8,8 +8,11 @@ const STORAGE_KEY = 'gooseman_cart';
 
 interface PersistedCart {
 	storeId: string;
-	items: { menuItemId: string; quantity: number }[];
+	items: { menuItemId: string; quantity: number; special?: boolean }[];
 }
+
+/** A cart line is one menu item in one size */
+const sameLine = (line: CartItem, menuItemId: string, special: boolean) => line.menuItem.id === menuItemId && !!line.special === special;
 
 class CartStore {
 	items = $state<CartItem[]>([]);
@@ -19,7 +22,7 @@ class CartStore {
 	promo = $state<PromoCode | null>(null);
 
 	totalItems = $derived(this.items.reduce((sum, i) => sum + i.quantity, 0));
-	subtotal = $derived(this.items.reduce((sum, i) => sum + i.menuItem.price * i.quantity, 0));
+	subtotal = $derived(this.items.reduce((sum, i) => sum + unitPrice(i) * i.quantity, 0));
 	/** Best partner promotion for this cart (food discount and/or free delivery) */
 	appliedPromotion = $derived(bestPromotion(this.store, this.items, STORE_DELIVERY_FEE));
 	partnerDiscount = $derived(this.appliedPromotion?.saving ?? 0);
@@ -34,9 +37,10 @@ class CartStore {
 			const store = catalog.byId(saved.storeId);
 			if (!store) return;
 			const items = saved.items
-				.map(({ menuItemId, quantity }) => {
+				.map(({ menuItemId, quantity, special }): CartItem | null => {
 					const menuItem = store.menuItems.find((m) => m.id === menuItemId && m.isAvailable);
-					return menuItem && quantity > 0 ? { menuItem, quantity } : null;
+					if (!menuItem || quantity <= 0 || (special && !menuItem.specialPrice)) return null;
+					return { menuItem, quantity, special: !!special };
 				})
 				.filter((i): i is CartItem => i !== null);
 			if (items.length) {
@@ -55,13 +59,13 @@ class CartStore {
 		}
 		const data: PersistedCart = {
 			storeId: this.store.id,
-			items: this.items.map((i) => ({ menuItemId: i.menuItem.id, quantity: i.quantity }))
+			items: this.items.map((i) => ({ menuItemId: i.menuItem.id, quantity: i.quantity, special: !!i.special }))
 		};
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 	}
 
-	add(menuItem: MenuItem, store: Store) {
-		if (!menuItem.isAvailable) return;
+	add(menuItem: MenuItem, store: Store, special = false) {
+		if (!menuItem.isAvailable || (special && !menuItem.specialPrice)) return;
 		// One store per order: switching store clears the previous cart
 		if (this.store && this.store.id !== store.id && this.items.length > 0) {
 			const previous = this.store.name;
@@ -70,36 +74,37 @@ class CartStore {
 		}
 		this.storeId = store.id;
 
-		const existing = this.items.find((c) => c.menuItem.id === menuItem.id);
+		const existing = this.items.find((c) => sameLine(c, menuItem.id, special));
 		if (existing) {
 			existing.quantity += 1;
 		} else {
-			this.items.push({ menuItem, quantity: 1 });
+			this.items.push({ menuItem, quantity: 1, special });
 		}
 		this.#persist();
 	}
 
-	decrement(menuItemId: string) {
-		const existing = this.items.find((c) => c.menuItem.id === menuItemId);
+	decrement(menuItemId: string, special = false) {
+		const existing = this.items.find((c) => sameLine(c, menuItemId, special));
 		if (!existing) return;
 		if (existing.quantity > 1) {
 			existing.quantity -= 1;
 		} else {
-			this.items = this.items.filter((c) => c.menuItem.id !== menuItemId);
+			this.items = this.items.filter((c) => c !== existing);
 		}
 		if (this.items.length === 0) this.storeId = null;
 		this.#persist();
 	}
 
-	qty(menuItemId: string): number {
-		return this.items.find((c) => c.menuItem.id === menuItemId)?.quantity ?? 0;
+	qty(menuItemId: string, special = false): number {
+		return this.items.find((c) => sameLine(c, menuItemId, special))?.quantity ?? 0;
 	}
 
 	/** Refill the cart from a past order; skips items that are sold out now. Returns items added. */
-	reorder(store: Store, lines: { menuItemId: string; quantity: number }[]): number {
-		const items = lines.flatMap(({ menuItemId, quantity }) => {
+	reorder(store: Store, lines: { menuItemId: string; quantity: number; special?: boolean }[]): number {
+		const items = lines.flatMap(({ menuItemId, quantity, special }) => {
 			const menuItem = store.menuItems.find((m) => m.id === menuItemId && m.isAvailable);
-			return menuItem && quantity > 0 ? [{ menuItem, quantity }] : [];
+			if (!menuItem || quantity <= 0 || (special && !menuItem.specialPrice)) return [];
+			return [{ menuItem, quantity, special: !!special }];
 		});
 		this.storeId = items.length ? store.id : null;
 		this.items = items;

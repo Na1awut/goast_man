@@ -1,162 +1,414 @@
-// Demo store catalogue. Also the source for supabase/seed.sql (npm run seed:sql).
-import type { Promotion, Store, StoreZone } from '$lib/types';
-
-const img = (id: string, w: number) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=75`;
+// Store catalogue: the real stalls of โรงอาหาร KFC (หลัก), มจธ., with the menus
+// and prices from src/picture/food_store/ร้านKFCหลัก.pdf.
+// Also the source for supabase/seed.sql (node supabase/generate-seed.mjs).
+//
+// Deliberately left unset because the source does not say:
+//   - ratings / reviews: every store starts as "ร้านใหม่ในแอป"
+//   - partner status and promotions: no stall has signed up yet
+// queueMinutes is an estimate by kind of stall, used for the rider's pickup timing.
+import type { MenuItem, Promotion, Store, StoreZone } from '$lib/types';
+import { mockMenuPhoto } from './menuPhotos.ts';
 
 export const STORE_ZONES: { id: StoreZone | 'all'; label: string }[] = [
 	{ id: 'all', label: 'ทั้งหมด' },
+	{ id: 'kfc-main', label: 'KFC (หลัก)' },
 	{ id: 'canteen-male', label: 'โรงชาย' },
 	{ id: 'green-canteen', label: 'Green Canteen 190 ปี' },
 	{ id: 'dorm', label: 'หอพัก' }
 ];
 
 export const ZONE_NAMES: Record<StoreZone, string> = {
+	'kfc-main': 'โรงอาหาร KFC (หลัก)',
 	'canteen-male': 'โรงอาหารพระจอมเกล้า (โรงชาย)',
 	'green-canteen': 'Green Canteen 190 ปี',
 	dorm: 'โซนหอพักนักศึกษา'
 };
 
-export const MOCK_STORES: Store[] = [
-	{
-		id: 'store-panee',
-		zone: 'canteen-male',
-		name: 'ข้าวมันไก่ป้าณี (สูตรไหหลำ)',
-		category: 'ข้าวมันไก่',
-		description: 'ข้าวมันไก่สูตรไหหลำแท้ๆ น้ำจิ้มเต้าเจี้ยวสูตรลับ',
-		imageUrl: img('photo-1569058242253-92a9c755a0ec', 800),
+/** [name, price, special price (พิเศษ), description] */
+type Line = [string, number, number?, string?];
+type Section = [category: string, lines: Line[]];
+
+const BOX_NOTE = 'ร้านคิดค่าใส่กล่อง 5 บาท';
+const CURRY_NOTE = 'เลือกกับข้าวหน้าร้าน ระบุในหมายเหตุ';
+
+function menu(storeId: string, sections: Section[]): MenuItem[] {
+	let n = 0;
+	return sections.flatMap(([category, lines]) =>
+		lines.map(([name, price, specialPrice, description]) => ({
+			id: `${storeId}-${++n}`,
+			storeId,
+			name,
+			price,
+			specialPrice,
+			description: description ?? '',
+			// Mockup until the stall sends real food photos
+			imageUrl: mockMenuPhoto(name, category),
+			isAvailable: true,
+			category
+		}))
+	);
+}
+
+function stall(o: { id: string; no?: number; name: string; category: string; description: string; queueMinutes: number; sections: Section[] }): Store {
+	return {
+		id: o.id,
+		zone: 'kfc-main',
+		name: o.name,
+		category: o.category,
+		description: o.description,
+		imageUrl: `stores/${o.id}.webp`,
 		isOpen: true,
-		rating: 4.9,
-		reviewsCount: '1.2k',
-		queueMinutes: 10,
-		lock: 'ล็อก 8',
-		isPartner: true,
-		tagline: 'ต้มสดทุกเช้า น้ำจิ้มสูตรบ้านป้าณี',
-		fastLaneMinutes: 5,
-		promotions: [
-			{ id: 'promo-panee-deal', storeId: 'store-panee', kind: 'DEAL', title: 'สั่งผ่านแอป ลดค่าอาหาร 5 บาททันที', description: 'ลดทุกออเดอร์ที่สั่งผ่าน Goose Man', minQty: 1, discount: 5, freeDelivery: false, active: true, approved: true },
-			{ id: 'promo-panee-co', storeId: 'store-panee', kind: 'CO_PROMO', title: 'Goose Man × ป้าณี ฟรีค่าหิ้ว', description: 'สั่ง 3 ชิ้นขึ้นไป ไม่เสียค่าหิ้วเลย', minQty: 3, discount: 0, freeDelivery: true, active: true, approved: true }
-		],
-		menuItems: [
-			{ id: 'pm1', storeId: 'store-panee', name: 'ข้าวมันไก่ผสม (ต้ม+ทอด) พิเศษ', price: 55, originalPrice: 60, description: 'แถมน้ำซุปร้อนๆ ระบุไม่ใส่แตงกวาได้', imageUrl: img('photo-1626082927389-6cd097cdc6ec', 300), isAvailable: true, category: 'ข้าวมันไก่', isPopular: true },
-			{ id: 'pm2', storeId: 'store-panee', name: 'ข้าวมันไก่ต้มเนื้อน่องฉ่ำ', price: 45, originalPrice: 50, description: 'เนื้อน่องนุ่มฉ่ำ น้ำจิ้มเต้าเจี้ยวพริกสด', imageUrl: img('photo-1546069901-ba9599a7e63c', 300), isAvailable: true, category: 'ข้าวมันไก่ต้ม' },
-			{ id: 'pm3', storeId: 'store-panee', name: 'ข้าวมันไก่ทอดกรอบ', price: 50, description: 'ไก่ทอดกรอบนอกนุ่มใน เสิร์ฟกับข้าวมันหอมๆ', imageUrl: img('photo-1598515214211-89d3c73ae83b', 300), isAvailable: true, category: 'ข้าวมันไก่ทอด' },
-			{ id: 'pm4', storeId: 'store-panee', name: 'ชามะนาวเย็น ดับร้อน', price: 25, description: 'ชาดำเข้มข้นผสมมะนาวแท้ เปรี้ยวหวานสดชื่น', imageUrl: img('photo-1556679343-c7306c1976bc', 300), isAvailable: true, category: 'เครื่องดื่ม' }
-		]
-	},
-	{
-		id: 'store-kaprao',
-		zone: 'canteen-male',
-		name: 'พี่แดง กะเพราเด็ดเผ็ด',
-		category: 'อาหารตามสั่ง',
-		description: 'กะเพราทุกชนิด ไข่ดาวกรอบทุกใบ',
-		imageUrl: img('photo-1604908176997-125f25cc6f3d', 800),
-		isOpen: true,
-		rating: 4.7,
-		reviewsCount: '890',
-		queueMinutes: 15,
-		lock: 'ล็อก 3',
-		isPartner: true,
-		tagline: 'ไข่ดาวกรอบทุกใบ เผ็ดได้ตามสั่ง',
-		fastLaneMinutes: 8,
-		promotions: [
-			{ id: 'promo-kaprao-deal', storeId: 'store-kaprao', kind: 'DEAL', title: 'สั่ง 2 กล่องขึ้นไป ลด 10 บาท', description: 'ชวนเพื่อนสั่งด้วยกันคุ้มกว่า', minQty: 2, discount: 10, freeDelivery: false, active: true, approved: true }
-		],
-		menuItems: [
-			{ id: 'km1', storeId: 'store-kaprao', name: 'ข้าวกะเพราหมูกรอบไข่ดาว', price: 55, description: 'หมูกรอบผัดกะเพราเผ็ดจัด ไข่ดาวกรอบ', imageUrl: img('photo-1604908176997-125f25cc6f3d', 300), isAvailable: true, category: 'กะเพรา', isPopular: true },
-			{ id: 'km2', storeId: 'store-kaprao', name: 'ข้าวกะเพราไก่ไข่ดาว', price: 45, description: 'ไก่สับผัดกะเพรา ไข่ดาวฟู', imageUrl: img('photo-1562565652-a0d8f0c59eb4', 300), isAvailable: true, category: 'กะเพรา' },
-			{ id: 'km3', storeId: 'store-kaprao', name: 'ข้าวผัดต้มยำกุ้ง', price: 60, originalPrice: 65, description: 'ข้าวผัดรสต้มยำ กุ้งสดตัวใหญ่', imageUrl: img('photo-1512058564366-18510be2db19', 300), isAvailable: true, category: 'ข้าวผัด' },
-			{ id: 'km4', storeId: 'store-kaprao', name: 'ผัดซีอิ๊วหมู', price: 45, description: 'เส้นใหญ่ผัดหอมกระทะ', imageUrl: img('photo-1559314809-0d155014e29e', 300), isAvailable: false, category: 'เส้น' }
-		]
-	},
-	{
-		id: 'store-boba',
-		zone: 'green-canteen',
-		name: 'BobaLab ชานมไข่มุก มจธ.',
+		rating: 0,
+		reviewsCount: '0',
+		queueMinutes: o.queueMinutes,
+		lock: o.no ? `ร้านที่ ${o.no}` : 'ซุ้มร้านเสริม',
+		isPartner: false,
+		promotions: [],
+		menuItems: menu(o.id, o.sections)
+	};
+}
+
+const drinks15 = (names: string[]): Line[] => names.map((n) => [n, 15]);
+
+export const STORE_CATALOGUE: Store[] = [
+	stall({
+		id: 'kfc-01',
+		no: 1,
+		name: 'ป้าวาบ (PA WAB FRESH MILK)',
 		category: 'เครื่องดื่ม',
-		description: 'ชานมไข่มุกหลากรส ไข่มุกนุ่มหนึบ ต้มสดทุกวัน',
-		imageUrl: img('photo-1558857563-b371033873b8', 800),
-		isOpen: true,
-		rating: 4.8,
-		reviewsCount: '2.1k',
+		description: 'นมสด ชา กาแฟ อิตาเลี่ยนโซดา และเบเกอรี่',
+		queueMinutes: 3,
+		sections: [
+			['นมสด', [['นมสด', 25], ['โกโก้', 25], ['กาแฟ', 25], ['โอวัลติน', 25], ['นมสดปั่น', 30], ['โกโก้ปั่น', 30], ['นมสดคาราเมล', 30]]],
+			['อิตาเลี่ยนโซดา', ['แดงโซดา', 'เขียวโซดา', 'น้ำผึ้งโซดา', 'ลิ้นจี่โซดา', 'บลูฮาวายโซดา', 'เสาวรสโซดา', 'ส้มโซดา', 'มะนาวโซดา'].map((n): Line => [n, 20])],
+			['เครื่องดื่มสมุนไพร / ทั่วไป', [...drinks15(['น้ำส้ม', 'น้ำลำไย', 'เก๊กฮวย', 'กระเจี๊ยบ', 'ใบเตย', 'โอเลี้ยง', 'ชาเย็น', 'ชาดำเย็น', 'ชามะนาว', 'ชาเขียว', 'นมเย็น', 'น้ำอัดลม (แก้ว)']), ['น้ำเปล่า (ขวด)', 6]]],
+			['เบเกอรี่', [['เค้กโดนัท', 20], ['เค้กช็อกโกแลต', 25], ['เค้กส้ม', 25], ['บัตเตอร์เค้ก', 25], ['บราวนี่', 30]]]
+		]
+	}),
+	stall({
+		id: 'kfc-02',
+		no: 2,
+		name: 'ครัวกรุงศรี (KRUA KRUNGSRI)',
+		category: 'ข้าวราดแกง ฮาลาล',
+		description: `ข้าวราดแกงและกับข้าวฮาลาล · ${BOX_NOTE}`,
 		queueMinutes: 5,
-		lock: 'ชั้น 1',
-		isPartner: true,
-		tagline: 'ไข่มุกต้มใหม่ทุก 2 ชั่วโมง',
-		fastLaneMinutes: 3,
-		promotions: [
-			{ id: 'promo-boba-deal', storeId: 'store-boba', kind: 'DEAL', title: 'สั่ง 2 แก้วขึ้นไป ลด 10 บาท', description: 'แก้วเดียวไม่พอ ชวนเพื่อนอีกแก้ว', minQty: 2, discount: 10, freeDelivery: false, active: true, approved: true },
-			{ id: 'promo-boba-co', storeId: 'store-boba', kind: 'CO_PROMO', title: 'Goose Man × BobaLab ลด 20 บาท', description: 'สั่ง 3 แก้วขึ้นไปผ่านแอป ลดทันที 20 บาท', minQty: 3, discount: 20, freeDelivery: false, active: true, approved: true }
-		],
-		menuItems: [
-			{ id: 'bb1', storeId: 'store-boba', name: 'ชานมไข่มุก Original', price: 45, description: 'ชานมเข้มข้น ไข่มุกนุ่มหนึบ', imageUrl: img('photo-1558857563-b371033873b8', 300), isAvailable: true, category: 'ชานม', isPopular: true },
-			{ id: 'bb2', storeId: 'store-boba', name: 'โกโก้ไข่มุก', price: 50, description: 'โกโก้เข้มข้นกับไข่มุก Q', imageUrl: img('photo-1572490122747-3968b75cc699', 300), isAvailable: true, category: 'โกโก้' },
-			{ id: 'bb3', storeId: 'store-boba', name: 'มัทฉะลาเต้', price: 55, description: 'มัทฉะเกรดพรีเมียม นมสดใหม่', imageUrl: img('photo-1515823064-d6e0c04616a7', 300), isAvailable: true, category: 'มัทฉะ' }
+		sections: [
+			[
+				'ข้าวแกงและจานเดียว',
+				[
+					['ข้าวราดแกง 1 อย่าง', 30, 40, CURRY_NOTE],
+					['ข้าวราดแกง 2 อย่าง', 40, 45, CURRY_NOTE],
+					['กับข้าว', 35, 40, CURRY_NOTE],
+					['ข้าวเปล่า', 10],
+					['ข้าวมัสมั่นไก่', 40, 50],
+					['ข้าวไก่อบ', 40, 50],
+					['ข้าวคลุกกะปิ', 40, 50],
+					['ก๋วยเตี๋ยวแกงไก่', 40, 50]
+				]
+			],
+			['เมนูเนื้อวัว', [['ข้าวเนื้ออบ', 50, 60], ['ข้าวมัสมั่นเนื้อ', 50, 60], ['ก๋วยเตี๋ยวลูกชิ้น + เนื้อสด', 45, 55], ['ก๋วยเตี๋ยวลูกชิ้น + เนื้อตุ๋น', 50, 60]]],
+			['เพิ่มเติม', [['ไข่ดาว', 10], ['ไข่ต้ม', 10]]]
 		]
-	},
-	{
-		id: 'store-greenbowl',
-		zone: 'green-canteen',
-		name: 'Green Bowl สลัดคลีน',
-		category: 'อาหารคลีน',
-		description: 'สลัดและข้าวกล้องอกไก่ สายสุขภาพต้องโดน',
-		imageUrl: img('photo-1512621776951-a57141f2eefd', 800),
-		isOpen: true,
-		rating: 4.6,
-		reviewsCount: '420',
+	}),
+	stall({
+		id: 'kfc-03',
+		no: 3,
+		name: 'NUY หนุ่ม บะหมี่เกี๊ยว',
+		category: 'บะหมี่ ก๋วยเตี๋ยว',
+		description: `บะหมี่เกี๊ยว หมูแดง หมูกรอบ สไตล์จีน · ${BOX_NOTE}`,
 		queueMinutes: 7,
-		lock: 'ล็อก 12',
-		isPartner: false,
-		promotions: [],
-		menuItems: [
-			{ id: 'gb1', storeId: 'store-greenbowl', name: 'สลัดอกไก่ย่างซอสงา', price: 65, description: 'ผักสลัดสด อกไก่ย่างนุ่ม ซอสงาญี่ปุ่น', imageUrl: img('photo-1512621776951-a57141f2eefd', 300), isAvailable: true, category: 'สลัด', isPopular: true },
-			{ id: 'gb2', storeId: 'store-greenbowl', name: 'ข้าวกล้องแซลมอนเทอริยากิ', price: 89, originalPrice: 99, description: 'แซลมอนย่างซอสเทอริยากิ ข้าวกล้องหอมมะลิ', imageUrl: img('photo-1467003909585-2f8a72700288', 300), isAvailable: true, category: 'ข้าวกล่อง' }
+		sections: [
+			[
+				'ก๋วยเตี๋ยวและบะหมี่',
+				[
+					['บะหมี่หมูแดง', 30, 40],
+					['ก๋วยเตี๋ยวหมูแดง', 30, 40],
+					['ก๋วยเตี๋ยวลูกชิ้นปลา', 35, 45],
+					['ก๋วยเตี๋ยวต้มยำ', 35, 45],
+					['เย็นตาโฟ', 35, 45],
+					['เย็นตาโฟต้มยำ', 35, 45],
+					['มาม่าต้มยำ', 40, 50],
+					['เกาเหลา', 35, 45],
+					['เกี๊ยวน้ำ', 35, 45],
+					['เกี๊ยวเย็นตาโฟ', 40, 50]
+				]
+			],
+			['ข้าว', [['ข้าวหมูแดง', 40, 50], ['ข้าวหมูแดง + หมูกรอบ', 40, 50], ['ข้าวเปล่า', 7, 10]]],
+			[
+				'เพิ่มเติมและทานเล่น',
+				[
+					['เกี๊ยวทอดกรอบ', 5],
+					['ไข่ต้ม', 7],
+					['เพิ่มหมูกรอบ', 10],
+					['เพิ่มหมูแดง', 10],
+					['เพิ่มลูกชิ้น', 10],
+					['เพิ่มหมูสับ', 10],
+					['มาม่า OK ฮอตแอนด์สไปซี่ (1 ห่อ)', 45],
+					['มาม่า OK ฮอตแอนด์สไปซี่ (2 ห่อ)', 60]
+				]
+			]
 		]
-	},
-	{
-		id: 'store-somtam',
-		zone: 'canteen-male',
-		name: 'ส้มตำป้าแจ๋ว',
-		category: 'อาหารอีสาน',
-		description: 'ส้มตำ ลาบ น้ำตก ไก่ย่าง รสแซ่บนัว',
-		imageUrl: img('photo-1562967916-eb82221dfb44', 800),
-		isOpen: true,
-		rating: 4.6,
-		reviewsCount: '650',
-		queueMinutes: 8,
-		lock: 'ล็อก 3',
-		isPartner: false,
-		promotions: [],
-		menuItems: [
-			{ id: 'st1', storeId: 'store-somtam', name: 'ส้มตำไทย', price: 40, description: 'ส้มตำรสจัดจ้าน ถั่วลิสง กุ้งแห้ง', imageUrl: img('photo-1562967916-eb82221dfb44', 300), isAvailable: true, category: 'ส้มตำ', isPopular: true },
-			{ id: 'st2', storeId: 'store-somtam', name: 'ส้มตำปูปลาร้า', price: 50, description: 'แซ่บนัว ปูดองเค็ม ปลาร้าหอม', imageUrl: img('photo-1559847844-5315695dadae', 300), isAvailable: true, category: 'ส้มตำ' },
-			{ id: 'st3', storeId: 'store-somtam', name: 'ไก่ย่าง 1/4 ตัว + ข้าวเหนียว', price: 60, description: 'ไก่ย่างหนังกรอบ น้ำจิ้มแจ่ว ข้าวเหนียวร้อนๆ', imageUrl: img('photo-1532550907401-a500c9a57435', 300), isAvailable: true, category: 'ไก่ย่าง' }
+	}),
+	stall({
+		id: 'kfc-04',
+		no: 4,
+		name: 'Dino Papa EXPRESS',
+		category: 'ไก่ทอด ไอศกรีม',
+		description: 'ข้าวไก่ทอดเกาหลี อาหารทานเล่น และไอศกรีม',
+		queueMinutes: 5,
+		sections: [
+			[
+				'ข้าวและอาหารทานเล่น',
+				[
+					['ข้าวไก่ทอดเกาหลี', 45],
+					['ข้าวไก่ทอดเกาหลี + ออนเซ็น', 55],
+					['ข้าวไก่ทอดเกาหลี Orange Mayo', 55],
+					['ข้าวไก่ทอดเกาหลี Snow Onion เมเปิ้ล', 55],
+					['ข้าวไก่ทอดเกาหลี Orange ออนเซ็น', 65],
+					['ไก่นิวออลีนส์', 15],
+					['ไข่ออนเซ็น', 10],
+					['กิมจิ', 15]
+				]
+			],
+			[
+				'ไอศกรีม',
+				[
+					['ไอศกรีมถ้วยเล็ก', 25, undefined, 'รสโยเกิร์ต / นม / ทูโทน ระบุในหมายเหตุ'],
+					['ไอศกรีมถ้วยใหญ่ (พร้อม 1-2 ท็อปปิ้ง)', 30, undefined, 'รสโยเกิร์ต / นม / ทูโทน ระบุในหมายเหตุ'],
+					['เพิ่มท็อปปิ้ง', 5],
+					['เพิ่มไอศกรีม', 5]
+				]
+			]
 		]
-	},
-	{
-		id: 'store-dormkitchen',
-		zone: 'dorm',
-		name: 'ครัวป้าติ๋ม หน้าหอใน',
+	}),
+	stall({
+		id: 'kfc-05',
+		no: 5,
+		name: 'ร้านข้าวมันไก่ & ข้าวหมกไก่ (HALAL FOODS)',
+		category: 'ข้าวมันไก่ ข้าวหมกไก่ ฮาลาล',
+		description: `ข้าวมันไก่ ไก่ทอด และข้าวหมกไก่ ฮาลาล · ${BOX_NOTE}`,
+		queueMinutes: 5,
+		sections: [
+			[
+				'ข้าวและไก่',
+				[
+					['ข้าวไก่หวาน', 30, 40],
+					['ข้าวคั่วกลิ้งไก่', 30, 40],
+					['ข้าวมันไก่ต้ม', 35, 40],
+					...[
+						'ข้าวมันไก่ทอด',
+						'ข้าวมันไก่ย่าง',
+						'ข้าวหมกไก่ต้ม',
+						'ข้าวหมกไก่ทอด',
+						'ข้าวหมกไก่ย่าง',
+						'ข้าวแกงมัสมั่นไก่',
+						'ข้าวแกงกุรุม่าไก่',
+						'ข้าวไก่อบเห็ดหอม',
+						'ข้าวไก่แดงเห็ดหอม',
+						'ข้าวไก่ย่างยำแซ่บ',
+						'ข้าวไก่ทอดยำแซ่บ',
+						'ข้าวไก่ย่างซอสกะเพรา',
+						'ข้าวไก่ย่างซอสพริกไทยดำ',
+						'ข้าวสตูไก่',
+						'ข้าวไก่กระเทียม',
+						'ข้าวแกงกะหรี่ไก่',
+						'ข้าวแกงพะแนงไก่',
+						'ข้าวไก่ย่างเทอริยากิ'
+					].map((n): Line => [n, 40, 50])
+				]
+			],
+			['เพิ่มเติม', [['ไข่ดาว', 10], ['ไข่ต้ม', 10], ['ฮอทดอก', 10], ['ไก่ทอด', 10]]]
+		]
+	}),
+	stall({
+		id: 'kfc-06',
+		no: 6,
+		name: 'ฟ้าใสแซ่บเว่อร์',
+		category: 'อาหารจานเดียว ของทานเล่น',
+		description: `ข้าวไก่ทอด ทงคัตสึ ข้าวหน้าหมูย่างเกาหลี และของทานเล่น · ${BOX_NOTE}`,
+		queueMinutes: 7,
+		sections: [
+			[
+				'อาหารจานเดียว',
+				[
+					['ข้าวมันไก่ทอด', 35, 40],
+					['ข้าวไก่ทอด', 35, 40],
+					['ข้าวไก่ย่างเทอริยากิ', 40, 50],
+					['ข้าวไก่ทอดเทอริยากิ', 40, 50],
+					['ข้าวไก่ทอดบอนชอน', 45, 55],
+					['ข้าวหมูทอดทงคัตสึ', 45, 55],
+					['ข้าวแกงกะหรี่ญี่ปุ่นไก่ทอด', 45],
+					['ข้าวหน้าหมูย่างเกาหลี', 45, 55],
+					['สลัดไก่ทอด', 40],
+					['สลัดหมูทอด', 40],
+					['ชุดข้าวหน้าปลาซาบะ', 69]
+				]
+			],
+			['เพิ่มเนื้อสัตว์', [['เพิ่มไก่ทอด', 25], ['เพิ่มไก่ย่าง', 25], ['เพิ่มหมูทอด', 35], ['เพิ่มหมูย่าง', 35]]],
+			['ทานเล่น', [['ไก่ป๊อป', 25], ['นักเก็ตไก่ (5 ชิ้น)', 30], ['เฟรนช์ฟรายส์', 25], ['หอมทอด', 20], ['เพิ่มชีส', 10]]]
+		]
+	}),
+	stall({
+		id: 'kfc-07',
+		no: 7,
+		name: 'ร้านตำลึงทอง อาหารตามสั่ง & ก๋วยเตี๋ยวไก่',
+		category: 'อาหารตามสั่ง ก๋วยเตี๋ยวไก่',
+		description: `ข้าวตามสั่ง และก๋วยเตี๋ยวไก่มะระ · ${BOX_NOTE}`,
+		queueMinutes: 10,
+		sections: [
+			[
+				'ก๋วยเตี๋ยวไก่',
+				[
+					['ก๋วยเตี๋ยวไก่ฉีก', 35, 40, 'เลือกเส้น: เส้นเล็ก เส้นใหญ่ หมี่ขาว บะหมี่ วุ้นเส้น มาม่า ระบุในหมายเหตุ'],
+					['ก๋วยเตี๋ยวไก่น่องไก่ตุ๋น', 45, undefined, 'เลือกเส้นระบุในหมายเหตุ'],
+					['ก๋วยเตี๋ยวไก่น่องไก่ติดสะโพก', 55, undefined, 'เลือกเส้นระบุในหมายเหตุ'],
+					['ทำเป็นเกาเหลา', 5],
+					['เพิ่มตีนไก่ (ต่อขา)', 5]
+				]
+			],
+			[
+				'อาหารตามสั่ง',
+				[
+					['อาหารตามสั่ง: ไม่ใส่เนื้อสัตว์ / ไก่', 40, undefined, 'บอกเมนูในหมายเหตุ เช่น ผัดกะเพรา ผัดพริกแกง ข้าวผัด ราดหน้า ผัดซีอิ๊ว ต้มยำ'],
+					['อาหารตามสั่ง: หมูสับ / หมูชิ้น', 45, undefined, 'บอกเมนูในหมายเหตุ เช่น ผัดกะเพรา ผัดพริกแกง ข้าวผัด ราดหน้า ผัดซีอิ๊ว ต้มยำ'],
+					['อาหารตามสั่ง: เนื้อ / หมูกรอบ / กุ้ง / ปลาหมึก / รวมมิตร', 50, undefined, 'บอกเมนูในหมายเหตุ เช่น ผัดกะเพรา ผัดพริกแกง ข้าวผัด ราดหน้า ผัดซีอิ๊ว ต้มยำ'],
+					['ไข่เจียวทรงเครื่องราดข้าว (1 ฟอง)', 25],
+					['ไข่เจียวทรงเครื่องราดข้าว (2 ฟอง)', 35]
+				]
+			],
+			['เพิ่มเติม', [['ไข่ดาว', 10], ['ไข่เจียว', 10], ['เพิ่มข้าว', 5]]]
+		]
+	}),
+	stall({
+		id: 'kfc-08',
+		no: 8,
+		name: 'ครัวสุดารัตน์ (Krua Sudarat)',
 		category: 'ข้าวราดแกง',
-		description: 'ข้าวราดแกง 2 อย่าง ไข่เจียวฟูๆ อิ่มคุ้ม',
-		imageUrl: img('photo-1455619452474-d2be8b1e70cd', 800),
-		isOpen: true,
-		rating: 4.5,
-		reviewsCount: '310',
-		queueMinutes: 4,
-		lock: 'หอพัก S5',
-		isPartner: false,
-		promotions: [],
-		menuItems: [
-			{ id: 'dk1', storeId: 'store-dormkitchen', name: 'ข้าวราดแกง 2 อย่าง', price: 40, description: 'เลือกกับข้าวหน้าร้านได้ ระบุในหมายเหตุ', imageUrl: img('photo-1455619452474-d2be8b1e70cd', 300), isAvailable: true, category: 'ข้าวราดแกง', isPopular: true },
-			{ id: 'dk2', storeId: 'store-dormkitchen', name: 'ข้าวไข่เจียวหมูสับ', price: 35, description: 'ไข่เจียวฟูกรอบ หมูสับแน่นๆ', imageUrl: img('photo-1525351484163-7529414344d8', 300), isAvailable: true, category: 'ไข่เจียว' }
+		description: `ข้าวแกงและกับข้าวหลากหลายเมนูต่อวัน · ${BOX_NOTE}`,
+		queueMinutes: 5,
+		sections: [
+			[
+				'ข้าวแกงและจานเดียว',
+				[
+					['ข้าวราดแกง 1 อย่าง', 30, 40, CURRY_NOTE],
+					['ข้าวราดแกง 2 อย่าง', 35, 45, CURRY_NOTE],
+					['กับข้าว', 35, 40, CURRY_NOTE],
+					['ข้าวเปล่า', 10],
+					['ข้าวเขียวหวานไก่ทอด', 35, 40],
+					['ข้าวผัดแฮม', 35, 40],
+					['ข้าวผัดไส้กรอก', 35, 40],
+					['ข้าวกะเพราโบราณ + ไข่ดาว', 35, 40],
+					['ข้าวไข่ระเบิด', 35, 40],
+					['ข้าวไก่ทอดสามรส', 35, 40],
+					['ขนมจีนแกงเขียวหวานไก่', 35, 40]
+				]
+			],
+			['เพิ่มเติม', [['ไส้กรอกจัมโบ้', 15], ['ไก่ทอด', 20], ['ไข่ดาว', 10], ['ไข่ต้ม', 10]]]
 		]
-	}
+	}),
+	stall({
+		id: 'kfc-09',
+		no: 9,
+		name: 'ครัวคุณอู๋ BY COMCAMP',
+		category: 'ข้าวราดแกง สุกี้',
+		description: `ข้าวแกงกับข้าวสไตล์โฮมเมด และสุกี้ · ${BOX_NOTE}`,
+		queueMinutes: 5,
+		sections: [
+			[
+				'ข้าวแกงและจานเดียว',
+				[
+					['ข้าวราดแกง 1 อย่าง', 30, 40, CURRY_NOTE],
+					['ข้าวราดแกง 2 อย่าง', 35, 45, CURRY_NOTE],
+					['กับข้าว', 35, 40, CURRY_NOTE],
+					['ข้าวเปล่า', 10],
+					['ข้าวไก่ทอดแกงกะหรี่ญี่ปุ่น', 40, 50],
+					['สุกี้หมู + ไก่', 40, 50, 'น้ำหรือแห้ง ระบุในหมายเหตุ'],
+					['สุกี้ทะเล', 50, 60, 'น้ำหรือแห้ง ระบุในหมายเหตุ']
+				]
+			],
+			['เพิ่มเติม', [['หมูนึ่งไข่เค็ม', 25], ['ไข่เค็มดาว', 15], ['ไข่ดาว', 10], ['ไข่ต้ม', 10]]]
+		]
+	}),
+	stall({
+		id: 'kfc-10',
+		no: 10,
+		name: 'จิรพันธุ์ เครื่องดื่ม',
+		category: 'เครื่องดื่ม น้ำปั่น',
+		description: 'ชา กาแฟ น้ำปั่น และอิตาเลี่ยนโซดา',
+		queueMinutes: 3,
+		sections: [
+			['น้ำปั่น', ['ส้มปั่น', 'มะนาวปั่น', 'ลิ้นจี่ปั่น', 'โยเกิร์ตปั่น', 'แดงแมงลักปั่น', 'เฉาก๊วยปั่น', 'โกโก้ปั่น'].map((n): Line => [n, 18])],
+			['อิตาเลี่ยนโซดา', ['แอปเปิ้ลโซดา', 'กีวี่โซดา', 'ลิ้นจี่โซดา', 'มะม่วงโซดา', 'แดงโซดา', 'เขียวโซดา', 'สตรอว์เบอร์รี่โซดา', 'บลูเลมอนโซดา'].map((n): Line => [n, 20])],
+			[
+				'สมุนไพร ชา กาแฟ',
+				[
+					...drinks15([
+						'น้ำส้ม',
+						'น้ำมะพร้าว',
+						'น้ำฝรั่ง',
+						'น้ำลำไย',
+						'สับปะรด + เงาะ',
+						'กระเจี๊ยบพุทราจีน',
+						'น้ำผึ้งมะนาว',
+						'วุ้นใบเตย',
+						'ใบบัวบก',
+						'เก๊กฮวย',
+						'ชาเย็น',
+						'ชาดำเย็น',
+						'ชามะนาว',
+						'ชาเขียวมะลิ',
+						'ชาเขียวนม',
+						'โกโก้',
+						'กาแฟโบราณ',
+						'นมชมพู',
+						'น้ำอัดลม (แก้ว)'
+					]),
+					['น้ำเปล่า (ขวด)', 6]
+				]
+			]
+		]
+	}),
+	stall({
+		id: 'kfc-aroi',
+		name: 'อร่อยไม่ซ้ำ (ขนมปังปิ้ง & ลูกชิ้น)',
+		category: 'ของว่าง ทานเล่น',
+		description: 'ขนมปังปิ้ง ลูกชิ้นยำ/ทอด และไอศกรีม',
+		queueMinutes: 5,
+		sections: [
+			['ขนมปังปิ้ง', ['เนยนม', 'แยมสตรอว์เบอร์รี่', 'ช็อกโกแลต', 'คาราเมล', 'โอวัลติน'].map((n): Line => [`ขนมปังปิ้ง ${n}`, 15])],
+			[
+				'ลูกชิ้น (ไม้ละ 10 บาท)',
+				['ปูอัด', 'ลูกชิ้นหมู', 'ลูกชิ้นเนื้อ', 'ลูกชิ้นไก่', 'เต้าหู้ชีส', 'เต้าหู้ปลา', 'ไส้กรอกชีส', 'ไส้กรอกรมควัน', 'ไส้กรอกหนังกรอบ', 'ไส้กรอกนม', 'มินิสอดหมู', 'เกี๊ยวห่อไข่', 'เกี๊ยวห่อไส้กรอก'].map(
+					(n): Line => [n, 10, undefined, 'ยำหรือทอด และน้ำจิ้ม (ซีฟู้ด / หม่าล่า / มะขาม) ระบุในหมายเหตุ']
+				)
+			]
+		]
+	}),
+	stall({
+		id: 'kfc-artter',
+		name: 'อาร์ทเตอร์ผลไม้สด-ปั่น',
+		category: 'ผลไม้ น้ำผลไม้ปั่น',
+		description: 'ผลไม้สดปลอก และน้ำผลไม้ปั่น',
+		queueMinutes: 4,
+		sections: [
+			['น้ำผลไม้ปั่น', ['ส้ม', 'แตงโม', 'แอปเปิ้ล', 'สับปะรด', 'กล้วย', 'มะม่วง', 'สตรอว์เบอร์รี่', 'ฝรั่ง'].map((n): Line => [`น้ำ${n}ปั่น`, 30])],
+			[
+				'ผสมนมสด / โยเกิร์ต',
+				['น้ำมะพร้าวนมสดปั่น', 'น้ำแคนตาลูปนมสดปั่น', 'น้ำกล้วยนมสดปั่น', 'น้ำมะม่วงโยเกิร์ตปั่น', 'น้ำสตรอว์เบอร์รี่โยเกิร์ตปั่น', 'น้ำผลไม้รวมปั่น'].map((n): Line => [n, 35])
+			]
+		]
+	})
 ];
 
 // ---------- Pure helpers over a store list (the live list lives in stores/catalog) ----------
 
 export function findStore(stores: Store[], id: string): Store | undefined {
 	return stores.find((s) => s.id === id);
+}
+
+/** A store with no reviews yet shows "ร้านใหม่ในแอป" instead of a made-up rating */
+export function hasReviews(store: Store): boolean {
+	return store.reviewsCount !== '0' && store.rating > 0;
 }
 
 /** Promotions a buyer can use right now */

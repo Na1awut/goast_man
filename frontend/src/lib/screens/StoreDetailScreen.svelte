@@ -5,7 +5,7 @@
 	import QtyStepper from '$lib/components/QtyStepper.svelte';
 	import SmartImage from '$lib/components/SmartImage.svelte';
 	import StoreLogo from '$lib/components/StoreLogo.svelte';
-	import { livePromotions, ZONE_NAMES } from '$lib/data/stores';
+	import { hasReviews, livePromotions, ZONE_NAMES } from '$lib/data/stores';
 	import { cart } from '$lib/stores/cart.svelte';
 	import { nav } from '$lib/stores/nav.svelte';
 	import { storeView } from '$lib/stores/storeView.svelte';
@@ -20,7 +20,8 @@
 	const cartIsThisStore = $derived(!!store && cart.store?.id === store.id);
 	const favorite = $derived(!!store && storeView.favorites.includes(store.id));
 	const menu = $derived(store?.menuItems ?? []);
-	const categories = $derived([POPULAR, ...new Set(menu.map((m) => m.category))]);
+	// "เมนูยอดฮิต" only when the store actually marks popular items
+	const categories = $derived([...(menu.some((m) => m.isPopular) ? [POPULAR] : []), ...new Set(menu.map((m) => m.category))]);
 
 	let category = $state<string | null>(null);
 	const items = $derived(
@@ -93,9 +94,13 @@
 			<Icon name="pin" class="h-4 w-4" /> {ZONE_NAMES[store.zone]} {store.lock}
 		</p>
 		<p class="mt-1 flex items-center gap-1.5 text-sm text-slate-600">
-			<Icon name="star" class="h-4 w-4 text-beak" filled strokeWidth={0} />
-			<span class="font-medium text-slate-900">{store.rating}</span>
-			<span class="text-slate-400">({store.reviewsCount} รีวิว)</span>
+			{#if hasReviews(store)}
+				<Icon name="star" class="h-4 w-4 text-beak" filled strokeWidth={0} />
+				<span class="font-medium text-slate-900">{store.rating}</span>
+				<span class="text-slate-400">({store.reviewsCount} รีวิว)</span>
+			{:else}
+				<span class="font-medium text-fresh-700">ร้านใหม่ในแอป</span>
+			{/if}
 			<span class="text-slate-300">·</span>
 			คิวหน้าร้าน ~{store.queueMinutes} นาที
 		</p>
@@ -163,19 +168,37 @@
 
 		<ul class="space-y-3">
 			{#each items as item (item.id)}
-				{@const qty = cartIsThisStore ? cart.qty(item.id) : 0}
+				{@const qty = cartIsThisStore ? cart.qty(item.id) + cart.qty(item.id, true) : 0}
 				<li class="flex gap-3 rounded-2xl border bg-white p-3 {qty > 0 ? 'border-brand-200' : 'border-slate-100'} {item.isAvailable ? '' : 'opacity-60'}">
-					<SmartImage src={item.imageUrl} alt={item.name} class="h-20 w-20 shrink-0 rounded-xl" />
+					{#if item.imageUrl}<SmartImage src={item.imageUrl} alt={item.name} class="h-20 w-20 shrink-0 rounded-xl" />{/if}
 					<div class="flex min-w-0 flex-1 flex-col">
 						<h3 class="text-sm leading-snug font-semibold text-slate-900">{item.name}</h3>
-						<p class="line-clamp-2 text-xs text-slate-500">{item.description}</p>
+						{#if item.description}<p class="line-clamp-2 text-xs text-slate-500">{item.description}</p>{/if}
 						{#if item.originalPrice}
 							<span class="mt-1 w-fit rounded-md bg-brand-50 px-1.5 py-0.5 text-[11px] text-brand-700">ลด {item.originalPrice - item.price} ฿ จากหน้าร้าน {item.originalPrice} ฿</span>
 						{/if}
-						<div class="mt-auto flex items-end justify-between gap-2 pt-1.5">
-							<span class="text-base font-semibold text-slate-900">{formatBaht(item.price)}</span>
-							<QtyStepper {qty} label={item.name} disabled={!item.isAvailable} onadd={(el) => { cart.add(item, store); haptic(); flyToCart(el); }} onremove={() => { cart.decrement(item.id); haptic(6); }} />
-						</div>
+						{#if item.specialPrice}
+							<!-- Two sizes: one stepper per size -->
+							<div class="mt-2 space-y-1.5">
+								{#each [{ special: false, label: 'ธรรมดา', price: item.price }, { special: true, label: 'พิเศษ', price: item.specialPrice }] as size (size.label)}
+									<div class="flex items-center justify-between gap-2">
+										<span class="text-sm text-slate-600">{size.label} <span class="font-semibold text-slate-900 tabular-nums">{formatBaht(size.price)}</span></span>
+										<QtyStepper
+											qty={cartIsThisStore ? cart.qty(item.id, size.special) : 0}
+											label="{item.name} ({size.label})"
+											disabled={!item.isAvailable}
+											onadd={(el) => { cart.add(item, store, size.special); haptic(); flyToCart(el); }}
+											onremove={() => { cart.decrement(item.id, size.special); haptic(6); }}
+										/>
+									</div>
+								{/each}
+							</div>
+						{:else}
+							<div class="mt-auto flex items-end justify-between gap-2 pt-1.5">
+								<span class="text-base font-semibold text-slate-900 tabular-nums">{formatBaht(item.price)}</span>
+								<QtyStepper {qty} label={item.name} disabled={!item.isAvailable} onadd={(el) => { cart.add(item, store); haptic(); flyToCart(el); }} onremove={() => { cart.decrement(item.id); haptic(6); }} />
+							</div>
+						{/if}
 					</div>
 				</li>
 			{:else}

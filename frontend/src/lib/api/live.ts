@@ -33,6 +33,7 @@ function mapMenuItem(r: Row): MenuItem {
 		storeId: r.store_id,
 		name: r.name,
 		price: r.price,
+		specialPrice: r.special_price ?? undefined,
 		originalPrice: r.original_price ?? undefined,
 		description: r.description ?? '',
 		imageUrl: r.image_url ?? '',
@@ -106,6 +107,7 @@ function mapRider(r: Row | null): Rider | undefined {
 function mapOrder(r: Row, findItem: (id: string) => MenuItem | undefined): Order {
 	const items: CartItem[] | undefined = (r.items as Row[] | null)?.map((i) => ({
 		quantity: i.quantity,
+		special: !!i.special,
 		menuItem: findItem(i.menu_item_id) ?? {
 			id: i.menu_item_id,
 			storeId: r.store_id,
@@ -243,7 +245,7 @@ export async function fetchStore(storeId: string): Promise<Store> {
 
 export interface StoreOrderArgs {
 	storeId: string;
-	items: { menuItemId: string; quantity: number }[];
+	items: { menuItemId: string; quantity: number; special?: boolean }[];
 	dropoffName: string;
 	note?: string;
 	paymentMethod: PaymentMethod;
@@ -254,7 +256,7 @@ export async function placeStoreOrder(a: StoreOrderArgs): Promise<string> {
 	return check(
 		await db().rpc('place_order', {
 			p_store_id: a.storeId,
-			p_items: a.items.map((i) => ({ menu_item_id: i.menuItemId, quantity: i.quantity })),
+			p_items: a.items.map((i) => ({ menu_item_id: i.menuItemId, quantity: i.quantity, special: !!i.special })),
 			p_dropoff: a.dropoffName,
 			p_note: a.note ?? '',
 			p_payment: a.paymentMethod,

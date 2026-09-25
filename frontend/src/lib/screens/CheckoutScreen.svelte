@@ -7,7 +7,7 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import QtyStepper from '$lib/components/QtyStepper.svelte';
 	import { DROPOFF_POINTS } from '$lib/data/locations';
-	import { normalizePromo, PROMO_CODES } from '$lib/pricing';
+	import { lineName, normalizePromo, PROMO_CODES, unitPrice } from '$lib/pricing';
 	import { campus } from '$lib/stores/campus.svelte';
 	import { cart } from '$lib/stores/cart.svelte';
 	import { checkout } from '$lib/stores/checkout.svelte';
@@ -108,13 +108,13 @@
 			<section class="rounded-2xl border border-slate-100 bg-white p-4">
 				<h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900"><Icon name="store" class="h-4 w-4 text-slate-500" /> {store.name}</h2>
 				<ul class="mt-2 divide-y divide-slate-100">
-					{#each cart.items as item (item.menuItem.id)}
+					{#each cart.items as item (item.menuItem.id + (item.special ? ':special' : ''))}
 						<li class="flex items-center gap-3 py-3" transition:slide={{ duration: 180 }}>
 							<div class="min-w-0 flex-1">
-								<p class="truncate text-sm text-slate-900">{item.menuItem.name}</p>
-								<p class="text-xs text-slate-500 tabular-nums">{formatBaht(item.menuItem.price * item.quantity)}</p>
+								<p class="truncate text-sm text-slate-900">{lineName(item)}</p>
+								<p class="text-xs text-slate-500 tabular-nums">{formatBaht(unitPrice(item) * item.quantity)}</p>
 							</div>
-							<QtyStepper qty={item.quantity} label={item.menuItem.name} onadd={() => { cart.add(item.menuItem, store); haptic(); }} onremove={() => { cart.decrement(item.menuItem.id); haptic(6); }} />
+							<QtyStepper qty={item.quantity} label={lineName(item)} onadd={() => { cart.add(item.menuItem, store, !!item.special); haptic(); }} onremove={() => { cart.decrement(item.menuItem.id, !!item.special); haptic(6); }} />
 						</li>
 					{/each}
 				</ul>

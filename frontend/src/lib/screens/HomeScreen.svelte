@@ -8,7 +8,7 @@
 	import SmartImage from '$lib/components/SmartImage.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
 	import { DROPOFF_POINTS, PICKUP_HUBS } from '$lib/data/locations';
-	import { livePromotions } from '$lib/data/stores';
+	import { hasReviews, livePromotions } from '$lib/data/stores';
 	import { describeBenefit, STORE_DELIVERY_FEE } from '$lib/pricing';
 	import type { PickupHub, StoreZone } from '$lib/types';
 	import { auth } from '$lib/stores/auth.svelte';
@@ -33,18 +33,24 @@
 	const activeOrder = $derived(orders.active[0]);
 
 	// --- Where to buy: canteens open the partner list, the rest become a free-form request
-	const PICKUP_ZONE: Partial<Record<string, StoreZone>> = { 'canteen-male': 'canteen-male', 'green-canteen': 'green-canteen' };
-	const PICKUP_ICON: Record<string, IconName> = { 'canteen-male': 'utensils', 'green-canteen': 'utensils', '7eleven-dorm': 'cart', soi45: 'store' };
+	const PICKUP_ZONE: Partial<Record<string, StoreZone>> = { 'kfc-main': 'kfc-main', 'canteen-male': 'canteen-male', 'green-canteen': 'green-canteen' };
+	const PICKUP_ICON: Record<string, IconName> = { 'kfc-main': 'utensils', 'canteen-male': 'utensils', 'green-canteen': 'utensils', '7eleven-dorm': 'cart', soi45: 'store' };
+	/** Stores listed in the app for this hub; 0 means it is served by free-form errands (ฝากซื้อ) */
+	const storesAt = (hub: PickupHub) => {
+		const zone = PICKUP_ZONE[hub.id];
+		return zone ? catalog.stores.filter((s) => s.zone === zone).length : 0;
+	};
 	const TILE_LABEL: Record<string, string> = { '7eleven-dorm': 'เซเว่น หอใน' };
 	const pickupSub = (hub: PickupHub) => {
-		const zone = PICKUP_ZONE[hub.id];
-		if (!zone) return 'ฝากซื้อ';
-		return catalog.loading ? '…' : `${catalog.stores.filter((s) => s.zone === zone).length} ร้าน`;
+		if (!PICKUP_ZONE[hub.id]) return 'ฝากซื้อ';
+		if (catalog.loading) return '…';
+		const count = storesAt(hub);
+		return count ? `${count} ร้าน` : 'ฝากซื้อ';
 	};
 
 	function choosePickup(hub: PickupHub) {
 		const zone = PICKUP_ZONE[hub.id];
-		if (zone) {
+		if (zone && storesAt(hub) > 0) {
 			storeView.zone = zone;
 			nav.go('STORES');
 		} else {
@@ -77,7 +83,7 @@
 		if (!lastOrder?.items || !lastStore) return;
 		const added = cart.reorder(
 			lastStore,
-			lastOrder.items.map((i) => ({ menuItemId: i.menuItem.id, quantity: i.quantity }))
+			lastOrder.items.map((i) => ({ menuItemId: i.menuItem.id, quantity: i.quantity, special: i.special }))
 		);
 		if (added === 0) {
 			toast.show('เมนูจากออเดอร์นี้หมดแล้ว ลองดูเมนูอื่นในร้าน', 'warning');
@@ -95,7 +101,9 @@
 			return deal ? [{ store, deal }] : [];
 		})
 	);
-	const popular = $derived([...catalog.stores].sort((a, b) => b.rating - a.rating).slice(0, 4));
+	// Ranked by rating once stores have reviews; until then just the stores in the app, without claiming popularity
+	const reviewed = $derived(catalog.stores.some(hasReviews));
+	const popular = $derived((reviewed ? [...catalog.stores].sort((a, b) => b.rating - a.rating) : catalog.browsing).slice(0, 4));
 
 
 	function openSearch() {
@@ -238,7 +246,7 @@
 		<!-- Where to buy -->
 		<section class="space-y-3">
 			<h2 class="text-base font-semibold text-slate-900">สั่งจากที่ไหนดี</h2>
-			<div class="grid grid-cols-4 gap-2">
+			<div class="grid grid-cols-5 gap-1.5">
 				{#each PICKUP_HUBS as hub (hub.id)}
 					<button type="button" onclick={() => choosePickup(hub)} class="flex flex-col items-center gap-2 rounded-2xl bg-white px-1 pt-3 pb-2.5 text-center">
 						<span class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand"><Icon name={PICKUP_ICON[hub.id] ?? 'store'} /></span>
@@ -321,7 +329,7 @@
 		<!-- Popular -->
 		{#if popular.length}
 			<section class="space-y-3">
-				<h2 class="text-base font-semibold text-slate-900">ร้านที่เพื่อนสั่งบ่อย</h2>
+				<h2 class="text-base font-semibold text-slate-900">{reviewed ? 'ร้านที่เพื่อนสั่งบ่อย' : 'ร้านในแอป'}</h2>
 				<ul class="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-100 bg-white">
 					{#each popular as store, i (store.id)}
 						<li>
@@ -331,8 +339,7 @@
 								<span class="min-w-0 flex-1">
 									<span class="block truncate text-sm font-medium text-slate-900">{store.name}</span>
 									<span class="flex items-center gap-1 text-xs text-slate-500">
-										<Icon name="star" class="h-3.5 w-3.5 text-beak" filled strokeWidth={0} />{store.rating}
-										<span class="text-slate-300">·</span>{store.category}
+										{#if hasReviews(store)}<Icon name="star" class="h-3.5 w-3.5 text-beak" filled strokeWidth={0} />{store.rating}<span class="text-slate-300">·</span>{/if}{store.category}
 									</span>
 								</span>
 								<Icon name="chevron-right" class="h-4 w-4 text-slate-300" />
