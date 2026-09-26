@@ -78,6 +78,7 @@ try {
 try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20260929000000_profile_at_first_order.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20260930000000_promptpay_slips.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261001000000_team_console.sql`, 'utf8'));
 	ok('profile-at-first-order migration applies cleanly', true);
 } catch (e) {
 	ok('profile-at-first-order migration applies cleanly', false, e.message);
@@ -435,6 +436,204 @@ await asService(async () => {
 	ok('recording the transfer clears it from the list', n === 2 && Number((await one(`select count(*) n from rider_payouts_due() where rider_id = '${fern}'`)).n) === 0);
 });
 ok('transfer reference is kept', (await orderRow(ppOrder)).payout_ref === 'KBANK-0001');
+
+// ---------- Team console: STAFF / ADMIN roles and every admin action ----------
+const tina = await newUser('tina@mail.kmutt.ac.th', 'Tina Admin');
+const sam = await newUser('sam@mail.kmutt.ac.th', 'Sam Staff');
+const gina = await newUser('gina@mail.kmutt.ac.th', 'Gina Rider');
+await ready(tina, 'ทีน่า', '0877777777', '66070500701');
+await ready(sam, 'แซม', '0888888888', '66070500801');
+await ready(gina, 'จีน่า', '0899999990', '66070500901');
+await db.exec(`insert into rider_roster (email) values ('gina@mail.kmutt.ac.th')`);
+// The first admin is added once in the SQL Editor
+await db.exec(`insert into team_members (email, role) values ('tina@mail.kmutt.ac.th', 'ADMIN')`);
+const rpc = (sql) => one(`select ${sql} as j`).then((r) => r.j);
+const ago = (id, minutes) => db.exec(`update orders set created_at = now() - interval '${minutes} minutes' where id = '${id}'`);
+const hasFlag = (row, code) => !!row?.attention?.some((a) => a.code === code);
+
+await as(alice, async () => {
+	ok('non-member: team_me is null', (await rpc(`team_me()`)) === null);
+	await expectError('non-member cannot open the console', `select admin_overview()`, 'TEAM_ONLY');
+});
+await db.exec(`set role anon;`);
+await expectError('anonymous cannot call admin functions', `select admin_orders()`, 'permission denied');
+await db.exec(`reset role;`);
+
+await as(tina, async () => {
+	ok('admin: team_me says ADMIN', (await rpc(`team_me()`))?.role === 'ADMIN');
+	await db.exec(`select admin_set_member('Sam@mail.kmutt.ac.th', 'STAFF', 'lunch shift')`);
+	await expectError('team members must use a KMUTT email', `select admin_set_member('x@gmail.com', 'STAFF')`, 'KMUTT_ONLY');
+	await expectError('admins cannot change their own role', `select admin_set_member('tina@mail.kmutt.ac.th', 'STAFF')`, 'CANNOT_CHANGE_SELF');
+	await expectError('admins cannot remove themselves', `select admin_remove_member('tina@mail.kmutt.ac.th')`, 'CANNOT_CHANGE_SELF');
+	const team = await rpc(`admin_team()`);
+	ok('team list shows both members', team.length === 2 && team.some((m) => m.email === 'sam@mail.kmutt.ac.th' && m.role === 'STAFF'));
+});
+await as(sam, async () => {
+	ok('staff: team_me says STAFF', (await rpc(`team_me()`))?.role === 'STAFF');
+	await expectError('staff cannot open the team page', `select admin_team()`, 'ADMIN_ONLY');
+	await expectError('staff cannot read the activity log', `select admin_activity()`, 'ADMIN_ONLY');
+	await expectError('staff cannot add riders', `select admin_add_rider('new@mail.kmutt.ac.th', 'x')`, 'ADMIN_ONLY');
+});
+
+// Orders that need a person
+let cashLate, ppUnpaid, ppPaid, lockJob, requeueJob;
+await as(alice, async () => {
+	cashLate = (await placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-1', quantity: 1 }])).id;
+	ppUnpaid = (await placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-1', quantity: 2 }], null, 'PROMPTPAY')).id;
+	ppPaid = (await placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-1', quantity: 3 }], null, 'PROMPTPAY')).id;
+	lockJob = (await placeOrder('kfc-05', [{ menu_item_id: 'kfc-05-4', quantity: 1 }])).id;
+	requeueJob = (await placeOrder('kfc-05', [{ menu_item_id: 'kfc-05-3', quantity: 1 }])).id;
+});
+await ago(cashLate, 12);
+await ago(ppUnpaid, 20);
+await as(sam, async () => {
+	const list = await rpc(`admin_orders('attention')`);
+	const late = list.rows.find((r) => r.id === cashLate);
+	const unpaid = list.rows.find((r) => r.id === ppUnpaid);
+	ok('attention: cash order without a rider for 10+ min', hasFlag(late, 'UNASSIGNED') && late.attention[0].minutes >= 12, JSON.stringify(late?.attention));
+	ok('attention: PromptPay unpaid for 15+ min, shown as awaiting payment', hasFlag(unpaid, 'UNPAID') && unpaid.stage === 'AWAITING_PAYMENT');
+	ok('attention count matches the rows', list.counts.attention === list.rows.length && list.total === list.rows.length);
+	ok('search by order code finds it', (await rpc(`admin_orders('all', null, null, null, '${late.code.replace('#', '')}')`)).rows.some((r) => r.id === cashLate));
+	ok('search by buyer nickname finds orders', (await rpc(`admin_orders('all', null, null, null, 'Alice')`)).rows.length > 0);
+
+	await expectError('manual payment needs the bank reference', `select admin_confirm_payment('${ppUnpaid}', ' ')`, 'REF_REQUIRED');
+	await expectError('cash orders cannot be confirmed as PromptPay', `select admin_confirm_payment('${cashLate}', 'X')`, 'ORDER_NOT_PAYABLE');
+	await db.exec(`select admin_confirm_payment('${ppUnpaid}', 'KBANK-777')`);
+	await db.exec(`select admin_confirm_payment('${ppPaid}', 'KBANK-778')`);
+	await expectError('a payment cannot be confirmed twice', `select admin_confirm_payment('${ppUnpaid}', 'KBANK-779')`, 'ALREADY_PAID');
+	const detail = await rpc(`admin_order('${ppUnpaid}')`);
+	ok('manual payment is recorded with who confirmed it', !!detail.paid_at && detail.slip_ref === 'MANUAL:KBANK-777' && detail.payment_confirmed_by === 'แซม');
+	ok('order detail shows the staff action in its activity', detail.activity.some((a) => a.action === 'PAYMENT_CONFIRMED' && a.by === 'แซม'));
+});
+await as(fern, async () => {
+	ok('a manually confirmed order reaches the riders', (await one(`select rider_board() as b`)).b.open.some((j) => j.id === ppUnpaid));
+});
+
+// OTP lock and unlock
+await as(gina, async () => {
+	await db.exec(accept(lockJob));
+	await db.exec(accept(requeueJob));
+	await db.exec(`select mark_delivering('${lockJob}')`);
+	for (let i = 0; i < 5; i++) await db.exec(`select confirm_delivery('${lockJob}', 'xxxx')`);
+	await expectError('five wrong OTPs lock the job', `select confirm_delivery('${lockJob}', 'xxxx')`, 'OTP_LOCKED');
+});
+const lockOtp = await otpOf(lockJob);
+await as(sam, async () => {
+	const row = (await rpc(`admin_orders('attention')`)).rows.find((r) => r.id === lockJob);
+	ok('attention: OTP locked comes first', hasFlag(row, 'OTP_LOCKED') && row.attention[0].code === 'OTP_LOCKED');
+	const detail = await rpc(`admin_order('${lockJob}')`);
+	ok('the panel shows failed attempts but never the OTP', detail.otp_failed === 5 && !JSON.stringify(detail).includes(`"${lockOtp}"`));
+	await db.exec(`select admin_unlock_otp('${lockJob}')`);
+	await expectError('unlocking an unlocked OTP is refused', `select admin_unlock_otp('${lockJob}')`, 'NOT_LOCKED');
+	await expectError('requeue needs a reason', `select admin_requeue_order('${requeueJob}', '')`, 'REASON_REQUIRED');
+	await db.exec(`select admin_requeue_order('${requeueJob}', 'คนหิ้วไม่ว่าง')`);
+	const r = await rpc(`admin_order('${requeueJob}')`);
+	ok('requeue puts the job back on the board', r.status === 'PENDING' && r.rider === null && r.activity[0].action === 'ORDER_REQUEUED');
+	await expectError('only an accepted job can be requeued', `select admin_requeue_order('${lockJob}', 'x')`, 'BAD_STATE');
+});
+await as(gina, async () => {
+	ok('after unlock the rider can close the job', (await one(`select confirm_delivery('${lockJob}', '${lockOtp}') as ok`)).ok === true);
+});
+
+// Cancel a paid order, then refund it
+await as(sam, async () => {
+	await expectError('cancelling needs a reason', `select admin_cancel_order('${ppPaid}', '  ')`, 'REASON_REQUIRED');
+	await db.exec(`select admin_cancel_order('${ppPaid}', 'ร้านปิด')`);
+	const c = await rpc(`admin_order('${ppPaid}')`);
+	ok('team cancel records who, when and why', c.status === 'CANCELLED' && !!c.cancelled_at && c.cancel_reason === 'ร้านปิด' && c.cancelled_by === 'แซม');
+	await expectError('a completed order cannot be cancelled', `select admin_cancel_order('${lockJob}', 'x')`, 'BAD_STATE');
+	const due = await rpc(`admin_refunds_due()`);
+	ok('a paid, cancelled order is due a refund', due.some((d) => d.order_id === ppPaid && d.promptpay === '0811111111'), JSON.stringify(due));
+	ok('attention: refund due', hasFlag((await rpc(`admin_orders('attention')`)).rows.find((r) => r.id === ppPaid), 'REFUND_DUE'));
+	await expectError('refund needs the transfer reference', `select admin_mark_refunded('${ppPaid}', '')`, 'REF_REQUIRED');
+	await db.exec(`select admin_mark_refunded('${ppPaid}', 'KBANK-R1')`);
+	ok('refund recorded clears it', !(await rpc(`admin_refunds_due()`)).some((d) => d.order_id === ppPaid));
+	await expectError('an order cannot be refunded twice', `select admin_mark_refunded('${ppPaid}', 'KBANK-R2')`, 'BAD_STATE');
+});
+await as(alice, async () => {
+	const own = (await placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-1', quantity: 1 }])).id;
+	await db.exec(`select cancel_order('${own}')`);
+	ok('a buyer cancel is timestamped too', (await orderRow(own)).cancelled_at !== null);
+});
+
+// Rider payouts through the console
+await as(sam, async () => {
+	const p = (await rpc(`admin_payouts()`)).find((x) => x.rider_id === gina);
+	ok('payouts list the rider with jobs and PromptPay', !!p && p.jobs === 1 && p.orders[0].order_id === lockJob && p.promptpay === '0899999990', JSON.stringify(p));
+	await expectError('payout for jobs that are not owed is refused', `select admin_mark_payout('${gina}', array['${ppPaid}']::uuid[], 'x')`, 'PAYOUT_CHANGED');
+	const paidOut = await rpc(`admin_mark_payout('${gina}', array['${lockJob}']::uuid[], 'KBANK-P1')`);
+	ok('payout amount is computed on the server', paidOut.amount === p.owed);
+	ok('paid rider leaves the list', !(await rpc(`admin_payouts()`)).some((x) => x.rider_id === gina));
+	const hist = await rpc(`admin_money_history()`);
+	ok('history has the payout and the refund', hist.some((h) => h.kind === 'PAYOUT' && h.ref === 'KBANK-P1' && h.by === 'แซม') && hist.some((h) => h.kind === 'REFUND' && h.ref === 'KBANK-R1'), JSON.stringify(hist));
+});
+
+// Stores and menu
+await as(sam, async () => {
+	await db.exec(`select admin_set_store_open('kfc-10', false)`);
+	await db.exec(`select admin_set_item_available('kfc-05-3', false)`);
+	const stores = await rpc(`admin_stores()`);
+	ok('store list shows closed store and sold-out count', stores.find((x) => x.id === 'kfc-10').is_open === false && stores.find((x) => x.id === 'kfc-05').items_off >= 1);
+	ok('store menu lists sizes and availability', (await rpc(`admin_store_menu('kfc-05')`)).some((m) => m.id === 'kfc-05-4' && m.special_price === 50));
+});
+await as(alice, async () => {
+	await expectError('a closed store takes no orders', `select place_order('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":1}]', 'x', '', 'CASH', null)`, 'STORE_UNAVAILABLE');
+	await expectError('a sold-out item cannot be ordered', `select place_order('kfc-05', '[{"menu_item_id":"kfc-05-3","quantity":1}]', 'x', '', 'CASH', null)`, 'ITEM_UNAVAILABLE');
+});
+await as(sam, async () => {
+	await db.exec(`select admin_set_store_open('kfc-10', true)`);
+	await db.exec(`select admin_set_item_available('kfc-05-3', true)`);
+});
+
+// Riders (admin only)
+await as(tina, async () => {
+	await expectError('riders must use a KMUTT email', `select admin_add_rider('someone@gmail.com', 'x')`, 'KMUTT_ONLY');
+	await db.exec(`select admin_add_rider('New.Rider@mail.kmutt.ac.th', 'ตรวจบัตร นศ. แล้ว')`);
+	await expectError('a rider cannot be added twice', `select admin_add_rider('new.rider@mail.kmutt.ac.th', 'x')`, 'ALREADY_RIDER');
+	const riders = await rpc(`admin_riders()`);
+	ok('rider list includes someone who never signed in', riders.some((r) => r.email === 'new.rider@mail.kmutt.ac.th' && r.user_id === null && r.added_by === 'ทีน่า'));
+	await expectError('removing a rider needs a reason', `select admin_remove_rider('new.rider@mail.kmutt.ac.th', '')`, 'REASON_REQUIRED');
+	await db.exec(`select admin_remove_rider('new.rider@mail.kmutt.ac.th', 'ทดสอบ')`);
+});
+
+// Promotions and partners (admin only)
+let coPromo;
+await as(panee, async () => {
+	coPromo = (await one(`insert into promotions (store_id, kind, title, min_qty, discount, free_delivery) values ('kfc-05', 'CO_PROMO', 'ห่านหิ้วฟรีวันศุกร์', 2, 0, true) returning id`)).id;
+});
+await as(tina, async () => {
+	ok('new joint promo waits for review', (await rpc(`admin_promotions()`)).find((x) => x.id === coPromo)?.state === 'PENDING');
+	await expectError('rejecting needs a note for the store', `select admin_review_promo('${coPromo}', false, '')`, 'REASON_REQUIRED');
+	await db.exec(`select admin_review_promo('${coPromo}', true, null)`);
+	ok('approved joint promo goes live', (await rpc(`admin_promotions()`)).find((x) => x.id === coPromo)?.state === 'LIVE');
+	await db.exec(`select admin_set_promo_active('${coPromo}', false)`);
+	ok('admin can switch a promo off', (await rpc(`admin_promotions()`)).find((x) => x.id === coPromo)?.state === 'OFF');
+	await expectError('a store with an owner cannot be invited again', `select admin_invite_partner('other@example.com', 'kfc-05')`, 'STORE_HAS_OWNER');
+	await db.exec(`select admin_invite_partner('Owner.One@example.com', 'kfc-01')`);
+	const partners = await rpc(`admin_partners()`);
+	ok('partners list owners and pending invites', partners.partners.some((x) => x.store_id === 'kfc-05') && partners.invites.some((x) => x.email === 'owner.one@example.com'));
+	await db.exec(`select admin_cancel_invite('owner.one@example.com')`);
+});
+await as(sam, async () => {
+	await expectError('staff cannot approve promotions', `select admin_review_promo('${coPromo}', true, null)`, 'ADMIN_ONLY');
+	ok('staff can still see promotions', (await rpc(`admin_promotions()`)).length > 0);
+});
+
+// Overview and the activity log
+await as(sam, async () => {
+	const o = await rpc(`admin_overview()`);
+	ok('overview counts today and its money', o.orders > 0 && o.gmv > 0 && o.is_today === true && o.stores_total === 12, JSON.stringify({ orders: o.orders, gmv: o.gmv }));
+	ok('overview has 15-minute slots covering every order', o.slots.length >= 12 && o.slots[0].at <= '10:30' && o.slots.reduce((n, x) => n + x.orders, 0) === o.orders, JSON.stringify(o.slots.slice(0, 3)));
+	ok('overview status counts add up', Object.values(o.status_counts).reduce((a, b) => a + b, 0) === o.orders);
+	ok('overview lists riders and top stores', Array.isArray(o.riders) && o.riders.length > 0 && o.top_stores.length > 0);
+});
+await as(tina, async () => {
+	const log = await rpc(`admin_activity()`);
+	const actions = new Set(log.map((l) => l.action));
+	const expected = ['PAYMENT_CONFIRMED', 'OTP_UNLOCKED', 'ORDER_REQUEUED', 'ORDER_CANCELLED', 'REFUNDED', 'PAYOUT_PAID', 'STORE_CLOSED', 'ITEM_OFF', 'RIDER_ADDED', 'PROMO_APPROVED', 'PARTNER_INVITED', 'MEMBER_ADDED'];
+	ok('activity log records the team actions', expected.every((a) => actions.has(a)), [...actions].join(','));
+	ok('activity log names who acted', log.find((l) => l.action === 'MEMBER_ADDED')?.by === 'ทีน่า');
+});
 
 // Anonymous visitors can browse the catalogue
 await db.exec(`set role anon;`);
