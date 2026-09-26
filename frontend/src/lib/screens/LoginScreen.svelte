@@ -64,7 +64,6 @@
 
 		<section class="sign-in" aria-labelledby="sign-in-title">
 			<div class="sign-in-content">
-				<img src={goose} alt="" width="360" height="280" class="sign-in-mascot" />
 				<h2 id="sign-in-title">พร้อมฝากหิ้วแล้วหรือยัง?</h2>
 				<p class="sign-in-description">เข้าสู่ระบบ แล้วให้เพื่อนในมอหิ้วให้</p>
 				<div class="auth-actions">
@@ -122,18 +121,20 @@
 	.login-page {
 		display: flex;
 		min-height: 100dvh;
-		align-items: center;
-		justify-content: center;
-		background: var(--color-brand-50);
+		flex-direction: column;
+		background: white;
 	}
 	.login-layout {
+		display: flex;
+		flex: 1;
+		flex-direction: column;
 		width: 100%;
-		max-width: 1040px;
 	}
 	.intro {
 		--intro-ink: #352b27;
 		--intro-muted: #795c4f;
-		padding: calc(32px + env(safe-area-inset-top, 0px)) 24px 28px;
+		padding: calc(24px + env(safe-area-inset-top, 0px)) 24px 20px;
+		background: var(--color-brand-50);
 		color: var(--intro-ink);
 	}
 	.brand-lockup {
@@ -144,7 +145,7 @@
 	}
 	.brand-mascot {
 		display: block;
-		width: 88px;
+		width: 72px;
 		height: auto;
 		flex-shrink: 0;
 	}
@@ -159,8 +160,8 @@
 		color: var(--intro-muted);
 	}
 	h1 {
-		margin: 28px 0;
-		font-size: clamp(24px, 6.4vw, 32px);
+		margin: 20px 0;
+		font-size: clamp(24px, 6.4vw, 28px);
 		line-height: 1.55;
 		font-weight: 600;
 		letter-spacing: -0.025em;
@@ -180,7 +181,7 @@
 		display: flex;
 		align-items: center;
 		gap: 12px;
-		padding-block: 12px;
+		padding-block: 8px;
 	}
 	.benefit-icon {
 		display: flex;
@@ -203,17 +204,15 @@
 	}
 	.sign-in {
 		display: flex;
+		flex: 1;
 		flex-direction: column;
-		padding: 28px 24px calc(12px + env(safe-area-inset-bottom, 0px));
+		padding: 24px 24px calc(12px + env(safe-area-inset-bottom, 0px));
 		background: white;
 	}
 	.sign-in-content {
 		width: 100%;
 		max-width: 360px;
-		margin: auto;
-	}
-	.sign-in-mascot {
-		display: none;
+		margin: 0 auto;
 	}
 	h2 {
 		font-size: 22px;
@@ -227,7 +226,7 @@
 		color: var(--color-slate-500);
 	}
 	.auth-actions {
-		margin-top: 24px;
+		margin-top: 20px;
 	}
 	.sign-in-error {
 		display: flex;
@@ -344,76 +343,6 @@
 	@keyframes spin {
 		to {
 			transform: rotate(360deg);
-		}
-	}
-	@media (max-width: 599px) {
-		.intro {
-			padding-bottom: 24px;
-		}
-		.sign-in {
-			padding-top: 24px;
-		}
-		.auth-actions {
-			margin-top: 20px;
-		}
-	}
-	@media (min-width: 600px) and (max-width: 859px) {
-		.login-layout {
-			max-width: 480px;
-		}
-	}
-	@media (min-width: 860px) {
-		.login-page {
-			padding: 40px 32px;
-			background: var(--color-canvas);
-		}
-		.login-layout {
-			display: grid;
-			grid-template-columns: 1.1fr 1fr;
-			border: 1px solid var(--color-slate-200);
-			border-radius: 16px;
-			overflow: hidden;
-		}
-		.intro {
-			display: flex;
-			min-height: 656px;
-			flex-direction: column;
-			justify-content: center;
-			padding: 48px 40px;
-			background: var(--color-brand-50);
-		}
-		.brand-mascot {
-			width: 104px;
-		}
-		h1 {
-			margin-block: 36px;
-		}
-		.benefits {
-			width: 100%;
-		}
-		.benefit-description {
-			font-size: 13px;
-		}
-		.sign-in {
-			padding: 40px 36px 20px;
-		}
-		.sign-in-mascot {
-			display: block;
-			width: 112px;
-			height: auto;
-			margin-bottom: 24px;
-		}
-		h2 {
-			font-size: 24px;
-		}
-		.auth-actions {
-			margin-top: 28px;
-		}
-		.partner-entry {
-			margin-top: 28px;
-		}
-		.legal-links {
-			margin-top: 32px;
 		}
 	}
 	@media (prefers-reduced-motion: reduce) {
