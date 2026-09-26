@@ -1,15 +1,33 @@
-// Which payment methods buyers can pick.
+// Which payment methods buyers can pick, and the PromptPay details.
 //
-// The PromptPay screen is still a mock QR: no money moves. Real buyers must not
-// see it, or they could "pay" and believe it went through. So in live mode
-// PromptPay stays hidden until a payment API is configured: set
-// PUBLIC_PROMPTPAY_API_URL (the payment integration's endpoint) and it turns on
-// by itself. Demo mode always shows it so the flow can be demonstrated.
+// PromptPay pays the team's account; the buyer uploads the slip and the
+// verify-slip Edge Function checks it with SlipOK. On the live site PromptPay
+// only appears once both are configured:
+//   PUBLIC_PROMPTPAY_API_URL  verify-slip function URL (…/functions/v1/verify-slip)
+//   PUBLIC_PROMPTPAY_ID       the team's PromptPay number (same account as the SlipOK branch)
+// Demo mode always shows the mock screen so the flow can be demonstrated.
 import { env } from '$env/dynamic/public';
+import generatePayload from 'promptpay-qr';
+import type { Order } from '$lib/types';
 import { isLive } from './supabase';
 
-export function promptPayAvailable(live: boolean, apiUrl: string | undefined): boolean {
-	return !live || !!apiUrl?.trim();
+export const verifySlipUrl = env.PUBLIC_PROMPTPAY_API_URL?.trim() ?? '';
+export const promptPayId = env.PUBLIC_PROMPTPAY_ID?.trim() ?? '';
+/** Account name shown under the QR so buyers know who they are paying (optional) */
+export const promptPayName = env.PUBLIC_PROMPTPAY_NAME?.trim() ?? '';
+
+export function promptPayAvailable(live: boolean, apiUrl: string | undefined, id: string | undefined): boolean {
+	return !live || (!!apiUrl?.trim() && !!id?.trim());
 }
 
-export const promptPayEnabled = promptPayAvailable(isLive, env.PUBLIC_PROMPTPAY_API_URL);
+export const promptPayEnabled = promptPayAvailable(isLive, verifySlipUrl, promptPayId);
+
+/** EMVCo PromptPay QR text for one payment of `amount` baht to the team */
+export function promptPayPayload(amount: number, id = promptPayId): string {
+	return generatePayload(id, { amount });
+}
+
+/** A PromptPay order that has no verified slip yet: riders do not see it */
+export function awaitingPayment(order: Pick<Order, 'paymentMethod' | 'paidAt' | 'status'>): boolean {
+	return order.paymentMethod === 'PROMPTPAY' && !order.paidAt && order.status === 'PENDING';
+}

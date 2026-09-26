@@ -8,6 +8,7 @@
 	import QtyStepper from '$lib/components/QtyStepper.svelte';
 	import { DROPOFF_POINTS } from '$lib/data/locations';
 	import { promptPayEnabled } from '$lib/payments';
+	import { isLive } from '$lib/supabase';
 	import { lineName, normalizePromo, PROMO_CODES, unitPrice } from '$lib/pricing';
 	import { formatPhone } from '$lib/profile';
 	import { auth } from '$lib/stores/auth.svelte';
@@ -62,13 +63,14 @@
 	async function placeOrder() {
 		// First order: ask for the buyer's details once, then come back here
 		if (!profileGate.ensure()) return;
-		if (checkout.payment === 'PROMPTPAY') {
+		if (checkout.payment === 'PROMPTPAY' && !isLive) {
 			checkout.startPayment();
 			nav.go('PAYMENT');
 			return;
 		}
 		try {
-			if (await checkout.place()) nav.reset('TRACKING');
+			// Live PromptPay: the order is created unpaid (riders cannot see it), then paid by slip
+			if (await checkout.place()) nav.reset(checkout.payment === 'PROMPTPAY' ? 'PAYMENT' : 'TRACKING');
 		} catch (err) {
 			toast.show(err instanceof OrderError ? err.message : 'สั่งไม่สำเร็จ ลองใหม่อีกครั้ง', 'error', { duration: 5000 });
 		}

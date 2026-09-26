@@ -11,6 +11,7 @@ import * as api from '$lib/api/live';
 import { pickRider, RIDER_POOL } from '$lib/data/riders';
 import { findStore, STORE_CATALOGUE } from '$lib/data/stores';
 import { friendlyError, isLive } from '$lib/supabase';
+import { awaitingPayment } from '$lib/payments';
 import { nowTime, randomDigits4, uid } from '$lib/utils';
 import { catalog } from './catalog.svelte';
 import { toast } from './toast.svelte';
@@ -113,6 +114,11 @@ class OrdersStore {
 	}
 
 	/** Re-read one order from the server (after a realtime event or our own RPC) */
+	/** Re-read one order from the server (live), e.g. after its slip was verified */
+	async reload(orderId: string): Promise<Order | undefined> {
+		return isLive ? this.#refresh(orderId) : this.orders.find((o) => o.id === orderId);
+	}
+
 	async #refresh(orderId: string, announce = false): Promise<Order | undefined> {
 		const [fresh] = await api.fetchMyOrders(findMenuItem, orderId);
 		if (!fresh) return;
@@ -154,6 +160,8 @@ class OrdersStore {
 			id: uid('ord'),
 			orderCode,
 			customerId: this.#customerId ?? 'u-demo-001',
+			// The demo payment screen "pays" before the order is placed
+			paidAt: input.paymentMethod === 'PROMPTPAY' ? new Date().toISOString() : undefined,
 			status: 'PENDING',
 			otpCode: randomDigits4(),
 			createdAt: new Date().toISOString()
@@ -196,7 +204,11 @@ class OrdersStore {
 		if (order.totalPrice !== input.totalPrice) {
 			toast.show(`ยอดสุทธิจากระบบคือ ${order.totalPrice} ฿ (ต่างจากที่แสดงก่อนหน้า)`, 'warning', { duration: 6000 });
 		}
-		toast.show(`สร้างออเดอร์ ${order.orderCode} แล้ว กำลังหาเพื่อนรับหิ้ว`, 'success', { notify: true });
+		toast.show(
+			awaitingPayment(order) ? `สร้างออเดอร์ ${order.orderCode} แล้ว ชำระเงินเพื่อเริ่มหาเพื่อนหิ้ว` : `สร้างออเดอร์ ${order.orderCode} แล้ว กำลังหาเพื่อนรับหิ้ว`,
+			'success',
+			{ notify: true }
+		);
 		return order;
 	}
 
@@ -360,6 +372,7 @@ class OrdersStore {
 				partnerDiscount: 0,
 				totalPrice: 90,
 				paymentMethod: 'PROMPTPAY',
+				paidAt: hoursAgo(26),
 				status: 'COMPLETED',
 				otpCode: '3391',
 				createdAt: hoursAgo(26),

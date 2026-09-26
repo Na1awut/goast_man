@@ -15,6 +15,8 @@
 | `migrations/20260927000000_store_images.sql` | โลโก้และรูปหน้าร้านที่ร้าน Partner ตั้งเอง |
 | `migrations/20260928000000_kfc_menu_sizes.sql` | โซนโรงอาหาร KFC (หลัก), เมนูขนาดธรรมดา/พิเศษ |
 | `migrations/20260929000000_profile_at_first_order.sql` | ไม่ต้องกรอกข้อมูลตอนล็อกอิน แต่ต้องมีข้อมูลครบก่อนสั่งหรือรับงาน |
+| `migrations/20260930000000_promptpay_slips.sql` | PromptPay: สถานะจ่ายเงิน, กันสลิปซ้ำ, ซ่อนออเดอร์ที่ยังไม่จ่ายจากคนหิ้ว, รายการเงินที่ต้องโอนให้คนหิ้ว |
+| `functions/verify-slip/` | Edge Function ตรวจสลิปกับ SlipOK แล้วบันทึกว่าจ่ายแล้ว |
 | `seed.sql` | ร้านจริง 12 ร้านของโรงอาหาร KFC (หลัก) และเมนู (สร้างจาก `frontend/src/lib/data/stores.ts`) |
 | `generate-seed.mjs` | สร้าง `seed.sql` ใหม่หลังแก้ข้อมูลร้านในแอป: `node supabase/generate-seed.mjs` |
 
@@ -29,7 +31,8 @@
    4. `migrations/20260927000000_store_images.sql`
    5. `migrations/20260928000000_kfc_menu_sizes.sql` (ต้องกด Run ไฟล์นี้แยกก่อน `seed.sql`)
    6. `migrations/20260929000000_profile_at_first_order.sql`
-   7. `seed.sql`
+   7. `migrations/20260930000000_promptpay_slips.sql`
+   8. `seed.sql`
 
 ### 2. เปิดล็อกอินด้วย Google
 1. ที่ [Google Cloud Console](https://console.cloud.google.com/apis/credentials) สร้าง **OAuth client ID** (ประเภท Web application)
@@ -128,3 +131,36 @@ update promotions set approved = true where id = '<promotion-id>';
 
 - **จำนวนเพื่อนที่ออนไลน์:** ยังไม่มีข้อมูลจริง ในโหมดจริงแอปจึงซ่อนตัวเลขนี้ไว้ แทนการแสดงตัวเลขปลอม
 - **PromptPay:** QR ยังเป็นภาพจำลอง ยังไม่ได้ต่อกับระบบรับชำระเงินจริง
+
+## PromptPay + SlipOK (รับเงินเข้าบัญชีทีม)
+
+ผู้ซื้อโอนเข้า PromptPay ของทีม แนบสลิป แล้ว Edge Function `verify-slip` ตรวจกับ SlipOK
+(ยอดตรง, เข้าบัญชีทีมจริง, สลิปไม่ซ้ำ) ผ่านแล้วออเดอร์จึงขึ้นให้คนหิ้วเห็น
+
+### ตั้งค่าครั้งแรก
+1. **Deploy function** (ต้องมี Supabase access token):
+   ```sh
+   SUPABASE_ACCESS_TOKEN=<token> npx supabase functions deploy verify-slip --project-ref <project-ref> --use-api
+   ```
+2. **ใส่ secret** ที่ Supabase → Edge Functions → Secrets (ห้ามใส่ในแอปหรือ Vercel):
+   - `SLIPOK_API_KEY`: API key จาก SlipOK
+   - `SLIPOK_BRANCH_ID`: เลข Branch ใน SlipOK ที่ผูกกับบัญชี PromptPay ของทีม
+3. **เปิดในแอป** ที่ Vercel → Settings → Environment Variables แล้ว Redeploy:
+   - `PUBLIC_PROMPTPAY_API_URL` = `https://<project-ref>.supabase.co/functions/v1/verify-slip`
+   - `PUBLIC_PROMPTPAY_ID` = เลข PromptPay ของทีม (บัญชีเดียวกับที่ผูกใน SlipOK)
+   - `PUBLIC_PROMPTPAY_NAME` = ชื่อบัญชีที่ให้ผู้ซื้อเห็น (ไม่บังคับ)
+
+   ถ้าขาดตัวใดตัวหนึ่ง เว็บจริงจะซ่อน PromptPay และให้จ่ายเงินสดอย่างเดียว
+
+### โอนเงินให้คนหิ้ว (หลังคนหิ้วกรอก OTP สำเร็จ)
+```sql
+-- ดูว่าต้องโอนให้ใครเท่าไร (PromptPay: ค่าอาหาร + ค่าหิ้ว · เงินสด: เฉพาะส่วนลดที่ผู้ซื้อไม่ได้จ่าย)
+select rider_name, rider_promptpay, order_code, owed, completed_at from rider_payouts_due();
+
+-- ยอดรวมต่อคน
+select rider_name, rider_promptpay, sum(owed) as total from rider_payouts_due() group by 1, 2;
+
+-- โอนแล้ว: บันทึกเลขอ้างอิงการโอน รายการจะหายจากลิสต์
+select mark_payout_paid(array(select order_id from rider_payouts_due() where rider_name = 'เฟิร์น'), 'KBANK-0001');
+```
+ทิปยังไม่รวม เพราะยังไม่มีช่องให้ผู้ซื้อจ่ายทิปเข้ามา · ยกเลิกหลังจ่ายแล้ว ให้ทีมคืนเงินเอง

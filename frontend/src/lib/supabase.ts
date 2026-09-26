@@ -70,7 +70,17 @@ export function friendlyError(error: unknown): string {
 		FINISH_ROUND_FIRST: 'เริ่มส่งของแล้ว ส่งรอบนี้ให้ครบก่อนค่อยรับงานใหม่',
 		ALREADY_TAKEN: 'มีเพื่อนรับงานนี้ไปแล้ว',
 		BAD_STATE: 'สถานะงานเปลี่ยนไปแล้ว ลองรีเฟรชอีกครั้ง',
-		OTP_LOCKED: 'ใส่รหัสผิดครบ 5 ครั้งแล้ว งานนี้ถูกล็อก ติดต่อทีม Goose Man'
+		OTP_LOCKED: 'ใส่รหัสผิดครบ 5 ครั้งแล้ว งานนี้ถูกล็อก ติดต่อทีม Goose Man',
+		SLIPOK_NOT_CONFIGURED: 'ยังไม่เปิดรับชำระผ่าน PromptPay ใช้เงินสดไปก่อนนะ',
+		SLIPOK_UNAVAILABLE: 'ระบบตรวจสลิปขัดข้องชั่วคราว ลองแนบใหม่อีกครั้ง',
+		SLIP_USED: 'สลิปนี้ถูกใช้ไปแล้ว ใช้สลิปของการโอนครั้งนี้',
+		SLIP_AMOUNT_MISMATCH: 'ยอดในสลิปไม่ตรงกับยอดที่ต้องชำระ',
+		SLIP_WRONG_RECEIVER: 'สลิปนี้ไม่ได้โอนเข้าบัญชี Goose Man',
+		SLIP_TOO_LARGE: 'รูปสลิปใหญ่เกินไป (ไม่เกิน 5 MB)',
+		SLIP_INVALID: 'อ่านสลิปไม่ได้ ลองเลือกรูปสลิปที่ชัดกว่านี้',
+		ALREADY_PAID: 'ออเดอร์นี้ชำระแล้ว',
+		ORDER_NOT_PAYABLE: 'ออเดอร์นี้ชำระด้วย PromptPay ไม่ได้แล้ว',
+		ORDER_NOT_FOUND: 'ไม่พบออเดอร์นี้'
 	};
 	const code = Object.keys(known).find((k) => text.includes(k));
 	return code ? known[code] : 'เชื่อมต่อไม่สำเร็จ ลองใหม่อีกครั้ง';

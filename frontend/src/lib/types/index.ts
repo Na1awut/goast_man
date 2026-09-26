@@ -178,6 +178,8 @@ export interface Order {
 	promoCode?: string;
 	totalPrice: number;
 	paymentMethod: PaymentMethod;
+	/** PromptPay: when the slip was verified. Unset = riders do not see the order yet */
+	paidAt?: string;
 	status: OrderStatus;
 	otpCode: string;
 	note?: string;

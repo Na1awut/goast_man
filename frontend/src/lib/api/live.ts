@@ -3,6 +3,7 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { CartItem, ChatMessage, MenuItem, Order, OrderStatus, PaymentMethod, Promotion, Rider, RiderJob, Store, User } from '$lib/types';
 import { base } from '$app/paths';
+import { verifySlipUrl } from '$lib/payments';
 import { db } from '$lib/supabase';
 import { formatTime } from '$lib/utils';
 
@@ -137,6 +138,7 @@ function mapOrder(r: Row, findItem: (id: string) => MenuItem | undefined): Order
 		promoCode: r.promo_code ?? undefined,
 		totalPrice: r.total_price,
 		paymentMethod: r.payment_method,
+		paidAt: r.paid_at ?? undefined,
 		status: r.status,
 		otpCode: r.otp_code ?? '',
 		note: r.note ?? undefined,
@@ -187,6 +189,23 @@ export async function signInWithGoogle(asPartner: boolean): Promise<void> {
 		}
 	});
 	if (error) throw error;
+}
+
+/**
+ * Sends the transfer slip of a PromptPay order to the verify-slip Edge Function,
+ * which checks it with SlipOK and marks the order paid. Throws the error code.
+ */
+export async function verifySlip(orderId: string, slip: File): Promise<void> {
+	const {
+		data: { session }
+	} = await db().auth.getSession();
+	if (!session) throw new Error('AUTH_REQUIRED');
+	const body = new FormData();
+	body.append('order_id', orderId);
+	body.append('slip', slip);
+	const res = await fetch(verifySlipUrl, { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` }, body });
+	const out = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+	if (!res.ok || !out.ok) throw new Error(out.error ?? 'SLIPOK_UNAVAILABLE');
 }
 
 export async function signOut(): Promise<void> {

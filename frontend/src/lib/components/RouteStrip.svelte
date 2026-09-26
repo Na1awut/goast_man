@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Order } from '$lib/types';
 	import Goose from './Goose.svelte';
+	import { awaitingPayment } from '$lib/payments';
 	import Icon from './Icon.svelte';
 
 	// The goose walks the real route: counter → building. Position comes only from
@@ -41,7 +42,7 @@
 	const rider = $derived(order.rider?.name ?? 'เพื่อน');
 	const line = $derived(
 		{
-			PENDING: 'น้องห่านกำลังหาเพื่อนที่อยู่ใกล้ร้าน',
+			PENDING: awaitingPayment(order) ? 'รอชำระเงินก่อน แล้วน้องห่านจะหาเพื่อนให้' : 'น้องห่านกำลังหาเพื่อนที่อยู่ใกล้ร้าน',
 			ACCEPTED: `${rider} ต่อคิวซื้อให้อยู่ที่ร้าน`,
 			DELIVERING: `${rider} หิ้วของเดินมาแล้ว อีกราว ${minutesLeft} นาที`,
 			COMPLETED: 'ถึงมือแล้ว ขอให้อร่อย',

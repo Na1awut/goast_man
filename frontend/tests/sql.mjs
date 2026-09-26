@@ -77,6 +77,7 @@ try {
 }
 try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20260929000000_profile_at_first_order.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20260930000000_promptpay_slips.sql`, 'utf8'));
 	ok('profile-at-first-order migration applies cleanly', true);
 } catch (e) {
 	ok('profile-at-first-order migration applies cleanly', false, e.message);
@@ -123,8 +124,9 @@ const as = async (uid, fn) => {
 		await db.exec(`reset role; select set_config('request.jwt.claim.sub', '', false);`);
 	}
 };
-const placeOrder = (store, items, code = null) =>
-	one(`select place_order('${store}', '${JSON.stringify(items)}'::jsonb, 'อาคาร SIT ชั้น 1', 'โต๊ะหน้าลิฟต์', 'PROMPTPAY', ${code ? `'${code}'` : 'null'}) as id`);
+// Cash by default: an unpaid PromptPay order is not a job yet (see the PromptPay section)
+const placeOrder = (store, items, code = null, pay = 'CASH') =>
+	one(`select place_order('${store}', '${JSON.stringify(items)}'::jsonb, 'อาคาร SIT ชั้น 1', 'โต๊ะหน้าลิฟต์', '${pay}', ${code ? `'${code}'` : 'null'}) as id`);
 const orderRow = (id) => one(`select * from orders where id = '${id}'`);
 
 // ---------- Profile is asked for at the first order, not at sign-in ----------
@@ -367,6 +369,72 @@ await as(dana, async () => {
 	ok('removed rider can still finish jobs in hand', (await orderRow(jobs[1])).status === 'DELIVERING');
 	await expectError('removed rider cannot take new jobs', accept(jobs[5]), 'RIDER_ONLY');
 });
+
+// ---------- PromptPay: slip checked by the verify-slip function, then rider payouts ----------
+const asService = async (fn) => {
+	await db.exec(`set role service_role;`);
+	try {
+		return await fn();
+	} finally {
+		await db.exec(`reset role;`);
+	}
+};
+const fern = await newUser('fern@mail.kmutt.ac.th', 'Fern Rider');
+await db.exec(`insert into rider_roster (email) values ('fern@mail.kmutt.ac.th')`);
+await ready(fern, 'เฟิร์น', '0866666666', '66070500601');
+let ppOrder, ppOrder2, cashOrder;
+await as(alice, async () => {
+	ppOrder = (await placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-1', quantity: 2 }], null, 'PROMPTPAY')).id;
+	ppOrder2 = (await placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-1', quantity: 1 }], null, 'PROMPTPAY')).id;
+	// kfc-05-4 40 ฿ + 15 fee, less GOOSEFREE and any store promotion: the buyer hands over less than 55 in cash
+	cashOrder = (await placeOrder('kfc-05', [{ menu_item_id: 'kfc-05-4', quantity: 1 }], 'GOOSEFREE')).id;
+	await expectError('buyers cannot mark their own order paid', `select record_slip_payment('${ppOrder}', 'X', 1)`, 'permission denied');
+});
+await as(fern, async () => {
+	const open = (await one(`select rider_board() as b`)).b.open.map((j) => j.id);
+	ok('unpaid PromptPay order is not on the board', !open.includes(ppOrder) && open.includes(cashOrder));
+	ok('riders cannot read an unpaid PromptPay order', Number((await one(`select count(*) n from orders where id = '${ppOrder}'`)).n) === 0);
+	await expectError('riders cannot take an unpaid PromptPay order', accept(ppOrder), 'ALREADY_TAKEN');
+});
+const ppTotal = (await orderRow(ppOrder)).total_price;
+const ppTotal2 = (await orderRow(ppOrder2)).total_price;
+await asService(async () => {
+	await expectError('slip amount must match the order', `select record_slip_payment('${ppOrder}', 'SLIP-1', ${ppTotal + 1})`, 'SLIP_AMOUNT_MISMATCH');
+	await db.exec(`select record_slip_payment('${ppOrder}', 'SLIP-1', ${ppTotal})`);
+	await expectError('an order cannot be paid twice', `select record_slip_payment('${ppOrder}', 'SLIP-9', ${ppTotal})`, 'ALREADY_PAID');
+	await expectError('one slip cannot pay two orders', `select record_slip_payment('${ppOrder2}', 'SLIP-1', ${ppTotal2})`, 'SLIP_USED');
+	await expectError('cash orders take no slip', `select record_slip_payment('${cashOrder}', 'SLIP-2', 40)`, 'ORDER_NOT_PAYABLE');
+});
+const paid = await orderRow(ppOrder);
+ok('verified slip marks the order paid', paid.paid_at !== null && paid.slip_ref === 'SLIP-1');
+ok('buyer chat says the payment arrived', Number((await one(`select count(*) n from chat_messages where order_id = '${ppOrder}' and body like 'ได้รับชำระเงินแล้ว%'`)).n) === 1);
+await as(fern, async () => {
+	ok('paid PromptPay order appears on the board', (await one(`select rider_board() as b`)).b.open.some((j) => j.id === ppOrder));
+	await db.exec(accept(ppOrder));
+	await db.exec(accept(cashOrder));
+	await db.exec(`select mark_delivering('${ppOrder}')`);
+	await db.exec(`select mark_delivering('${cashOrder}')`);
+});
+const otpOf = async (id) => (await one(`select otp_code from order_secrets where order_id = '${id}'`)).otp_code;
+const [ppOtp, cashOtp] = [await otpOf(ppOrder), await otpOf(cashOrder)];
+await as(fern, async () => {
+	await db.exec(`select confirm_delivery('${ppOrder}', '${ppOtp}')`);
+	await db.exec(`select confirm_delivery('${cashOrder}', '${cashOtp}')`);
+	await expectError('riders cannot read the payout list', `select * from rider_payouts_due()`, 'permission denied');
+	await expectError('riders cannot mark their own payout', `select mark_payout_paid(array['${ppOrder}']::uuid[], 'x')`, 'permission denied');
+});
+await asService(async () => {
+	const due = (await db.query(`select * from rider_payouts_due() where rider_id = '${fern}'`)).rows;
+	const pp = due.find((r) => r.order_id === ppOrder);
+	const cash = due.find((r) => r.order_id === cashOrder);
+	ok('PromptPay job: team owes the rider food + fee', pp?.owed === paid.food_total + paid.delivery_fee && pp?.collected_in_cash === 0, JSON.stringify(pp));
+	const c = await orderRow(cashOrder);
+	ok('cash job: team owes only the discount the buyer did not pay', cash?.collected_in_cash === c.total_price && cash?.owed === c.food_total + c.delivery_fee - c.total_price && cash.owed > 0, JSON.stringify(cash));
+	ok('payout shows where to transfer', pp?.rider_promptpay === '0866666666' && pp?.rider_name === 'เฟิร์น');
+	const n = (await one(`select mark_payout_paid(array['${ppOrder}', '${cashOrder}']::uuid[], 'KBANK-0001') as n`)).n;
+	ok('recording the transfer clears it from the list', n === 2 && Number((await one(`select count(*) n from rider_payouts_due() where rider_id = '${fern}'`)).n) === 0);
+});
+ok('transfer reference is kept', (await orderRow(ppOrder)).payout_ref === 'KBANK-0001');
 
 // Anonymous visitors can browse the catalogue
 await db.exec(`set role anon;`);

@@ -3,6 +3,8 @@
 	import BottomBar from '$lib/components/BottomBar.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import MockQr from '$lib/components/MockQr.svelte';
+	import LivePayment from '$lib/components/LivePayment.svelte';
+	import { isLive } from '$lib/supabase';
 	import { cart } from '$lib/stores/cart.svelte';
 	import { checkout } from '$lib/stores/checkout.svelte';
 	import { nav } from '$lib/stores/nav.svelte';
@@ -66,6 +68,10 @@
 	}
 </script>
 
+<!-- Live: real QR for an order already placed, checked by slip. Demo: mock QR, the order is placed on confirm -->
+{#if isLive}
+	<LivePayment />
+{:else}
 <div class="flex flex-1 flex-col">
 	<AppBar title="ชำระเงิน (PromptPay QR)" />
 
@@ -128,3 +134,4 @@
 		</BottomBar>
 	{/if}
 </div>
+{/if}

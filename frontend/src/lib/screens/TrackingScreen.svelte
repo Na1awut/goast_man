@@ -9,10 +9,12 @@
 	import { nav } from '$lib/stores/nav.svelte';
 	import { orders } from '$lib/stores/orders.svelte';
 	import { isLive } from '$lib/supabase';
+	import { awaitingPayment } from '$lib/payments';
 	import { lineName, unitPrice } from '$lib/pricing';
 	import { formatBaht, formatTime } from '$lib/utils';
 
 	const order = $derived(orders.current);
+	const unpaid = $derived(!!order && awaitingPayment(order));
 
 	type StepState = 'done' | 'active' | 'todo';
 
@@ -20,7 +22,7 @@
 		if (!order) return [];
 		const rank = { PENDING: 0, ACCEPTED: 1, DELIVERING: 2, COMPLETED: 4, CANCELLED: -1 }[order.status];
 		const defs = [
-			{ title: 'สร้างออเดอร์สำเร็จ', sub: 'กำลังหาเพื่อนที่อยู่ใกล้ร้าน', time: order.createdAt },
+			{ title: 'สร้างออเดอร์สำเร็จ', sub: awaitingPayment(order) ? 'รอชำระเงิน PromptPay' : 'กำลังหาเพื่อนที่อยู่ใกล้ร้าน', time: order.createdAt },
 			{ title: 'เพื่อนรับงานหิ้ว', sub: order.rider ? `${order.rider.name} กำลังต่อคิวที่ร้าน` : '', time: order.acceptedAt },
 			{ title: 'ซื้อเสร็จ กำลังเดินมาส่ง', sub: 'คาดว่าจะถึงใน ~8 นาที', time: order.deliveringAt },
 			{ title: 'ส่งมอบสำเร็จ', sub: '', time: order.completedAt }
@@ -117,6 +119,15 @@
 					<button type="button" onclick={() => nav.go('CHAT')} aria-label="แชทกับ {rider.name}" class="flex h-11 w-11 items-center justify-center rounded-full bg-brand-50 text-brand">
 						<Icon name="message" />
 					</button>
+				</section>
+			{:else if unpaid}
+				<section class="rounded-2xl border border-brand-100 bg-brand-50 p-4">
+					<p class="text-sm font-semibold text-slate-900">รอชำระเงิน {order.totalPrice} ฿</p>
+					<p class="mt-0.5 text-xs text-slate-600">โอนผ่าน PromptPay แล้วแนบสลิป เพื่อนจะเห็นงานนี้หลังตรวจสลิปผ่าน</p>
+					<div class="mt-3 flex items-center gap-3">
+						<button type="button" onclick={() => nav.go('PAYMENT')} class="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-white">ชำระเงิน</button>
+						<button type="button" onclick={() => orders.cancel(order.id)} class="text-sm text-slate-500 underline underline-offset-2">ยกเลิก</button>
+					</div>
 				</section>
 			{:else if order.status === 'PENDING'}
 				<section class="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white p-4">
