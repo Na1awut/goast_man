@@ -835,6 +835,17 @@ npm run test:e2e         # หรือ node tests/e2e.mjs <โฟลเดอ�
 3. โดเมนของตัวเอง: ตั้ง DNS แล้วใส่ Variable `CUSTOM_DOMAIN` (ไม่ใส่ = เว็บอยู่ที่ `https://<user>.github.io/<repo>/`)
 4. เพิ่ม URL เว็บใน Supabase → Authentication → URL Configuration → Redirect URLs ไม่อย่างนั้น Google login จะกลับเข้าแอปไม่ได้
 
+### 15.1.1 Vercel
+
+ตั้งค่าอยู่ใน `vercel.json` ที่ root ของ repo (ไม่ต้องตั้งในหน้า Vercel และค่าในไฟล์ชนะค่าในหน้า Vercel):
+ติดตั้งและ build ในโฟลเดอร์ `frontend/` แล้วเสิร์ฟ `frontend/build` แบบไฟล์นิ่ง (framework: Other)
+
+- ใน Vercel → Settings → Build and Deployment ให้ **Root Directory เป็นค่าว่าง (root ของ repo)** ไม่อย่างนั้นจะหา `vercel.json` ไม่เจอ
+- Node.js Version: 22.x ขึ้นไป (Settings → General)
+- โหมดจริง: ใส่ `PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY` ใน Settings → Environment Variables แล้ว Redeploy (Vercel ส่งค่าให้ตอน build)
+- เพิ่มลิงก์ Vercel ใน Supabase → Authentication → Redirect URLs
+- push เข้า `main` = deploy อัตโนมัติ · push branch อื่น = ได้ลิงก์ preview แยก
+
 ### 15.2 Repository
 
 โปรเจกต์มี 2 repo ที่เก็บโค้ดชุดเดียวกัน:
