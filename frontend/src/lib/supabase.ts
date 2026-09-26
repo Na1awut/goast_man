@@ -36,7 +36,9 @@ export function db(): SupabaseClient {
 export function friendlyError(error: unknown): string {
 	const text = error instanceof Error ? error.message : typeof error === 'object' && error && 'message' in error ? String(error.message) : String(error);
 	const known: Record<string, string> = {
-		KMUTT_ONLY: 'ใช้ได้เฉพาะอีเมล @kmutt.ac.th หรือร้าน Partner ที่ได้รับเชิญเท่านั้น',
+		KMUTT_ONLY: 'ใช้ได้เฉพาะอีเมล @kmutt.ac.th / @mail.kmutt.ac.th หรือร้าน Partner ที่ได้รับเชิญเท่านั้น',
+		// Supabase Auth hides the sign-up trigger's reason; the only thing that trigger rejects is a non-KMUTT email
+		'saving new user': 'ใช้ได้เฉพาะอีเมล @kmutt.ac.th / @mail.kmutt.ac.th กรุณาเลือกบัญชี มจธ.',
 		AUTH_REQUIRED: 'กรุณาเข้าสู่ระบบก่อน',
 		STORE_UNAVAILABLE: 'ร้านนี้ปิดรับออเดอร์อยู่ตอนนี้',
 		ITEM_UNAVAILABLE: 'มีเมนูในตะกร้าที่หมดแล้ว ลองเอาออกแล้วสั่งใหม่',

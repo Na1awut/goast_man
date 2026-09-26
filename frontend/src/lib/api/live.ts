@@ -172,16 +172,18 @@ export async function currentUser(): Promise<User | null> {
 }
 
 /**
- * Redirects to Google. Students get the @kmutt.ac.th account hint; partner shop
- * owners may use any Google account that an admin has invited. The database
- * trigger rejects everyone else, whatever the hint says.
+ * Redirects to Google's account chooser, listing every account already signed in
+ * on the device. No hosted-domain (hd) hint: KMUTT uses two Google domains
+ * (@kmutt.ac.th and @mail.kmutt.ac.th) and hd accepts only one, so a hint hid
+ * students' accounts and sent them to a blank sign-in form. The database trigger
+ * rejects anything but KMUTT accounts and invited partner shops.
  */
 export async function signInWithGoogle(asPartner: boolean): Promise<void> {
 	const { error } = await db().auth.signInWithOAuth({
 		provider: 'google',
 		options: {
 			redirectTo: window.location.origin + base + '/',
-			queryParams: asPartner ? { prompt: 'select_account' } : { hd: 'kmutt.ac.th', prompt: 'select_account' }
+			queryParams: { prompt: 'select_account' }
 		}
 	});
 	if (error) throw error;
