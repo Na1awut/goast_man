@@ -389,6 +389,8 @@ begin
 			'avg_accept_minutes', (select round(avg(extract(epoch from accepted_at - coalesce(paid_at, created_at)) / 60)::numeric, 1)
 				from dayrows where accepted_at is not null),
 			'problems', (select count(*) from problems),
+			'pending_promos', (select count(*) from promotions where kind = 'CO_PROMO' and not approved and active
+				and (ends_at is null or ends_at > now())),
 			'slots', (
 				select coalesce(jsonb_agg(jsonb_build_object(
 					'at', to_char(s.slot_start, 'HH24:MI'),
