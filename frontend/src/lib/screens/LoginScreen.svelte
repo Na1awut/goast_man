@@ -6,8 +6,8 @@
 	import Icon, { type IconName } from '$lib/components/Icon.svelte';
 	import { auth, AuthError } from '$lib/stores/auth.svelte';
 	import { nav } from '$lib/stores/nav.svelte';
+	import { welcome } from '$lib/stores/welcome.svelte';
 	import { orders } from '$lib/stores/orders.svelte';
-	import { toast } from '$lib/stores/toast.svelte';
 
 	let loading = $state<'student' | 'partner' | null>(null);
 	/** Shown on the page, not only as a toast: this is the one thing a rejected student needs to read */
@@ -22,7 +22,7 @@
 			const user = await auth.signInWithGoogle({ asPartner });
 			nav.reset(auth.mustOnboardNow ? 'ONBOARDING' : auth.isPartner ? 'PARTNER' : 'HOME');
 			void orders.init(user.id);
-			if (!auth.mustOnboardNow) toast.show(`เข้าสู่ระบบแล้ว สวัสดี ${auth.displayName}`, 'success');
+			welcome.show(auth.displayName);
 		} catch (err) {
 			error = err instanceof AuthError ? err.message : 'เข้าสู่ระบบไม่สำเร็จ ลองใหม่อีกครั้ง';
 		} finally {

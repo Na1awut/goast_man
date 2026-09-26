@@ -7,6 +7,7 @@
 	import LocationSheet from '$lib/components/LocationSheet.svelte';
 	import NotificationSheet from '$lib/components/NotificationSheet.svelte';
 	import ToastStack from '$lib/components/ToastStack.svelte';
+	import WelcomeSplash from '$lib/components/WelcomeSplash.svelte';
 	import ChatScreen from '$lib/screens/ChatScreen.svelte';
 	import CheckoutScreen from '$lib/screens/CheckoutScreen.svelte';
 	import CustomOrderScreen from '$lib/screens/CustomOrderScreen.svelte';
@@ -32,7 +33,8 @@
 	import { nav } from '$lib/stores/nav.svelte';
 	import { orders } from '$lib/stores/orders.svelte';
 	import { rider } from '$lib/stores/rider.svelte';
-	import { friendlyError } from '$lib/supabase';
+	import { welcome } from '$lib/stores/welcome.svelte';
+	import { friendlyError, returnedFromSignIn } from '$lib/supabase';
 	import { prefersReducedMotion, withTimeout } from '$lib/utils';
 
 	const SCREENS: Record<Exclude<Screen, 'LOGIN'>, Component> = {
@@ -76,6 +78,8 @@
 			if (await withTimeout(auth.init(), AUTH_TIMEOUT_MS)) {
 				nav.reset(auth.mustOnboardNow ? 'ONBOARDING' : auth.isPartner ? 'PARTNER' : 'HOME');
 				void orders.init(auth.user!.id);
+				// Say hello only after a fresh sign-in, not when a saved session is restored
+				if (returnedFromSignIn) welcome.show(auth.displayName);
 			}
 		} catch (err) {
 			toast.show(err instanceof AuthError ? err.message : friendlyError(err), 'error', { duration: 6000 });
@@ -116,4 +120,5 @@
 		<NotificationSheet />
 	{/if}
 	<ToastStack />
+	<WelcomeSplash />
 </div>

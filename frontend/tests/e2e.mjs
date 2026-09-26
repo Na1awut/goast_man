@@ -65,6 +65,12 @@ const setSelect = (optionText) =>
 		sel.dispatchEvent(new Event('change', { bubbles: true }));
 	}, optionText);
 const pickLabel = (text) => page.evaluate((t) => [...document.querySelectorAll('label')].find((l) => l.innerText.trim() === t)?.click(), text);
+/** The goose's hello after a fresh sign-in; waits for it to finish so it cannot cover taps */
+const waitWelcomeGone = async () => {
+	await page.waitForSelector('[data-welcome]', { timeout: 4000 });
+	await page.waitForSelector('[data-welcome]', { hidden: true, timeout: 5000 });
+	await sleep(300);
+};
 let pass = 0;
 let fail = 0;
 const check = async (label, cond) => {
@@ -79,7 +85,17 @@ await page.reload({ waitUntil: 'networkidle0' });
 await shot('01-login');
 
 await clickSel('button.google-button');
-await sleep(1400);
+await page.waitForSelector('[data-welcome]', { timeout: 4000 });
+await check('fresh sign-in shows the goose hello', await bodyHas('สวัสดี กูส'));
+const honk = new Set();
+for (let i = 0; i < 12; i++) {
+	honk.add(await page.evaluate(() => [...document.querySelectorAll('[data-welcome] img')].findIndex((im) => im.classList.contains('opacity-100'))));
+	await sleep(60);
+}
+await check('the goose honks: both head frames play', honk.has(0) && honk.has(1));
+await shot('01a-welcome');
+await page.waitForSelector('[data-welcome]', { hidden: true, timeout: 5000 });
+await sleep(300);
 // A new account may look around first: no profile form until the first order
 await check('new account goes straight to home', (await bodyHas('ขี้เกียจเดินฝ่าแดด')) && !(await bodyHas('ยินดีต้อนรับสู่ Goose Man')));
 await check('greets with the Google first name', await bodyHas('สวัสดี กูส'));
@@ -286,6 +302,7 @@ await shot('16-logout-confirm');
 await page.reload({ waitUntil: 'networkidle0' });
 await sleep(500);
 await check('session restored on reload', await bodyHas('ขี้เกียจเดินฝ่าแดด'));
+await check('no hello when a saved session is restored', (await page.$('[data-welcome]')) === null);
 await check('no horizontal overflow', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
 
 // Rider mode is for riders verified by the team, not something to open from the profile
@@ -304,7 +321,7 @@ await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: 'networkidle0' });
 await sleep(600);
 await clickSel('button.partner-button');
-await sleep(1500);
+await waitWelcomeGone();
 await check('partner onboarding asks contact only', (await bodyHas('กรอกข้อมูลติดต่อของร้าน')) && !(await bodyHas('รหัสนักศึกษา')));
 await page.type('input[autocomplete="tel-national"]', '0890001234');
 await page.click('main input[type=checkbox]');

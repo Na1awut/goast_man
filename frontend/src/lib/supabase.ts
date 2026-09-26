@@ -12,6 +12,12 @@ const fetchWithTimeout: typeof fetch = (input, init) => {
 	return fetch(input, { ...init, signal });
 };
 
+/**
+ * The page just came back from Google sign-in (PKCE code in the URL). Read before
+ * the client is created, because the client removes the code once it signs in.
+ */
+export const returnedFromSignIn = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('code');
+
 const url = env.PUBLIC_SUPABASE_URL?.trim();
 const anonKey = env.PUBLIC_SUPABASE_ANON_KEY?.trim();
 
