@@ -7,6 +7,7 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import QtyStepper from '$lib/components/QtyStepper.svelte';
 	import { DROPOFF_POINTS } from '$lib/data/locations';
+	import { promptPayEnabled } from '$lib/payments';
 	import { lineName, normalizePromo, PROMO_CODES, unitPrice } from '$lib/pricing';
 	import { formatPhone } from '$lib/profile';
 	import { auth } from '$lib/stores/auth.svelte';
@@ -214,7 +215,7 @@
 				<h2 id="pay-label" class="text-sm font-semibold text-slate-900">วิธีชำระเงิน</h2>
 				<div class="mt-1 divide-y divide-slate-100" role="radiogroup" aria-labelledby="pay-label">
 					{#each [
-						{ id: 'PROMPTPAY' as const, label: 'สแกน PromptPay QR Code', sub: 'แนะนำ · เงินพักในระบบจนกว่าจะยืนยัน OTP' },
+						...(promptPayEnabled ? [{ id: 'PROMPTPAY' as const, label: 'สแกน PromptPay QR Code', sub: 'แนะนำ · เงินพักในระบบจนกว่าจะยืนยัน OTP' }] : []),
 						{ id: 'CASH' as const, label: 'เงินสดปลายทาง', sub: 'ส่งมอบให้เพื่อนตอนรับของ' }
 					] as pm (pm.id)}
 						{@const selected = checkout.payment === pm.id}
@@ -229,6 +230,9 @@
 						</button>
 					{/each}
 				</div>
+				{#if !promptPayEnabled}
+					<p class="mt-1 flex items-center gap-1.5 text-xs text-slate-500"><Icon name="info" class="h-3.5 w-3.5 shrink-0" /> จ่ายผ่าน PromptPay ได้เร็วๆ นี้</p>
+				{/if}
 			</section>
 		</div>
 

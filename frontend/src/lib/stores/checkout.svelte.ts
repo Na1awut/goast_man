@@ -1,5 +1,6 @@
 // Checkout draft shared by the summary and PromptPay screens (Svelte 5 runes)
 import type { Order, PaymentMethod } from '$lib/types';
+import { promptPayEnabled } from '$lib/payments';
 import { lineName, netTotal, promoDiscount, STORE_DELIVERY_FEE } from '$lib/pricing';
 import { campus } from './campus.svelte';
 import { cart } from './cart.svelte';
@@ -7,7 +8,8 @@ import { orders } from './orders.svelte';
 
 class CheckoutStore {
 	note = $state('');
-	payment = $state<PaymentMethod>('PROMPTPAY');
+	/** PromptPay is the default once it can take real payments; until then cash only (see $lib/payments) */
+	payment = $state<PaymentMethod>(promptPayEnabled ? 'PROMPTPAY' : 'CASH');
 	/** PromptPay reference, created when the payment screen opens */
 	reference = $state('');
 	placing = $state(false);
