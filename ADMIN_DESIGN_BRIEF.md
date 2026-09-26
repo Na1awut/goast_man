@@ -20,6 +20,26 @@
 
 ขนาดเฟรมที่ขอ: **PC 1440 × 900** และ **มือถือ 390 × 844** ทุกหน้า
 
+### 1.1 แบบอ้างอิงหน้าตา: [`picture/admin_reference.png`](picture/admin_reference.png)
+
+เป็น template แดชบอร์ดทั่วไป ("Flowix") ใช้เป็น **ภาษาภาพ** เท่านั้น ข้อมูลและโครงหน้ายังเป็นของ Goose Man ตามเอกสารนี้
+
+**เอามาใช้**
+- **Sidebar ขาว:** เมนูที่เลือกเป็นแถบสีส้มเต็ม (brand) ตัวอักษร/ไอคอนขาว มุมโค้ง 12px · เมนูอื่นไอคอนเส้นสีเทา · เส้นคั่นก่อนกลุ่มล่าง
+- **Top bar:** ช่องค้นหาพื้นเทาอ่อนด้านซ้าย · ขวามี DateRangePicker (ปฏิทิน + ช่วงวันที่ + ▾), กระดิ่งมีจุดแจ้งเตือนส้ม, รูป/อักษรย่อ + ชื่อ + บทบาท
+- **หัวหน้า:** ชื่อหน้าตัวใหญ่หนา (30px, 700) + ประโยครองสีเทาบรรทัดเดียว
+- **KpiTile:** การ์ดขาว มุม 16px · ไอคอนเส้นสีส้มในสี่เหลี่ยมพื้นส้มอ่อน (`brand-50`) มุม 12px · ชื่อเล็กสีเทา · ตัวเลขใหญ่หนา · บรรทัดล่าง ลูกศรขึ้นเขียว/ลงแดง + "+12% เทียบเมื่อวาน" · sparkline สีส้มเล็กมุมขวาล่าง
+- **กราฟ:** โทนส้มไล่อ่อน (แท่งส้มอ่อน + เส้นส้มเข้ม + จุด) · tooltip การ์ดขาวเงาอ่อน · ตัวเลือกช่วงเวลาเป็นปุ่ม dropdown เล็กมุมขวาบนของการ์ด
+- **ตาราง:** อยู่ในการ์ด หัวการ์ดมีชื่อซ้าย + ลิงก์ส้ม "ดูทั้งหมด →" ขวา · หัวคอลัมน์เทาเล็ก · รหัสออเดอร์สีส้มเป็นลิงก์ · สถานะเป็นป้ายตัวอักษรสีบนพื้นอ่อน
+- **ความแน่น:** การ์ดเรียงเป็นแถว ช่องไฟ 16-24px ใช้พื้นที่จอกว้างเต็มที่
+
+**ไม่เอามา** (ไม่ตรงกับงานของ Goose Man หรือเป็นข้อมูลปลอม)
+- หน้าแรกเป็นแดชบอร์ดตัวเลข → หน้าแรกของเรายังเป็น **ออเดอร์ที่ต้องจัดการ** (ตามที่เลือกไว้) ภาษาภาพแบบนี้ใช้กับทุกหน้า โดยหน้า **ภาพรวม** ได้เลย์เอาต์แบบรูปนี้มากที่สุด
+- donut "User Acquisition", ธงประเทศ, "System Health", "Conversion Rate", "Support Tickets" → ไม่มีข้อมูลเหล่านี้ ใช้ KPI ในข้อ 5.5 แทน
+- รูปถ่ายหน้าคนในตาราง → ใช้วงกลมอักษรย่อ (`Avatar`) เพราะเราไม่มีรูปโปรไฟล์ และเป็นข้อมูลส่วนตัว
+- "+12.5% vs last month" ที่ไม่มีข้อมูลจริงรองรับ → ช่วงทดลองที่ยังไม่มีข้อมูลเทียบ ให้แสดง "ยังไม่มีข้อมูลเทียบ" แทนตัวเลข
+- ฟอนต์ละติน (Inter) ของ template → ใช้ **Prompt** ตามเดิม เพราะต้องแสดงภาษาไทย
+
 ---
 
 ## 2. Prompt พร้อมวาง
@@ -42,6 +62,16 @@ PURPOSE
 - See problems first, numbers second. The landing screen is the queue of orders that need a
   human ("ต้องจัดการ"), sorted by urgency, each with a clear next action.
 - Every action is a button that changes a status in the database. No free-form editing of prices.
+
+VISUAL REFERENCE: attached image picture/admin_reference.png (a generic SaaS template). Match
+its visual language: white sidebar whose active item is a solid orange rounded pill with white
+text; light-grey search field in the top bar, date-range picker, bell with an orange dot, avatar
+with name and role on the right; big bold page title with a one-line grey subtitle; white KPI
+cards with an orange line icon inside a pale-orange rounded square, a large number, a green/red
+delta line and a small orange sparkline; orange-toned charts (pale bars + dark line) with a white
+tooltip card; tables inside cards with an orange "ดูทั้งหมด →" link, orange order-code links and
+tinted status labels. Do NOT copy its content: no donut of acquisition channels, no country flags,
+no people photos (use initials avatars), no invented growth percentages, no Latin display font.
 
 VISUAL SYSTEM (inherit the existing customer app, same family, denser and more tool-like)
 - Font: Prompt for Thai and Latin text, weights 400/500/600/700. Tabular numbers for money,
