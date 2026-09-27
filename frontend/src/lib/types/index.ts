@@ -72,7 +72,7 @@ export interface PickupHub {
 }
 
 // --- Store & Menu ---
-export type StoreZone = 'kfc-main' | 'female-dorm' | 'male-dorm' | 'cb1' | 'canteen-male' | 'green-canteen' | 'dorm';
+export type StoreZone = 'kfc-main' | 'female-dorm' | 'male-dorm' | 'cb1' | 'green-canteen' | 'dorm';
 
 /**
  * DEAL     = the store's own promotion, live as soon as it is saved.

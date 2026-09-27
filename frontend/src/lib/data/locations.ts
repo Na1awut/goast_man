@@ -17,7 +17,6 @@ export const PICKUP_HUBS: PickupHub[] = [
 	{ id: 'female-dorm', name: 'โรงอาหารหอหญิง', shortName: 'หอหญิง', icon: 'utensils', zone: 'CANTEEN' },
 	{ id: 'male-dorm', name: 'โรงอาหารหอชาย', shortName: 'หอชาย', icon: 'utensils', zone: 'CANTEEN' },
 	{ id: 'cb1', name: 'อาคาร CB1', shortName: 'CB1', icon: 'store', zone: 'ACADEMIC' },
-	{ id: 'canteen-male', name: 'โรงอาหารพระจอมเกล้า (โรงชาย)', shortName: 'โรงชาย', icon: 'utensils', zone: 'CANTEEN' },
 	{ id: 'green-canteen', name: 'โรงอาหาร 190 ปี (Green Canteen)', shortName: 'Green Canteen', icon: 'utensils', zone: 'CANTEEN' },
 	{ id: '7eleven-dorm', name: 'เซเว่นหน้าหอใน มจธ.', shortName: 'เซเว่นหน้าหอใน', icon: 'cart', zone: 'OFF_CAMPUS' },
 	{ id: 'soi45', name: 'ร้านอาหารซอยประชาอุทิศ 45', shortName: 'ซอย 45', icon: 'store', zone: 'OFF_CAMPUS' }

@@ -433,7 +433,7 @@ export const orders = new OrdersStore();
  * what was typed survives a detour to the first-order profile form
  */
 class CustomDraft {
-	pickupId = $state('canteen-male');
+	pickupId = $state('kfc-main');
 	items = $state('');
 	price = $state<number | null>(null);
 	note = $state('');

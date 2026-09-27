@@ -15,7 +15,6 @@ export const STORE_ZONES: { id: StoreZone | 'all'; label: string }[] = [
 	{ id: 'female-dorm', label: 'หอหญิง' },
 	{ id: 'male-dorm', label: 'หอชาย' },
 	{ id: 'cb1', label: 'CB1' },
-	{ id: 'canteen-male', label: 'โรงชาย' },
 	{ id: 'green-canteen', label: 'Green Canteen 190 ปี' },
 	{ id: 'dorm', label: 'หอพัก' }
 ];
@@ -25,7 +24,6 @@ export const ZONE_NAMES: Record<StoreZone, string> = {
 	'female-dorm': 'โรงอาหารหอหญิง',
 	'male-dorm': 'โรงอาหารหอชาย',
 	cb1: 'อาคาร CB1',
-	'canteen-male': 'โรงอาหารพระจอมเกล้า (โรงชาย)',
 	'green-canteen': 'Green Canteen 190 ปี',
 	dorm: 'โซนหอพักนักศึกษา'
 };

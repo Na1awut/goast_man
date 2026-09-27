@@ -165,7 +165,7 @@ describe('campus places', () => {
 	});
 
 	it('gives campus walks a sensible length', () => {
-		const walk = travelFn()(PLACES['canteen-male'], PLACES['lx-1']);
+		const walk = travelFn()(PLACES['kfc-main'], PLACES['lx-1']);
 		expect(walk).toBeGreaterThan(60);
 		expect(walk).toBeLessThan(15 * 60);
 	});
