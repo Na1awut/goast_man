@@ -112,6 +112,8 @@ export const ADMIN_ERRORS: Record<string, string> = {
 	NOT_A_RIDER: 'อีเมลนี้ไม่ได้อยู่ในรายชื่อคนหิ้ว',
 	PROMO_NOT_FOUND: 'ไม่พบโปรนี้',
 	BAD_EMAIL: 'อีเมลไม่ถูกต้อง',
+	// Sign-up refused by the database (not KMUTT, not invited, not on the team)
+	'saving new user': 'อีเมลนี้ยังไม่อยู่ในรายชื่อทีมงาน ให้ ADMIN เพิ่มที่หน้าทีมงานก่อน แล้วลองใหม่',
 	STORE_HAS_OWNER: 'ร้านนี้มีเจ้าของบัญชี Partner แล้ว',
 	EMAIL_HAS_ACCOUNT: 'อีเมลนี้มีบัญชีในแอปแล้ว ใช้อีเมลอื่นของเจ้าของร้าน',
 	INVITE_NOT_FOUND: 'ไม่พบคำเชิญนี้',

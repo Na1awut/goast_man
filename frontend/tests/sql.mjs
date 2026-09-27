@@ -82,6 +82,7 @@ try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20261002000000_client_errors.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261003000000_rider_tools.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261004000000_partner_dashboard.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261005000000_team_personal_email.sql`, 'utf8'));
 	ok('profile-at-first-order migration applies cleanly', true);
 } catch (e) {
 	ok('profile-at-first-order migration applies cleanly', false, e.message);
@@ -466,7 +467,7 @@ await db.exec(`reset role;`);
 await as(tina, async () => {
 	ok('admin: team_me says ADMIN', (await rpc(`team_me()`))?.role === 'ADMIN');
 	await db.exec(`select admin_set_member('Sam@mail.kmutt.ac.th', 'STAFF', 'lunch shift')`);
-	await expectError('team members must use a KMUTT email', `select admin_set_member('x@gmail.com', 'STAFF')`, 'KMUTT_ONLY');
+	await expectError('a team member needs a real email', `select admin_set_member('not-an-email', 'STAFF')`, 'BAD_EMAIL');
 	await expectError('admins cannot change their own role', `select admin_set_member('tina@mail.kmutt.ac.th', 'STAFF')`, 'CANNOT_CHANGE_SELF');
 	await expectError('admins cannot remove themselves', `select admin_remove_member('tina@mail.kmutt.ac.th')`, 'CANNOT_CHANGE_SELF');
 	const team = await rpc(`admin_team()`);
@@ -821,6 +822,20 @@ await as(tina, async () => {
 	const log = await rpc(`admin_activity()`);
 	ok('the team sees what the store did', log.some((l) => l.action === 'STORE_CLOSED' && l.detail?.by === 'partner') && log.some((l) => l.action === 'ITEM_OFF' && l.detail?.by === 'partner'));
 });
+
+// ---------- Team members with a personal email ----------
+await expectError('a stranger with a personal email still cannot sign up', `insert into auth.users (email) values ('stranger@gmail.com')`, 'KMUTT_ONLY');
+await as(tina, () => db.exec(`select admin_set_member('Kai.Team@Gmail.com', 'STAFF', 'ใช้เมลส่วนตัว')`));
+const kai = await newUser('kai.team@gmail.com', 'Kai Team');
+ok('a team member can sign up with a personal email', (await one(`select role from profiles where id = '${kai}'`)).role === 'ADMIN');
+await as(kai, async () => {
+	ok('and opens the console with their role', (await rpc(`team_me()`))?.role === 'STAFF');
+	ok('can work the console', (await rpc(`admin_overview()`)).stores_total === 12);
+	await expectError('but cannot become a rider (not a student)', `select apply_rider('ทุกวัน', null)`, 'STUDENT_ONLY');
+	await expectError('and the profile role alone approves nothing', `select admin_review_promo('${coPromo}', true, null)`, 'ADMIN_ONLY');
+});
+await as(tina, () => db.exec(`select admin_remove_member('kai.team@gmail.com')`));
+await as(kai, async () => ok('taken off the team, the console closes', (await rpc(`team_me()`)) === null));
 
 // Anonymous visitors can browse the catalogue
 await db.exec(`set role anon;`);

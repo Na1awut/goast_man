@@ -618,7 +618,7 @@ export function createDemoApi(): DemoApi {
 		async setMember(email, role: TeamRole, note) {
 			if (me.role !== 'ADMIN') return fail('ADMIN_ONLY');
 			const e = email.trim().toLowerCase();
-			if (!/^[^@\s]+@(mail\.)?kmutt\.ac\.th$/.test(e)) return fail('KMUTT_ONLY');
+			if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return fail('BAD_EMAIL');
 			if (e === me.email) return fail('CANNOT_CHANGE_SELF');
 			const m = team.find((x) => x.email === e);
 			if (m) m.role = role;

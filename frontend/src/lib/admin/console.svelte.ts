@@ -102,7 +102,7 @@ class Console {
 			return;
 		}
 		const redirectError = takeAuthRedirectError();
-		if (redirectError) this.signInError = friendlyError(redirectError);
+		if (redirectError) this.signInError = adminError(redirectError);
 		const {
 			data: { session }
 		} = await db().auth.getSession();

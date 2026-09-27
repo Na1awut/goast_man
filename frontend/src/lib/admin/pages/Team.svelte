@@ -34,7 +34,8 @@
 	let note = $state('');
 	let busy = $state(false);
 	let dialogError = $state('');
-	const validEmail = $derived(/^[^@\s]+@(mail\.)?kmutt\.ac\.th$/i.test(email.trim()));
+	// Any email they sign in to Google with: KMUTT or personal (team accounts are the only non-KMUTT sign-ups besides partner stores)
+	const validEmail = $derived(/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim()));
 
 	async function run(action: () => Promise<unknown>, success: string) {
 		busy = true;
@@ -102,9 +103,9 @@
 <Modal open={adding} title="เพิ่มทีมงาน" onclose={() => (adding = false)} confirmLabel="เพิ่มทีมงาน" {busy} disabled={!validEmail} error={dialogError}
 	onconfirm={() => run(() => c.api!.setMember(email, role, note), `เพิ่ม ${email.trim().toLowerCase()} เป็น ${role} แล้ว`)}>
 	<label class="block">
-		<span class="mb-1 block font-medium text-slate-900">อีเมล มจธ.</span>
-		<input bind:value={email} type="email" autocomplete="off" placeholder="ชื่อ.นามสกุล@mail.kmutt.ac.th" class="h-11 w-full rounded-xl bg-slate-100 px-3.5 outline-none focus:ring-2 focus:ring-brand" />
-		{#if email && !validEmail}<span class="mt-1 block text-xs text-red-600">ใช้ได้เฉพาะ @kmutt.ac.th หรือ @mail.kmutt.ac.th</span>{/if}
+		<span class="mb-1 block font-medium text-slate-900">อีเมลที่ใช้ login Google</span>
+		<input bind:value={email} type="email" autocomplete="off" placeholder="ชื่อ.นามสกุล@mail.kmutt.ac.th หรือ @gmail.com" class="h-11 w-full rounded-xl bg-slate-100 px-3.5 outline-none focus:ring-2 focus:ring-brand" />
+		{#if email && !validEmail}<span class="mt-1 block text-xs text-red-600">อีเมลไม่ถูกต้อง</span>{:else}<span class="mt-1 block text-xs text-slate-500">อีเมล มจธ. หรืออีเมลส่วนตัวก็ได้ ต้องเป็นบัญชีเดียวกับที่ใช้ login Google</span>{/if}
 	</label>
 	<fieldset class="mt-4">
 		<legend class="mb-2 font-medium text-slate-900">บทบาท</legend>

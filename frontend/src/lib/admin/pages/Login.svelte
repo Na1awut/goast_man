@@ -17,7 +17,7 @@
 	<section class="flex flex-col justify-center px-6 py-10 pb-[calc(2.5rem+env(safe-area-inset-bottom))] sm:px-12">
 		<div class="mx-auto w-full max-w-sm">
 			<h2 class="text-2xl font-bold text-slate-900">เข้าสู่ระบบทีมงาน</h2>
-			<p class="mt-1 text-sm text-slate-500">ใช้บัญชี Google ของ มจธ. แบบเดียวกับแอปสั่งอาหาร</p>
+			<p class="mt-1 text-sm text-slate-500">ใช้บัญชี Google ที่ ADMIN เพิ่มไว้ในรายชื่อทีมงาน อีเมล มจธ. หรืออีเมลส่วนตัวก็ได้</p>
 
 			{#if c.signInError}
 				<p class="mt-5 flex items-start gap-2 rounded-xl bg-red-50 p-3 text-sm text-red-700" role="alert"><Icon name="alert" class="mt-0.5 h-4 w-4" />{c.signInError}</p>
