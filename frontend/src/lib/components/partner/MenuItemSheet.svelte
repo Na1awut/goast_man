@@ -127,12 +127,22 @@
 				{/if}
 			</div>
 			<div class="min-w-0 flex-1 space-y-1.5">
-				<label class="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-brand px-3 py-2 text-sm font-medium text-brand active:bg-brand-50">
-					<Icon name="upload" class="h-4 w-4" />{shownPhoto ? 'เปลี่ยนรูป' : 'ใส่รูปเมนู'}
-					<input type="file" accept="image/png,image/jpeg,image/webp" class="sr-only" onchange={pickPhoto} />
-				</label>
-				{#if shownPhoto}<button type="button" onclick={() => { photoFile = null; preview = null; }} class="ml-1 text-sm text-slate-500">เอารูปออก</button>{/if}
-				<p class="text-[11px] text-slate-500">รูปจริงของร้าน แนวตั้งหรือสี่เหลี่ยม ไม่เกิน 3 MB</p>
+				<div class="flex flex-wrap gap-2">
+					<label class="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-xl border border-brand px-3 text-sm font-medium text-brand focus-within:ring-2 focus-within:ring-brand active:bg-brand-50">
+						<Icon name="upload" class="h-4 w-4" />{shownPhoto ? 'เปลี่ยนรูป' : 'ใส่รูปเมนู'}
+						<input type="file" accept="image/png,image/jpeg,image/webp" class="sr-only" onchange={pickPhoto} />
+					</label>
+					{#if shownPhoto}
+						<button type="button" onclick={() => { photoFile = null; preview = null; }} class="inline-flex h-10 items-center gap-1.5 rounded-xl border border-red-200 px-3 text-sm font-medium text-red-600 hover:bg-red-50">
+							<Icon name="image-off" class="h-4 w-4" />ลบรูป
+						</button>
+					{/if}
+				</div>
+				{#if photoFile === null && item?.imageUrl}
+					<p class="text-xs text-red-700">รูปจะถูกลบเมื่อกดบันทึก · <button type="button" onclick={() => (photoFile = undefined)} class="font-medium underline underline-offset-2">ไม่ลบแล้ว</button></p>
+				{:else}
+					<p class="text-[11px] text-slate-500">รูปจริงของร้าน แนวตั้งหรือสี่เหลี่ยม ไม่เกิน 3 MB</p>
+				{/if}
 			</div>
 		</div>
 
@@ -177,10 +187,13 @@
 
 		{#if error}<p class="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>{/if}
 
-		<button type="submit" disabled={saving} class="flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-3 text-sm font-semibold text-white disabled:opacity-60">
-			{#if saving}<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span>{/if}
-			{item ? 'บันทึกเมนู' : 'เพิ่มเมนู'}
-		</button>
+		<!-- Stays in view while the form scrolls on a phone -->
+		<div class="sticky bottom-0 bg-white pt-1 pb-1">
+			<button type="submit" disabled={saving} class="flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-3 text-sm font-semibold text-white disabled:opacity-60">
+				{#if saving}<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span>{/if}
+				{item ? 'บันทึกเมนู' : 'เพิ่มเมนู'}
+			</button>
+		</div>
 
 		{#if item}
 			{#if confirmRemove}

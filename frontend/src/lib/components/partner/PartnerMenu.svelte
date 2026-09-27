@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
 	import SmartImage from '$lib/components/SmartImage.svelte';
+	import Sheet from '$lib/components/Sheet.svelte';
 	import MenuItemSheet from './MenuItemSheet.svelte';
 	import type { MenuItem, Store } from '$lib/types';
 	import { partnerOps, type StoreOps } from '$lib/storeOps';
@@ -25,6 +26,34 @@
 		}
 		return [...map.entries()];
 	});
+
+	// Photo off in one step: the dish keeps everything else
+	let removingPhoto = $state<MenuItem | null>(null);
+	let removingBusy = $state(false);
+	async function removePhoto() {
+		const m = removingPhoto;
+		if (!m || removingBusy) return;
+		removingBusy = true;
+		try {
+			await ops.saveMenuItem(store.id, {
+				id: m.id,
+				name: m.name,
+				category: m.category,
+				price: m.price,
+				specialPrice: m.specialPrice,
+				description: m.description,
+				imageUrl: m.imageUrl,
+				photoFile: null,
+				isAvailable: m.isAvailable
+			});
+			toast.show(`ลบรูป ${m.name} แล้ว`, 'success');
+			removingPhoto = null;
+		} catch (err) {
+			toast.show(friendlyError(err), 'error');
+		} finally {
+			removingBusy = false;
+		}
+	}
 
 	async function toggle(m: MenuItem) {
 		if (busyId) return;
@@ -51,7 +80,7 @@
 	</div>
 	<p class="flex flex-wrap items-center gap-x-2 text-xs text-slate-500">
 		<span class="rounded-full px-2 py-0.5 font-medium {soldOut ? 'bg-red-50 text-red-700' : 'bg-fresh-50 text-fresh-700'}">{soldOut ? `หมด ${soldOut} เมนู` : 'มีขายครบ'}</span>
-		แตะเมนูเพื่อแก้ชื่อ ราคา รูป · สวิตช์ = มีขาย/หมด นักศึกษาเห็นทันที
+		กด "แก้ไข" เพื่อแก้ชื่อ ราคา รูป · กด × บนรูปเพื่อลบรูป · สวิตช์ = มีขาย/หมด นักศึกษาเห็นทันที
 	</p>
 
 	{#each groups as [category, items] (category)}
@@ -59,17 +88,28 @@
 			<h2 class="px-4 pt-3 text-sm font-semibold text-slate-900">{category}</h2>
 			<ul class="divide-y divide-slate-100">
 				{#each items as m (m.id)}
-					<li class="flex items-center gap-3 px-4 py-2.5">
-						<button type="button" onclick={() => (editing = m)} aria-label="แก้ไข {m.name}" class="flex min-w-0 flex-1 items-center gap-3 text-left">
-							<span class="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-slate-100">
-								{#if m.imageUrl}<SmartImage src={m.imageUrl} alt="" class="h-11 w-11" />{:else}<span class="flex h-full w-full items-center justify-center text-slate-300"><Icon name="camera" class="h-4 w-4" /></span>{/if}
-							</span>
-							<span class="min-w-0 flex-1">
-								<span class="block truncate text-sm {m.isAvailable ? 'text-slate-900' : 'text-slate-400 line-through'}">{m.name}</span>
-								<span class="block text-xs text-slate-500 tabular-nums">{formatBaht(m.price)}{m.specialPrice ? ` · พิเศษ ${formatBaht(m.specialPrice)}` : ''}</span>
-							</span>
+					<li class="flex items-center gap-2.5 px-4 py-2.5 sm:gap-3">
+						<div class="relative flex min-w-0 flex-1">
+							<button type="button" onclick={() => (editing = m)} aria-label="แก้ไข {m.name}" class="flex min-w-0 flex-1 items-center gap-3 text-left">
+								<span class="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-100">
+									{#if m.imageUrl}<SmartImage src={m.imageUrl} alt="" class="h-12 w-12" />{:else}<span class="flex h-full w-full items-center justify-center text-slate-300"><Icon name="camera" class="h-4 w-4" /></span>{/if}
+								</span>
+								<span class="min-w-0 flex-1">
+									<span class="block truncate text-sm {m.isAvailable ? 'text-slate-900' : 'text-slate-400 line-through'}">{m.name}</span>
+									<span class="block text-xs text-slate-500 tabular-nums">{formatBaht(m.price)}{m.specialPrice ? ` · พิเศษ ${formatBaht(m.specialPrice)}` : ''}</span>
+								</span>
+							</button>
+							<!-- One tap takes the photo off (after a confirm), without opening the dish -->
+							{#if m.imageUrl}
+								<button type="button" onclick={() => (removingPhoto = m)} aria-label="ลบรูป {m.name}" title="ลบรูป" class="absolute -top-1.5 left-9 flex h-6 w-6 items-center justify-center rounded-full bg-white text-red-600 shadow-sm ring-1 ring-slate-200 hover:bg-red-50">
+									<Icon name="x" class="h-3.5 w-3.5" />
+								</button>
+							{/if}
+						</div>
+						<button type="button" onclick={() => (editing = m)} tabindex="-1" aria-hidden="true" class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-medium text-slate-700 hover:border-brand hover:text-brand">
+							<Icon name="pencil" class="h-4 w-4" />แก้ไข
 						</button>
-						<span class="w-10 shrink-0 text-right text-xs {m.isAvailable ? 'text-fresh-700' : 'font-medium text-red-600'}">{m.isAvailable ? 'มีขาย' : 'หมด'}</span>
+						<span class="hidden w-10 shrink-0 text-right text-xs sm:block {m.isAvailable ? 'text-fresh-700' : 'font-medium text-red-600'}">{m.isAvailable ? 'มีขาย' : 'หมด'}</span>
 						<button
 							type="button"
 							role="switch"
@@ -91,3 +131,20 @@
 </div>
 
 <MenuItemSheet {store} {ops} item={editing} onclose={() => (editing = undefined)} />
+
+<Sheet open={!!removingPhoto} title="ลบรูปเมนู" onclose={() => !removingBusy && (removingPhoto = null)}>
+	{#if removingPhoto}
+		<div class="space-y-4 pb-2">
+			<div class="flex items-center gap-3">
+				<SmartImage src={removingPhoto.imageUrl} alt="" class="h-16 w-16 shrink-0 rounded-xl" />
+				<p class="text-sm text-slate-700">ลบรูปของ <span class="font-semibold text-slate-900">{removingPhoto.name}</span>? เมนูยังขายต่อได้ ลูกค้าจะเห็นนาฬิกาทราย "กำลังดำเนินการ" แทนรูปจนกว่าจะใส่รูปใหม่</p>
+			</div>
+			<div class="grid grid-cols-2 gap-2">
+				<button type="button" onclick={() => (removingPhoto = null)} disabled={removingBusy} class="h-11 rounded-xl border border-slate-200 text-sm font-medium text-slate-700 disabled:opacity-60">ยกเลิก</button>
+				<button type="button" onclick={removePhoto} disabled={removingBusy} class="flex h-11 items-center justify-center gap-2 rounded-xl bg-red-600 text-sm font-semibold text-white disabled:opacity-60">
+					{#if removingBusy}<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span>{:else}<Icon name="image-off" class="h-4 w-4" />{/if}ลบรูป
+				</button>
+			</div>
+		</div>
+	{/if}
+</Sheet>
