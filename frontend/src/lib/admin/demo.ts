@@ -3,6 +3,8 @@
 // number, order and amount here is made up. Never shown to buyers.
 import { DROPOFF_POINTS } from '$lib/data/locations';
 import { STORE_CATALOGUE } from '$lib/data/stores';
+import { catalog } from '$lib/stores/catalog.svelte';
+import type { Store } from '$lib/types';
 import type { AdminApi, OrderQuery } from './api';
 import { attentionOf, owedToRider, stageOf } from './rules';
 import { bangkokToday } from './format';
@@ -216,7 +218,7 @@ export function createDemoApi(): DemoApi {
 	const now = () => Date.now();
 	let me: TeamMe = { ...DEMO_ADMIN };
 	const orders = buildOrders(now());
-	const stores = STORE_CATALOGUE.map((s) => ({ id: s.id, name: s.name, category: s.category, lock: s.lock, image_url: s.imageUrl, logo_url: null, is_open: true, is_partner: s.id === 'kfc-05' }));
+	const stores = STORE_CATALOGUE.map((s) => ({ id: s.id, name: s.name, category: s.category, lock: s.lock, image_url: s.imageUrl, logo_url: null as string | null, is_open: true, is_partner: s.id === 'kfc-05', zone: s.zone as string, hidden: false, owner_email: s.id === 'kfc-05' ? 'demo.shop@example.com' : null, invite_email: null as string | null }));
 	const menu = new Map<string, AdminMenuItem[]>(
 		STORE_CATALOGUE.map((s) => [s.id, s.menuItems.map((m) => ({ id: m.id, name: m.name, price: m.price, special_price: m.specialPrice ?? null, category: m.category, is_available: m.id !== 'kfc-04-8' }))])
 	);
@@ -511,22 +513,40 @@ export function createDemoApi(): DemoApi {
 
 		stores: () =>
 			wait(
-				stores.map((s) => ({
-					...s,
-					orders_today: orders.filter((o) => o.store_id === s.id && isToday(o.created_at, bangkokToday())).length,
-					items_total: menu.get(s.id)!.length,
-					items_off: menu.get(s.id)!.filter((m) => !m.is_available).length
-				}))
+				stores.map((s) => {
+					// The editor changes the catalogue; read the live name, photo and menu from there
+					const live = catalog.byId(s.id);
+					const items = live?.menuItems ?? [];
+					return {
+						...s,
+						name: live?.name ?? s.name,
+						category: live?.category ?? s.category,
+						image_url: live?.imageUrl ?? s.image_url,
+						logo_url: live?.logoUrl ?? s.logo_url,
+						invite_email: invites.find((i) => i.store_id === s.id)?.email ?? null,
+						orders_today: orders.filter((o) => o.store_id === s.id && isToday(o.created_at, bangkokToday())).length,
+						items_total: items.length,
+						items_off: items.filter((m) => !m.isAvailable).length
+					};
+				})
 			),
 		storeMenu: (id) => wait(menu.get(id) ?? []),
 		async setStoreOpen(id, open) {
 			const s = stores.find((x) => x.id === id);
 			if (!s) return fail('STORE_NOT_FOUND');
 			s.is_open = open;
+			const live = catalog.byId(id);
+			if (live) live.isOpen = open;
 			record(open ? 'STORE_OPENED' : 'STORE_CLOSED', 'store', s.id, s.name);
 			return wait(undefined);
 		},
 		async setItemAvailable(itemId, available) {
+			const owner = catalog.stores.find((st) => st.menuItems.some((m) => m.id === itemId));
+			if (owner) {
+				await catalog.setItemAvailable(owner.id, itemId, available);
+				record(available ? 'ITEM_ON' : 'ITEM_OFF', 'store', owner.id, owner.name, { item: owner.menuItems.find((m) => m.id === itemId)?.name });
+				return wait(undefined);
+			}
 			for (const [storeId, items] of menu) {
 				const m = items.find((i) => i.id === itemId);
 				if (m) {
@@ -644,6 +664,65 @@ export function createDemoApi(): DemoApi {
 		async errors(status) {
 			const rows = errors.filter((e) => (status === 'resolved') === (e.resolved_at !== null));
 			return wait(rows.sort((a, b) => (b.resolved_at ?? b.last_at).localeCompare(a.resolved_at ?? a.last_at)));
+		},
+		async createStore(n) {
+			const prefix = n.zone === 'kfc-main' ? 'kfc' : n.zone;
+			const next = Math.max(0, ...stores.map((s) => Number(s.id.match(new RegExp(`^${prefix}-(\\d+)$`))?.[1] ?? 0))) + 1;
+			const id = `${prefix}-${String(next).padStart(2, '0')}`;
+			stores.push({ id, name: n.name.trim(), category: n.category.trim(), lock: n.lock.trim(), image_url: '', logo_url: null, is_open: false, is_partner: false, zone: n.zone, hidden: true, owner_email: null, invite_email: null });
+			catalog.stores.push({ id, zone: n.zone as Store['zone'], name: n.name.trim(), category: n.category.trim(), description: n.description.trim(), imageUrl: '', isOpen: false, rating: 0, reviewsCount: '0', queueMinutes: n.queueMinutes, lock: n.lock.trim(), isPartner: false, promotions: [], menuItems: [] });
+			record('STORE_CREATED', 'store', id, n.name.trim(), { zone: n.zone });
+			return wait(id);
+		},
+		async setStoreHidden(storeId, hidden) {
+			const s = stores.find((x) => x.id === storeId);
+			if (!s) return fail('STORE_NOT_FOUND');
+			s.hidden = hidden;
+			if (hidden) s.is_open = false;
+			record(hidden ? 'STORE_HIDDEN' : 'STORE_SHOWN', 'store', storeId, s.name);
+			return wait(undefined);
+		},
+		async clearMenu(storeId) {
+			if (me.role !== 'ADMIN') return fail('ADMIN_ONLY');
+			const live = catalog.byId(storeId);
+			if (!live) return fail('STORE_NOT_FOUND');
+			const n = live.menuItems.length;
+			live.menuItems = [];
+			record('MENU_CLEARED', 'store', storeId, live.name, { items: n });
+			return wait(n);
+		},
+		async storeForEdit(storeId) {
+			const live = catalog.byId(storeId);
+			return live ? live : fail('STORE_NOT_FOUND');
+		},
+		async uploadStoreImage(_storeId, file) {
+			return URL.createObjectURL(file);
+		},
+		async saveMenuItem(storeId, item) {
+			await catalog.saveMenuItem(storeId, { ...item, photoFile: undefined });
+			record(item.id ? 'ITEM_EDITED' : 'ITEM_ADDED', 'store', storeId, catalog.byId(storeId)?.name ?? storeId, { item: item.name, by: 'team' });
+			return item.id ?? '';
+		},
+		async removeMenuItem(storeId, itemId) {
+			await catalog.removeMenuItem(storeId, itemId);
+			record('ITEM_REMOVED', 'store', storeId, catalog.byId(storeId)?.name ?? storeId, { by: 'team' });
+			return wait(undefined);
+		},
+		async updateStoreInfo(storeId, info) {
+			await catalog.updateStoreInfo(storeId, info);
+			record('STORE_EDITED', 'store', storeId, info.name, { by: 'team' });
+			return wait(undefined);
+		},
+		async updateStorefront(storeId, f) {
+			const live = catalog.byId(storeId);
+			if (!live) return fail('STORE_NOT_FOUND');
+			live.tagline = f.tagline.trim() || undefined;
+			live.fastLaneMinutes = f.fastLaneMinutes;
+			live.bannerUrl = f.bannerUrl;
+			live.logoUrl = f.logoUrl;
+			if (f.imageUrl) live.imageUrl = f.imageUrl;
+			record('STORE_EDITED', 'store', storeId, live.name, { what: 'storefront', by: 'team' });
+			return wait(undefined);
 		},
 		async badges() {
 			return wait({

@@ -2,6 +2,9 @@
 // admin_* functions (each checks the caller's team role); demo mode runs the
 // same interface on sample data in memory (./demo.ts).
 import { db, friendlyError, isLive } from '$lib/supabase';
+import * as app from '$lib/api/live';
+import type { Store } from '$lib/types';
+import type { StoreInfo } from '$lib/storeOps';
 import { ADMIN_ERRORS } from './labels';
 import type {
 	AdminMenuItem,
@@ -14,6 +17,7 @@ import type {
 	ErrorStatus,
 	LogEntry,
 	MoneyEntry,
+	NewStore,
 	OrderDetail,
 	OrdersPage,
 	OrdersTab,
@@ -73,6 +77,17 @@ export interface AdminApi {
 	errorCount(): Promise<number>;
 	resolveError(id: number): Promise<void>;
 	badges(): Promise<Badges>;
+	// Stores the team builds and edits (any store, owner or not)
+	createStore(s: NewStore): Promise<string>;
+	setStoreHidden(storeId: string, hidden: boolean): Promise<void>;
+	clearMenu(storeId: string): Promise<number>;
+	/** The full store (details, storefront, menu) for the editor; hidden stores included */
+	storeForEdit(storeId: string): Promise<Store>;
+	uploadStoreImage(storeId: string, file: File, kind: 'banner' | 'logo' | 'photo' | 'menu'): Promise<string>;
+	saveMenuItem(storeId: string, item: app.MenuItemArgs): Promise<string>;
+	removeMenuItem(storeId: string, itemId: string): Promise<void>;
+	updateStoreInfo(storeId: string, info: StoreInfo): Promise<void>;
+	updateStorefront(storeId: string, f: app.StorefrontArgs): Promise<void>;
 	riderApplications(status?: ApplicationStatus | null): Promise<RiderApplicationRow[]>;
 	reviewRiderApplication(id: string, approve: boolean, note: string): Promise<void>;
 }
@@ -134,6 +149,36 @@ const liveApi: AdminApi = {
 	errorCount: () => call('admin_error_count'),
 	resolveError: (id) => call('admin_resolve_error', { p_id: id }),
 	badges: () => call('admin_badges'),
+	createStore: (s) =>
+		call('admin_create_store', { p_name: s.name, p_category: s.category, p_zone: s.zone, p_lock: s.lock, p_description: s.description, p_queue_minutes: s.queueMinutes }),
+	setStoreHidden: (storeId, hidden) => call('admin_set_store_hidden', { p_store_id: storeId, p_hidden: hidden }),
+	clearMenu: (storeId) => call('admin_clear_menu', { p_store_id: storeId }),
+	storeForEdit: (storeId) => app.fetchStore(storeId),
+	uploadStoreImage: (storeId, file, kind) => app.uploadStoreImage(storeId, file, kind),
+	saveMenuItem: (storeId, m) =>
+		call('admin_save_menu_item', {
+			p_store_id: storeId,
+			p_id: m.id ?? null,
+			p_name: m.name,
+			p_category: m.category,
+			p_price: m.price,
+			p_special_price: m.specialPrice ?? null,
+			p_description: m.description,
+			p_image_url: m.imageUrl,
+			p_available: m.isAvailable
+		}),
+	removeMenuItem: (storeId, itemId) => call('admin_remove_menu_item', { p_store_id: storeId, p_id: itemId }),
+	updateStoreInfo: (storeId, i) =>
+		call('admin_update_store_info', { p_store_id: storeId, p_name: i.name, p_category: i.category, p_description: i.description, p_queue_minutes: i.queueMinutes }),
+	updateStorefront: (storeId, f) =>
+		call('admin_update_storefront', {
+			p_store_id: storeId,
+			p_tagline: f.tagline,
+			p_banner_url: f.bannerUrl ?? '',
+			p_fast_lane_minutes: f.fastLaneMinutes ?? null,
+			p_logo_url: f.logoUrl ?? '',
+			p_image_url: f.imageUrl ?? ''
+		}),
 	riderApplications: (status) => call('admin_rider_applications', { p_status: status === undefined ? 'PENDING' : status }),
 	reviewRiderApplication: (id, approve, note) => call('admin_review_rider_application', { p_id: id, p_approve: approve, p_note: note })
 };

@@ -16,7 +16,7 @@ export const PAGES: { id: Page; label: string; title: string; subtitle: string; 
 	{ id: 'overview', label: 'ภาพรวม', title: 'ภาพรวม', subtitle: 'ดูสถานะออเดอร์ การเงิน และปัญหาที่ต้องจัดการในช่วงเที่ยงวันนี้', icon: 'home' },
 	{ id: 'orders', label: 'ออเดอร์', title: 'ออเดอร์', subtitle: 'ออเดอร์ที่ต้องมีคนช่วยขึ้นก่อน กดเพื่อดูรายละเอียดและแก้ไข', icon: 'receipt' },
 	{ id: 'finance', label: 'การเงิน', title: 'การเงิน', subtitle: 'โอนเงินให้คนหิ้ว คืนเงินผู้ซื้อ และประวัติการโอน', icon: 'coins' },
-	{ id: 'stores', label: 'ร้านค้า', title: 'ร้านค้า', subtitle: 'เปิด/ปิดรับออเดอร์ และเมนูที่หมดวันนี้', icon: 'store' },
+	{ id: 'stores', label: 'ร้านค้า', title: 'ร้านค้า', subtitle: 'สร้างร้าน แก้ข้อมูล รูป และเมนูของทุกร้าน เปิด/ปิดรับออเดอร์', icon: 'store' },
 	{ id: 'riders', label: 'คนหิ้ว', title: 'คนหิ้ว', subtitle: 'คนหิ้วที่ผ่านการ verify และงานที่ถืออยู่ตอนนี้', icon: 'bike' },
 	{ id: 'partners', label: 'Partner และโปร', title: 'Partner และโปร', subtitle: 'โปรของร้านที่เปิดอยู่ และเชิญร้านเข้าร่วม', icon: 'tag' },
 	{ id: 'errors', label: 'ข้อผิดพลาด', title: 'ข้อผิดพลาด', subtitle: 'error ที่ผู้ใช้เจอในแอปและหน้านี้ รวมเป็นกลุ่มตามจุดที่พัง', icon: 'alert' },
@@ -29,10 +29,11 @@ const REFRESH_MS = 15_000;
 const DEMO_KEY = 'gooseman_console_demo';
 const SOUND_KEY = 'gooseman_console_sound';
 
-function readRoute(): { page: Page; orderId: string | null } {
+function readRoute(): { page: Page; orderId: string | null; storeId: string | null } {
 	const [, page, id] = (typeof location === 'undefined' ? '' : location.hash).replace(/^#/, '').split('/');
 	const known = PAGES.some((p) => p.id === page) ? (page as Page) : 'overview';
-	return { page: known, orderId: known === 'orders' && id ? decodeURIComponent(id) : null };
+	const sub = id ? decodeURIComponent(id) : null;
+	return { page: known, orderId: known === 'orders' ? sub : null, storeId: known === 'stores' ? sub : null };
 }
 
 class Console {
@@ -45,6 +46,8 @@ class Console {
 
 	page = $state<Page>('overview');
 	orderId = $state<string | null>(null);
+	/** Store open in the store editor (#/stores/<id>) */
+	storeId = $state<string | null>(null);
 	/** Day the overview and day-based order tabs look at (Bangkok "YYYY-MM-DD") */
 	day = $state(bangkokToday());
 	/** Search typed in the top bar; the orders page picks it up */
@@ -231,11 +234,12 @@ class Console {
 	}
 
 	#applyRoute() {
-		const { page, orderId } = readRoute();
+		const { page, orderId, storeId } = readRoute();
 		const def = PAGES.find((p) => p.id === page)!;
 		// STAFF never lands on an admin-only page, even from a pasted link
 		this.page = def.admin && this.me && !this.isAdmin ? 'overview' : page;
 		this.orderId = orderId;
+		this.storeId = storeId;
 		if (typeof window !== 'undefined') window.scrollTo({ top: 0 });
 	}
 

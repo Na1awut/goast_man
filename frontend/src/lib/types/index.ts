@@ -106,6 +106,8 @@ export interface Store {
 	description: string;
 	imageUrl: string;
 	isOpen: boolean;
+	/** Hidden from the app by the team (being set up, or retired) */
+	hidden?: boolean;
 	rating: number;
 	reviewsCount: string;
 	queueMinutes: number;

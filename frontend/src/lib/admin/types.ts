@@ -189,9 +189,24 @@ export interface AdminStore {
 	logo_url: string | null;
 	is_open: boolean;
 	is_partner: boolean;
+	zone: string;
+	/** Hidden from the app (being set up, or a retired mock-up) */
+	hidden: boolean;
+	/** The partner who runs it, or the email invited to; both null = team-run for now */
+	owner_email: string | null;
+	invite_email: string | null;
 	orders_today: number;
 	items_total: number;
 	items_off: number;
+}
+
+export interface NewStore {
+	name: string;
+	category: string;
+	zone: string;
+	lock: string;
+	description: string;
+	queueMinutes: number;
 }
 
 export interface AdminMenuItem {

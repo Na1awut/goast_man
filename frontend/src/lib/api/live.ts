@@ -54,6 +54,7 @@ function mapStore(r: Row): Store {
 		description: r.description ?? '',
 		imageUrl: r.image_url ?? '',
 		isOpen: r.is_open,
+		hidden: r.hidden ?? false,
 		rating: Number(r.rating),
 		reviewsCount: r.reviews_count,
 		queueMinutes: r.queue_minutes,

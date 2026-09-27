@@ -42,7 +42,8 @@ class CatalogStore {
 		this.loading = true;
 		this.error = null;
 		try {
-			this.stores = await api.fetchCatalog();
+			// The database hides these from buyers; a team member signed in here can still read them, so drop them too
+			this.stores = (await api.fetchCatalog()).filter((s) => !s.hidden);
 		} catch (err) {
 			// No silent fallback to demo data: a live app must not show made-up stores
 			this.error = friendlyError(err);

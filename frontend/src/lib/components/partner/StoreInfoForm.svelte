@@ -2,11 +2,11 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import SmartImage from '$lib/components/SmartImage.svelte';
 	import type { Store } from '$lib/types';
-	import { catalog } from '$lib/stores/catalog.svelte';
+	import { partnerOps, type StoreOps } from '$lib/storeOps';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { friendlyError } from '$lib/supabase';
 
-	let { store }: { store: Store } = $props();
+	let { store, ops = partnerOps }: { store: Store; ops?: StoreOps } = $props();
 
 	const MAX_BYTES = 3 * 1024 * 1024;
 
@@ -55,10 +55,10 @@
 		if (queue === null || queue < 0 || queue > 120) return (error = 'เวลาคิวต้องอยู่ระหว่าง 0-120 นาที');
 		saving = true;
 		try {
-			await catalog.updateStoreInfo(store.id, { name, category, description, queueMinutes: queue });
+			await ops.updateStoreInfo(store.id, { name, category, description, queueMinutes: queue });
 			if (logoFile || photoFile) {
 				// Same call as the storefront form: keeps the tagline, banner and Fast lane as they are
-				await catalog.updateStorefront(store.id, {
+				await ops.updateStorefront(store.id, {
 					tagline: store.tagline ?? '',
 					fastLaneMinutes: store.fastLaneMinutes,
 					bannerFile: undefined,
@@ -104,7 +104,7 @@
 				<SmartImage src={photoPreview ?? store.imageUrl} alt="รูปร้าน" class="h-20 w-full" />
 			</div>
 			<label class="inline-block cursor-pointer text-xs font-medium text-brand">
-				เปลี่ยนรูปร้าน
+				{store.imageUrl || photoPreview ? 'เปลี่ยนรูปร้าน' : 'ใส่รูปร้าน'}
 				<input type="file" accept="image/png,image/jpeg,image/webp" class="sr-only" onchange={(e) => pick(e, 'photo')} />
 			</label>
 		</div>

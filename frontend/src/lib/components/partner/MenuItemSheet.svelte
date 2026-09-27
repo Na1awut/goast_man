@@ -3,12 +3,12 @@
 	import Sheet from '$lib/components/Sheet.svelte';
 	import SmartImage from '$lib/components/SmartImage.svelte';
 	import type { MenuItem, Store } from '$lib/types';
-	import { catalog } from '$lib/stores/catalog.svelte';
+	import { partnerOps, type StoreOps } from '$lib/storeOps';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { friendlyError } from '$lib/supabase';
 
 	/** item: a dish to edit; null = add a new one; undefined = closed */
-	let { store, item, onclose }: { store: Store; item: MenuItem | null | undefined; onclose: () => void } = $props();
+	let { store, item, onclose, ops = partnerOps }: { store: Store; item: MenuItem | null | undefined; onclose: () => void; ops?: StoreOps } = $props();
 
 	const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
 	const categories = $derived([...new Set(store.menuItems.map((m) => m.category).filter(Boolean))]);
@@ -72,7 +72,7 @@
 		saving = true;
 		error = '';
 		try {
-			await catalog.saveMenuItem(store.id, {
+			await ops.saveMenuItem(store.id, {
 				id: item?.id,
 				name: name.trim(),
 				category: category.trim(),
@@ -96,7 +96,7 @@
 		if (!item) return;
 		saving = true;
 		try {
-			await catalog.removeMenuItem(store.id, item.id);
+			await ops.removeMenuItem(store.id, item.id);
 			toast.show(`ลบ ${item.name} ออกจากเมนูแล้ว`, 'info');
 			onclose();
 		} catch (err) {

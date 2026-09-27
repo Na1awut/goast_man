@@ -86,6 +86,7 @@ try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20261006000000_partner_menu.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261007000000_free_delivery_team_only.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261008000000_store_discount.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261009000000_team_store_editing.sql`, 'utf8'));
 	ok('profile-at-first-order migration applies cleanly', true);
 } catch (e) {
 	ok('profile-at-first-order migration applies cleanly', false, e.message);
@@ -919,6 +920,61 @@ await db.exec(`update orders set payout_paid_at = now() where id in ('${dealOrde
 await as(gina, async () => {
 	const job = (await rpc(`rider_board()`)) ?? {};
 	ok('the rider board carries the store discount', !JSON.stringify(job).includes('"store_discount": null'));
+});
+
+// ---------- The team sets stores up itself ----------
+let newStore;
+await as(alice, () => expectError('a buyer cannot create a store', `select admin_create_store('ร้านใหม่', 'ข้าว', 'kfc-main', '13', '', 5)`, 'TEAM_ONLY'));
+await as(sam, async () => {
+	await expectError('the zone must be a real canteen', `select admin_create_store('ร้านใหม่', 'ข้าว', 'moon', '13', '', 5)`, 'BAD_ZONE');
+	newStore = (await one(`select admin_create_store('ร้านข้าวแกงป้าแดง', 'ข้าวราดแกง', 'kfc-main', '13', 'ค่ากล่อง 5 บาท', 8) as id`)).id;
+	ok('staff create a store with the next free KFC id', /^kfc-\d{2}$/.test(newStore) && Number((await one(`select count(*) n from stores where id = '${newStore}'`)).n) === 1, newStore);
+	const listed = (await rpc(`admin_stores()`)).find((s) => s.id === newStore);
+	ok('a new store starts hidden and closed, with no owner yet', listed?.hidden === true && listed.is_open === false && listed.owner_email === null && listed.name === 'ร้านข้าวแกงป้าแดง');
+});
+await db.exec(`set role anon;`);
+ok('buyers do not see a hidden store', (await one(`select count(*) n from stores where id = '${newStore}'`)).n == 0);
+await db.exec(`reset role;`);
+const TEAM_PHOTO = `https://proj.supabase.co/storage/v1/object/public/store-banners/${newStore}/menu-1.jpg`;
+let teamDish;
+await as(sam, async () => {
+	ok('the team sees hidden stores', Number((await one(`select count(*) n from stores where id = '${newStore}'`)).n) === 1);
+	teamDish = (await one(`select admin_save_menu_item('${newStore}', null, 'ข้าวแกงเขียวหวาน', 'ข้าวราดแกง', 35, 45, '', '${TEAM_PHOTO}') as id`)).id;
+	ok('the team adds a dish with a photo to any store', teamDish.startsWith(`${newStore}-`));
+	await expectError('a photo from another store’s folder is refused', `select admin_save_menu_item('${newStore}', null, 'x', 'y', 30, null, '', '${TEAM_PHOTO.replace(newStore, 'kfc-05')}')`, 'BAD_IMAGE');
+	await db.exec(`select admin_save_menu_item('kfc-05', 'kfc-05-2', 'ข้าวคั่วกลิ้งไก่', 'ข้าวและไก่', 38, 45, '', (select image_url from menu_items where id = 'kfc-05-2'))`);
+	ok('the team edits a partner’s dish too', (await one(`select price from menu_items where id = 'kfc-05-2'`)).price === 38);
+	await db.exec(`select admin_update_store_info('${newStore}', 'ร้านข้าวแกงป้าแดง', 'ข้าวราดแกง', 'เปิด 7:00-14:00', 6)`);
+	await db.exec(`select admin_update_storefront('${newStore}', 'แกงสดทุกเช้า', null, 5, '${TEAM_PHOTO.replace('menu-1', 'logo')}', '${TEAM_PHOTO.replace('menu-1', 'photo')}')`);
+	const st = await one(`select description, queue_minutes, tagline, fast_lane_minutes, logo_url, image_url from stores where id = '${newStore}'`);
+	ok('the team edits store details and storefront', st.description === 'เปิด 7:00-14:00' && st.queue_minutes === 6 && st.tagline === 'แกงสดทุกเช้า' && st.fast_lane_minutes === 5 && st.image_url.endsWith('/photo.jpg'));
+	await expectError('only ADMIN clears a whole menu', `select admin_clear_menu('${newStore}')`, 'ADMIN_ONLY');
+	await db.exec(`select admin_set_store_hidden('${newStore}', false); select admin_set_store_open('${newStore}', true)`);
+});
+await db.exec(`set role anon;`);
+ok('once shown, buyers see the store and its dish', (await one(`select count(*) n from stores where id = '${newStore}' and is_open`)).n == 1 && (await one(`select count(*) n from menu_items where id = '${teamDish}'`)).n == 1);
+await db.exec(`reset role;`);
+await as(alice, async () => {
+	const o = await orderRow((await placeOrder(newStore, [{ menu_item_id: teamDish, quantity: 1 }])).id);
+	ok('a team-built store takes orders', o.food_total === 35 && o.pickup_name === 'ร้านข้าวแกงป้าแดง');
+	await db.exec(`select cancel_order('${o.id}')`);
+});
+await as(tina, async () => {
+	ok('ADMIN clears the whole menu in one go', (await rpc(`admin_clear_menu('${newStore}')`)) === 1);
+	await db.exec(`select admin_set_store_hidden('${newStore}', true)`);
+	ok('hiding a store also stops orders', (await one(`select is_open from stores where id = '${newStore}'`)).is_open === false);
+	const acts = new Set((await rpc(`admin_activity()`)).map((l) => l.action));
+	ok('the log shows the team built the store', ['STORE_CREATED', 'STORE_SHOWN', 'STORE_HIDDEN', 'MENU_CLEARED'].every((a) => acts.has(a)) && (await rpc(`admin_activity()`)).some((l) => l.action === 'ITEM_ADDED' && l.detail?.by === 'team'));
+	await db.exec(`select admin_invite_partner('owner.red@example.com', '${newStore}')`);
+});
+const red = await newUser('owner.red@example.com', 'ป้าแดง');
+await as(red, async () => {
+	ok('the invited owner takes over the team-built store', (await one(`select partner_store_id from profiles where id = '${red}'`)).partner_store_id === newStore);
+	await db.exec(`select partner_update_store_info('ร้านป้าแดง', 'ข้าวราดแกง', 'เปิด 7:00-14:00', 6)`);
+});
+await as(sam, async () => {
+	await db.exec(`select admin_update_store_info('${newStore}', 'ร้านป้าแดง (KFC ล็อก 13)', 'ข้าวราดแกง', 'เปิด 7:00-14:00', 6)`);
+	ok('and the team can still edit it', (await one(`select name from stores where id = '${newStore}'`)).name === 'ร้านป้าแดง (KFC ล็อก 13)');
 });
 
 // Anonymous visitors can browse the catalogue

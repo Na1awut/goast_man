@@ -3,12 +3,12 @@
 	import SmartImage from '$lib/components/SmartImage.svelte';
 	import MenuItemSheet from './MenuItemSheet.svelte';
 	import type { MenuItem, Store } from '$lib/types';
-	import { catalog } from '$lib/stores/catalog.svelte';
+	import { partnerOps, type StoreOps } from '$lib/storeOps';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { friendlyError } from '$lib/supabase';
 	import { formatBaht } from '$lib/utils';
 
-	let { store }: { store: Store } = $props();
+	let { store, ops = partnerOps }: { store: Store; ops?: StoreOps } = $props();
 
 	let query = $state('');
 	let busyId = $state<string | null>(null);
@@ -31,7 +31,7 @@
 		busyId = m.id;
 		const next = !m.isAvailable;
 		try {
-			await catalog.setItemAvailable(store.id, m.id, next);
+			await ops.setItemAvailable(store.id, m.id, next);
 			toast.show(next ? `${m.name} กลับมาขายแล้ว` : `${m.name} ขึ้นว่าหมดแล้ว`, next ? 'success' : 'info');
 		} catch (err) {
 			toast.show(friendlyError(err), 'error');
@@ -90,4 +90,4 @@
 	{/each}
 </div>
 
-<MenuItemSheet {store} item={editing} onclose={() => (editing = undefined)} />
+<MenuItemSheet {store} {ops} item={editing} onclose={() => (editing = undefined)} />

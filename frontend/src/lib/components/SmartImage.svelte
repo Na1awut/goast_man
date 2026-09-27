@@ -1,9 +1,13 @@
 <script lang="ts">
+	import { assets } from '$app/paths';
 	import Icon from './Icon.svelte';
 
 	// Image with a shimmer while loading and a neutral icon if the remote photo
 	// fails, so a flaky network never shows a broken-image glyph.
-	let { src, alt, class: className = '' }: { src: string; alt: string; class?: string } = $props();
+	let { src: raw, alt, class: className = '' }: { src: string; alt: string; class?: string } = $props();
+
+	// Bundled photos are stored as "stores/kfc-05.webp": resolve from the site root, so they also load under /admin/
+	const src = $derived(!raw || /^(https?:|data:|blob:|\/)/.test(raw) ? raw : `${assets}/${raw}`);
 
 	// Keyed by src so a changed image restarts the loading state without an effect
 	let loadedSrc = $state<string | null>(null);
