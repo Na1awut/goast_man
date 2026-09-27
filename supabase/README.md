@@ -46,7 +46,7 @@
    insert into team_members (email, role, note) values ('<อีเมล มจธ.>', 'ADMIN', 'first admin');
    ```
 
-**โปรเจกต์ที่ใช้อยู่ (`pguhzjtdwgualqeqzleu`):** รันถึง `20261003000000_rider_tools.sql` แล้ว (**ยังต้องรัน `20261004000000_partner_dashboard.sql`**) ADMIN คนแรกคือ `natthawut.napa@mail.kmutt.ac.th`
+**โปรเจกต์ที่ใช้อยู่ (`pguhzjtdwgualqeqzleu`):** รันครบถึง `20261004000000_partner_dashboard.sql` แล้ว (รันด้วย `npx supabase db query --linked --project-ref pguhzjtdwgualqeqzleu -f <ไฟล์>` ได้ หลัง `npx supabase login`) ADMIN คนแรกคือ `natthawut.napa@mail.kmutt.ac.th`
 
 **บันทึก deploy 27 กันยายน 2569:** รัน `client_errors_deploy.sql` แล้วต่อด้วย `rider_tools_deploy.sql` ผ่าน Supabase CLI ไปยังโปรเจกต์ `goose-man` แต่ละไฟล์ครอบด้วย `begin;` … `commit;` และสำเร็จแล้ว ตรวจหลัง deploy พบตาราง `client_errors`, `rider_presence`, `rider_applications` เปิด RLS, คอลัมน์ `orders.tip_in_total` และฟังก์ชันครบ ตรวจสิทธิ์การเรียกฟังก์ชันและสูตรทิปผ่าน ส่วน API `riders_online` ตอบ HTTP 200 และค่า `0` ณ เวลาตรวจ ก่อน deploy ชุดทดสอบ SQL ในเครื่องผ่าน 233 รายการ ไม่ได้สร้างออเดอร์หรือใบสมัครทดสอบบนฐานข้อมูลจริง **ไม่ต้องรันสองไฟล์นี้ซ้ำ** เพราะคำสั่งสร้างตาราง/เพิ่มคอลัมน์ไม่ได้รองรับการรันซ้ำ
 
