@@ -18,6 +18,7 @@
 | `migrations/20260930000000_promptpay_slips.sql` | PromptPay: สถานะจ่ายเงิน, กันสลิปซ้ำ, ซ่อนออเดอร์ที่ยังไม่จ่ายจากคนหิ้ว, รายการเงินที่ต้องโอนให้คนหิ้ว |
 | `migrations/20261001000000_team_console.sql` | หน้าทีมงาน: รายชื่อทีม (ADMIN / STAFF), บันทึกการทำงาน, ฟังก์ชัน `admin_*` ทุกปุ่ม |
 | `migrations/20261002000000_client_errors.sql` | Error log: error จากเว็บ รวมเป็นกลุ่ม ให้ทีมดูในหน้าทีมงาน |
+| `migrations/20261003000000_rider_tools.sql` | คนหิ้ว: พร้อมรับงาน, ใบสมัครคนหิ้ว, ทิปปัดเศษรวมในยอดโอน |
 | `functions/verify-slip/` | Edge Function ตรวจสลิปกับ SlipOK แล้วบันทึกว่าจ่ายแล้ว |
 | `seed.sql` | ร้านจริง 12 ร้านของโรงอาหาร KFC (หลัก) และเมนู (สร้างจาก `frontend/src/lib/data/stores.ts`) |
 | `generate-seed.mjs` | สร้าง `seed.sql` ใหม่หลังแก้ข้อมูลร้านในแอป: `node supabase/generate-seed.mjs` |
@@ -36,13 +37,14 @@
    7. `migrations/20260930000000_promptpay_slips.sql`
    8. `migrations/20261001000000_team_console.sql`
    9. `migrations/20261002000000_client_errors.sql`
-   10. `seed.sql`
+   10. `migrations/20261003000000_rider_tools.sql`
+   11. `seed.sql`
 3. เพิ่ม ADMIN คนแรกของหน้าทีมงาน (คนต่อไป ADMIN เพิ่มเองในหน้าทีมงาน):
    ```sql
    insert into team_members (email, role, note) values ('<อีเมล มจธ.>', 'ADMIN', 'first admin');
    ```
 
-**โปรเจกต์ที่ใช้อยู่ (`pguhzjtdwgualqeqzleu`):** รันถึง `20261001000000_team_console.sql` แล้ว ADMIN คนแรกคือ `natthawut.napa@mail.kmutt.ac.th` · **ยังต้องรัน `20261002000000_client_errors.sql`** (ครอบด้วย `begin;` … `commit;` ถ้ามี error จะไม่มีอะไรเปลี่ยน)
+**โปรเจกต์ที่ใช้อยู่ (`pguhzjtdwgualqeqzleu`):** รันถึง `20261001000000_team_console.sql` แล้ว ADMIN คนแรกคือ `natthawut.napa@mail.kmutt.ac.th` · **ยังต้องรัน `20261002000000_client_errors.sql` แล้วต่อด้วย `20261003000000_rider_tools.sql`** (ครอบด้วย `begin;` … `commit;` ถ้ามี error จะไม่มีอะไรเปลี่ยน)
 
 ### 2. เปิดล็อกอินด้วย Google
 1. ที่ [Google Cloud Console](https://console.cloud.google.com/apis/credentials) สร้าง **OAuth client ID** (ประเภท Web application)
