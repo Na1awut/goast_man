@@ -65,7 +65,7 @@
 <div class="flex flex-1 flex-col">
 	<!-- Cover: a partner's own storefront banner when set -->
 	<div class="relative h-56 shrink-0">
-		<SmartImage src={store.bannerUrl ?? store.imageUrl} alt={store.bannerUrl ? `แบนเนอร์ร้าน ${store.name}` : store.name} class="h-full w-full" />
+		<SmartImage src={store.bannerUrl ?? store.imageUrl} alt={store.bannerUrl ? `แบนเนอร์ร้าน ${store.name}` : store.name} pending class="h-full w-full" />
 		<div class="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/40 to-transparent"></div>
 		<div class="absolute inset-x-0 top-0 flex items-center justify-between px-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
 			<button type="button" onclick={() => nav.back()} aria-label="ย้อนกลับ" class="flex h-10 w-10 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-sm">
@@ -170,7 +170,7 @@
 			{#each items as item (item.id)}
 				{@const qty = cartIsThisStore ? cart.qty(item.id) + cart.qty(item.id, true) : 0}
 				<li class="flex gap-3 rounded-2xl border bg-white p-3 {qty > 0 ? 'border-brand-200' : 'border-slate-100'} {item.isAvailable ? '' : 'opacity-60'}">
-					{#if item.imageUrl}<SmartImage src={item.imageUrl} alt={item.name} class="h-20 w-20 shrink-0 rounded-xl" />{/if}
+					<SmartImage src={item.imageUrl} alt={item.name} pending class="h-20 w-20 shrink-0 rounded-xl" />
 					<div class="flex min-w-0 flex-1 flex-col">
 						<h3 class="text-sm leading-snug font-semibold text-slate-900">{item.name}</h3>
 						{#if item.description}<p class="line-clamp-2 text-xs text-slate-500">{item.description}</p>{/if}

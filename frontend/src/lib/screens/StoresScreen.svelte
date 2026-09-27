@@ -83,7 +83,7 @@
 					<li>
 						<button type="button" onclick={() => storeView.open(store.id)} class="flex w-full gap-3 rounded-2xl border border-slate-100 bg-white p-3 text-left">
 							<span class="relative h-24 w-24 shrink-0">
-								<SmartImage src={store.imageUrl} alt={store.name} class="h-full w-full rounded-xl" />
+								<SmartImage src={store.imageUrl} alt={store.name} pending class="h-full w-full rounded-xl" />
 								{#if store.isPartner}<StoreLogo {store} class="absolute -right-1.5 -bottom-1.5 h-8 w-8 text-xs ring-2 ring-white" />{/if}
 							</span>
 							<div class="flex min-w-0 flex-1 flex-col">

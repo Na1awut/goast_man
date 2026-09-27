@@ -231,7 +231,7 @@
 											<span class="mt-0.5 block truncate text-xs text-white/85">{promotion.minQty > 1 ? `เมื่อสั่ง ${promotion.minQty} ชิ้นขึ้นไป` : 'ทุกออเดอร์ผ่านแอป'}</span>
 										</span>
 									</div>
-									<SmartImage src={store.imageUrl} alt="" class="w-28 shrink-0 [clip-path:ellipse(100%_90%_at_100%_50%)]" />
+									<SmartImage src={store.imageUrl} alt="" pending class="w-28 shrink-0 [clip-path:ellipse(100%_90%_at_100%_50%)]" />
 								</div>
 							{/if}
 							<p class="truncate bg-brand-700 px-4 py-2 text-xs text-white/90">{promotion.title}</p>
@@ -283,7 +283,7 @@
 			<section class="space-y-3">
 				<h2 class="text-base font-semibold text-slate-900">สั่งอีกครั้ง</h2>
 				<div class="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white p-3">
-					<SmartImage src={lastStore.imageUrl} alt={lastStore.name} class="h-14 w-14 shrink-0 rounded-xl" />
+					<SmartImage src={lastStore.imageUrl} alt={lastStore.name} pending class="h-14 w-14 shrink-0 rounded-xl" />
 					<div class="min-w-0 flex-1">
 						<p class="truncate text-sm font-semibold text-slate-900">{lastStore.name}</p>
 						<p class="truncate text-xs text-slate-500">{lastOrder.itemDetails}</p>
@@ -305,7 +305,7 @@
 					{#each deals as { store, deal } (store.id)}
 						<button type="button" onclick={() => storeView.open(store.id)} class="w-60 shrink-0 snap-start overflow-hidden rounded-2xl border border-slate-100 bg-white text-left">
 							<div class="relative">
-								<SmartImage src={store.imageUrl} alt={store.name} class="h-28 w-full" />
+								<SmartImage src={store.imageUrl} alt={store.name} pending class="h-28 w-full" />
 								<span class="absolute bottom-2 left-2 flex items-center gap-1 rounded-md bg-white px-1.5 py-0.5 text-[11px] font-medium text-slate-700">
 									<Icon name="clock" class="h-3 w-3" /> ~{store.queueMinutes} นาที
 								</span>
@@ -333,7 +333,7 @@
 						<li>
 							<button type="button" onclick={() => storeView.open(store.id)} class="flex w-full items-center gap-3 p-3 text-left active:bg-slate-50">
 								<span class="w-4 text-center text-sm font-semibold text-slate-400 tabular-nums">{i + 1}</span>
-								<SmartImage src={store.imageUrl} alt={store.name} class="h-12 w-12 shrink-0 rounded-lg" />
+								<SmartImage src={store.imageUrl} alt={store.name} pending class="h-12 w-12 shrink-0 rounded-lg" />
 								<span class="min-w-0 flex-1">
 									<span class="block truncate text-sm font-medium text-slate-900">{store.name}</span>
 									<span class="flex items-center gap-1 text-xs text-slate-500">

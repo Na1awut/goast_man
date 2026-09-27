@@ -83,7 +83,6 @@
 		if (!store) return [];
 		const m: string[] = [];
 		if (!store.imageUrl) m.push('รูปร้าน');
-		if (!store.menuItems.length) m.push('เมนู');
 		return m;
 	});
 </script>
@@ -127,8 +126,11 @@
 					<span class="text-[11px] text-slate-500">{store.isOpen ? 'รับออเดอร์' : 'ปิดรับ'}</span>
 				</div>
 			</div>
-			{#if meta?.hidden && missing.length}
-				<p class="w-full rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">ยังขาด{missing.join(' และ ')} · ใส่ให้ครบแล้วค่อยกด "แสดงในแอป"</p>
+			{#if meta?.hidden && !store.menuItems.length}
+				<p class="w-full rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">ยังไม่มีเมนู · ใส่เมนูแล้วค่อยกด "แสดงในแอป" (รูปใส่ทีหลังได้)</p>
+			{/if}
+			{#if missing.length && store.menuItems.length}
+				<p class="w-full rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">ยังไม่มีรูปร้าน ลูกค้าจะเห็นนาฬิกาทราย "กำลังดำเนินการ" แทนรูป · ใส่รูปเมื่อพร้อม</p>
 			{/if}
 		</section>
 
