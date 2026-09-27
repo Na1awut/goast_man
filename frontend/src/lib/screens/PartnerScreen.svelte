@@ -2,6 +2,8 @@
 	import AppBar from '$lib/components/AppBar.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import PartnerBadge from '$lib/components/PartnerBadge.svelte';
+	import PartnerMenu from '$lib/components/partner/PartnerMenu.svelte';
+	import PartnerOverview from '$lib/components/partner/PartnerOverview.svelte';
 	import Sheet from '$lib/components/Sheet.svelte';
 	import SmartImage from '$lib/components/SmartImage.svelte';
 	import type { PromoKind, Promotion } from '$lib/types';
@@ -14,6 +16,13 @@
 	import { friendlyError } from '$lib/supabase';
 
 	const MAX_BANNER_BYTES = 3 * 1024 * 1024;
+
+	const TABS = [
+		{ id: 'overview', label: 'ภาพรวม' },
+		{ id: 'menu', label: 'เมนู' },
+		{ id: 'shop', label: 'หน้าร้านและโปร' }
+	] as const;
+	let tab = $state<(typeof TABS)[number]['id']>('overview');
 
 	const store = $derived(auth.user?.partnerStoreId ? catalog.byId(auth.user.partnerStoreId) : undefined);
 
@@ -185,6 +194,17 @@
 				<button type="button" onclick={() => storeView.open(store.id)} class="shrink-0 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-sm text-slate-700">ดูหน้าร้าน</button>
 			</div>
 
+			<div class="grid grid-cols-3 rounded-xl bg-slate-100 p-1 text-sm" role="tablist" aria-label="จัดการร้าน">
+				{#each TABS as t (t.id)}
+					<button type="button" role="tab" aria-selected={tab === t.id} onclick={() => (tab = t.id)} class="rounded-lg py-2 {tab === t.id ? 'bg-white font-semibold text-slate-900 shadow-sm' : 'text-slate-500'}">{t.label}</button>
+				{/each}
+			</div>
+
+			{#if tab === 'overview'}
+				<PartnerOverview {store} />
+			{:else if tab === 'menu'}
+				<PartnerMenu {store} />
+			{:else}
 			<!-- Storefront -->
 			<section class="space-y-4 rounded-2xl border border-slate-100 bg-white p-4" aria-labelledby="front-title">
 				<div>
@@ -279,6 +299,7 @@
 					</ul>
 				{/if}
 			</section>
+			{/if}
 		</div>
 	{/if}
 </div>

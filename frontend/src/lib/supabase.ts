@@ -77,6 +77,7 @@ export function friendlyError(error: unknown): string {
 		BAD_AVAILABILITY: 'เลือกวันและช่วงเวลาที่ว่างก่อน',
 		NOTE_TOO_LONG: 'ข้อความยาวเกินไป (ไม่เกิน 300 ตัวอักษร)',
 		BAD_TIP: 'ยอดทิปไม่ถูกต้อง ลองกดปัดเศษใหม่อีกครั้ง',
+		ITEM_NOT_FOUND: 'ไม่พบเมนูนี้ในร้านของคุณ',
 		SLIPOK_NOT_CONFIGURED: 'ยังไม่เปิดรับชำระผ่าน PromptPay ใช้เงินสดไปก่อนนะ',
 		SLIPOK_UNAVAILABLE: 'ระบบตรวจสลิปขัดข้องชั่วคราว ลองแนบใหม่อีกครั้ง',
 		SLIP_USED: 'สลิปนี้ถูกใช้ไปแล้ว ใช้สลิปของการโอนครั้งนี้',

@@ -69,6 +69,21 @@ class CatalogStore {
 
 	// ---------- Partner actions ----------
 
+	/** The partner opens or closes their store to app orders; buyers see it at once */
+	async setStoreOpen(storeId: string, open: boolean) {
+		if (isLive) await api.setMyStoreOpen(open);
+		this.#patch(storeId, (store) => (store.isOpen = open));
+	}
+
+	/** The partner marks a dish sold out (or back on) */
+	async setItemAvailable(storeId: string, itemId: string, available: boolean) {
+		if (isLive) await api.setMyItemAvailable(itemId, available);
+		this.#patch(storeId, (store) => {
+			const item = store.menuItems.find((m) => m.id === itemId);
+			if (item) item.isAvailable = available;
+		});
+	}
+
 	async updateStorefront(storeId: string, draft: StorefrontDraft) {
 		if (isLive) {
 			const current = this.byId(storeId);

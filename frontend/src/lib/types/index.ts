@@ -238,6 +238,20 @@ export interface RiderEarning {
 	payoutRef?: string;
 }
 
+/** A store's own numbers, for its owner (sales at menu price, completed orders) */
+export interface PartnerDashboard {
+	storeId: string;
+	isOpen: boolean;
+	today: { sales: number; orders: number; items: number; discounts: number; cancelled: number; onTheWay: number };
+	month: { sales: number; orders: number };
+	/** One entry per Bangkok day, oldest first, ending today */
+	days: { day: string; sales: number; orders: number }[];
+	topItems: { name: string; qty: number; sales: number }[];
+	/** Orders the stall should expect: waiting for a rider, or a rider is coming */
+	live: { id: string; code: string; status: OrderStatus; createdAt: string; acceptedAt?: string; note?: string; foodTotal: number; rider: string | null; items: { name: string; quantity: number }[] }[];
+	recent: { id: string; code: string; completedAt: string; foodTotal: number; partnerDiscount: number; items: string }[];
+}
+
 // --- Chat ---
 export interface ChatMessage {
 	id: string;

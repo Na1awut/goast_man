@@ -81,6 +81,7 @@ try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20261001000000_team_console.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261002000000_client_errors.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261003000000_rider_tools.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261004000000_partner_dashboard.sql`, 'utf8'));
 	ok('profile-at-first-order migration applies cleanly', true);
 } catch (e) {
 	ok('profile-at-first-order migration applies cleanly', false, e.message);
@@ -778,6 +779,48 @@ await as(alice, async () => {
 await db.exec(`update orders set tip = 20, tip_in_total = false where id = '${ppTipped.id}'`);
 ok('a tip that was never paid in is left out of the payout', (await owedOf(ppTipped.id)) === ppTipped.food_total + ppTipped.delivery_fee);
 await db.exec(`update orders set payout_paid_at = now() where id in ('${cashTipped.id}', '${ppTipped.id}')`);
+
+// ---------- Partner dashboard: own sales, open/close, sold out ----------
+await as(alice, () => expectError('a buyer has no store dashboard', `select partner_dashboard()`, 'PARTNER_ONLY'));
+await as(sam, () => expectError('team members are not partners either', `select partner_set_store_open(false)`, 'PARTNER_ONLY'));
+const expectedToday = await one(`select coalesce(sum(food_total), 0)::int as sales, count(*)::int as orders from orders
+	where store_id = 'kfc-05' and status = 'COMPLETED' and bkk(completed_at)::date = bkk_today()`);
+await as(panee, async () => {
+	const d = await rpc(`partner_dashboard()`);
+	ok('the dashboard is for the partner’s own store', d.store_id === 'kfc-05' && d.is_open === true);
+	ok('today’s sales are completed orders at menu price', Number(d.today.sales) === expectedToday.sales && Number(d.today.orders) === expectedToday.orders, JSON.stringify({ got: d.today, want: expectedToday }));
+	ok('7 days by default, 30 on request', d.days.length === 7 && (await rpc(`partner_dashboard(30)`)).days.length === 30 && d.days.at(-1).sales === d.today.sales);
+	ok('best sellers come from finished orders', Array.isArray(d.top_items) && d.top_items.every((t) => t.qty > 0));
+	const text = JSON.stringify(d);
+	ok('the store never sees buyer names or phones', !text.includes('0811111111') && !text.includes('Alice') && !text.includes('"customer'));
+});
+// An order on its way shows up for the stall, with the rider's nickname
+let onTheWay;
+await as(alice, async () => (onTheWay = (await placeOrder('kfc-05', [{ menu_item_id: 'kfc-05-1', quantity: 1 }])).id));
+await as(gina, () => db.exec(`select accept_order('${onTheWay}')`));
+await as(panee, async () => {
+	const live = (await rpc(`partner_dashboard()`)).live.find((o) => o.id === onTheWay);
+	ok('orders on the way list dishes and who collects', !!live && live.status === 'ACCEPTED' && live.rider === 'จีน่า' && live.items?.[0]?.quantity === 1);
+});
+await as(gina, () => db.exec(`select release_order('${onTheWay}')`));
+await as(alice, () => db.exec(`select cancel_order('${onTheWay}')`));
+// Open / close and sold out
+await as(panee, async () => {
+	await db.exec(`select partner_set_store_open(false)`);
+	ok('the partner can close their store', (await one(`select is_open from stores where id = 'kfc-05'`)).is_open === false);
+	await expectError('another store’s dish cannot be touched', `select partner_set_item_available('kfc-10-1', false)`, 'ITEM_NOT_FOUND');
+	await db.exec(`select partner_set_item_available('kfc-05-1', false)`);
+	ok('the partner can mark a dish sold out', (await one(`select is_available from menu_items where id = 'kfc-05-1'`)).is_available === false);
+});
+await as(alice, () => expectError('a closed store takes no orders', `select place_order('kfc-05', '[{"menu_item_id":"kfc-05-4","quantity":1}]'::jsonb, 'x', null, 'CASH', null)`, 'STORE_UNAVAILABLE'));
+await as(panee, async () => {
+	await db.exec(`select partner_set_store_open(true); select partner_set_item_available('kfc-05-1', true)`);
+	ok('and open it again', (await one(`select is_open from stores where id = 'kfc-05'`)).is_open === true);
+});
+await as(tina, async () => {
+	const log = await rpc(`admin_activity()`);
+	ok('the team sees what the store did', log.some((l) => l.action === 'STORE_CLOSED' && l.detail?.by === 'partner') && log.some((l) => l.action === 'ITEM_OFF' && l.detail?.by === 'partner'));
+});
 
 // Anonymous visitors can browse the catalogue
 await db.exec(`set role anon;`);

@@ -13,6 +13,7 @@
 	import { orders } from '$lib/stores/orders.svelte';
 	import { profileGate } from '$lib/stores/profileGate.svelte';
 	import { riderApplication } from '$lib/stores/riderApplication.svelte';
+	import { partnerDashboard } from '$lib/stores/partnerDashboard.svelte';
 	import { onMount } from 'svelte';
 	import { rider } from '$lib/stores/rider.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
@@ -39,6 +40,7 @@
 		orders.reset();
 		rider.reset();
 		riderApplication.reset();
+		partnerDashboard.reset();
 		cart.clear();
 		toast.reset();
 		await auth.logout();

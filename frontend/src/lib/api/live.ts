@@ -1,7 +1,7 @@
 // Every Supabase call the app makes lives here, so stores stay mode-agnostic and
 // the row ↔ type mapping has exactly one home. Only imported on live paths.
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import type { CartItem, ChatMessage, MenuItem, Order, OrderStatus, PaymentMethod, Promotion, Rider, RiderEarning, RiderJob, Store, User } from '$lib/types';
+import type { CartItem, ChatMessage, MenuItem, Order, OrderStatus, PaymentMethod, PartnerDashboard, Promotion, Rider, RiderEarning, RiderJob, Store, User } from '$lib/types';
 import { owedToRider } from '$lib/admin/rules';
 import { base } from '$app/paths';
 import { verifySlipUrl } from '$lib/payments';
@@ -554,4 +554,41 @@ export function subscribeRiderBoard(onChange: () => void): () => void {
 		.on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => onChange())
 		.subscribe();
 	return () => void db().removeChannel(channel);
+}
+
+// ---------- Partner dashboard ----------
+
+export async function fetchPartnerDashboard(days: 7 | 30): Promise<PartnerDashboard> {
+	const d = check(await db().rpc('partner_dashboard', { p_days: days })) as Row;
+	const n = (v: unknown) => Number(v ?? 0);
+	return {
+		storeId: d.store_id,
+		isOpen: d.is_open,
+		today: { sales: n(d.today.sales), orders: n(d.today.orders), items: n(d.today.items), discounts: n(d.today.discounts), cancelled: n(d.today.cancelled), onTheWay: n(d.today.on_the_way) },
+		month: { sales: n(d.month.sales), orders: n(d.month.orders) },
+		days: (d.days as Row[]).map((x) => ({ day: x.day, sales: n(x.sales), orders: n(x.orders) })),
+		topItems: (d.top_items as Row[]).map((x) => ({ name: x.name, qty: n(x.qty), sales: n(x.sales) })),
+		live: (d.live as Row[]).map((x) => ({
+			id: x.id,
+			code: x.code,
+			status: x.status,
+			createdAt: x.created_at,
+			acceptedAt: x.accepted_at ?? undefined,
+			note: x.note ?? undefined,
+			foodTotal: n(x.food_total),
+			rider: x.rider ?? null,
+			items: (x.items as Row[] | null) ?? []
+		})) as PartnerDashboard['live'],
+		recent: (d.recent as Row[]).map((x) => ({ id: x.id, code: x.code, completedAt: x.completed_at, foodTotal: n(x.food_total), partnerDiscount: n(x.partner_discount), items: x.items ?? '' }))
+	};
+}
+
+/** The partner opens or closes their own store to app orders */
+export async function setMyStoreOpen(open: boolean): Promise<void> {
+	check(await db().rpc('partner_set_store_open', { p_open: open }));
+}
+
+/** The partner marks one of their dishes available or sold out */
+export async function setMyItemAvailable(itemId: string, available: boolean): Promise<void> {
+	check(await db().rpc('partner_set_item_available', { p_item_id: itemId, p_available: available }));
 }
