@@ -1,0 +1,108 @@
+-- Existing shop: fill empty menu photos only, preserving all other fields.
+-- Original source pixels and shared-photo mappings: loongnoom_photos.json.
+begin;
+do $photos$
+declare updated_count integer;
+begin
+  update public.menu_items m set image_url = photos.image_url
+  from (values
+    ('loongnoom-square-macchiato-iced', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/coffee.png'),
+    ('loongnoom-square-macchiato-blended', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/coffee.png'),
+    ('loongnoom-square-espresso-iced', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/coffee.png'),
+    ('loongnoom-square-espresso-blended', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/coffee.png'),
+    ('loongnoom-square-mocca-iced', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/coffee.png'),
+    ('loongnoom-square-mocca-blended', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/coffee.png'),
+    ('loongnoom-square-cappuccino-iced', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/coffee.png'),
+    ('loongnoom-square-cappuccino-blended', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/coffee.png'),
+    ('loongnoom-square-latte-iced', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/coffee.png'),
+    ('loongnoom-square-latte-blended', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/coffee.png'),
+    ('loongnoom-square-americano-iced', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/coffee.png'),
+    ('loongnoom-square-americano-blended', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/coffee.png'),
+    ('loongnoom-square-frozen-blueberry', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-blueberry.png'),
+    ('loongnoom-square-frozen-cantaloupe', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-cantaloupe.png'),
+    ('loongnoom-square-frozen-fuji', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-fuji.png'),
+    ('loongnoom-square-frozen-white-malt', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-white-malt.png'),
+    ('loongnoom-square-frozen-fuji-white-white', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-fuji-white-white.png'),
+    ('loongnoom-square-frozen-pink-milk', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-pink-milk.png'),
+    ('loongnoom-square-frozen-corn-milk', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-corn-milk.png'),
+    ('loongnoom-square-frozen-extra-milo', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-extra-milo.png'),
+    ('loongnoom-square-frozen-x-tream', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-x-tream.png'),
+    ('loongnoom-square-frozen-black-white', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-black-white.png'),
+    ('loongnoom-square-frozen-pink-sky', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-pink-sky.png'),
+    ('loongnoom-square-frozen-taro', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-taro.png'),
+    ('loongnoom-square-frozen-elsa', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-elsa.png'),
+    ('loongnoom-square-frozen-strawberry-yogurt', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-strawberry-yogurt.png'),
+    ('loongnoom-square-frozen-anna', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-anna.png'),
+    ('loongnoom-square-frozen-mint', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-mint.png'),
+    ('loongnoom-square-frozen-vanilla', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-vanilla.png'),
+    ('loongnoom-square-frozen-mocha', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-mocha.png'),
+    ('loongnoom-square-frozen-banana', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-banana.png'),
+    ('loongnoom-square-frozen-strawberry', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-strawberry.png'),
+    ('loongnoom-square-black-widow', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/black-widow.png'),
+    ('loongnoom-square-chathai-frozen', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/chathai-frozen.png'),
+    ('loongnoom-square-extra-cocoa', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/extra-cocoa.png'),
+    ('loongnoom-square-strawberry-cream-cheese', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/strawberry-cream-cheese.png'),
+    ('loongnoom-square-dsi', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/dsi.png'),
+    ('loongnoom-square-brown-sugar-milk', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/brown-sugar-milk.png'),
+    ('loongnoom-square-cs', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/cs.png'),
+    ('loongnoom-square-sticky-cocoa-teen', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/sticky-cocoa.png'),
+    ('loongnoom-square-sticky-cocoa-pro', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/sticky-cocoa.png'),
+    ('loongnoom-square-butter-beer-original', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/butter-beer-original.png'),
+    ('loongnoom-square-butter-beer-slytherin', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/butter-beer-slytherin.png'),
+    ('loongnoom-square-butter-beer-gryffindor', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/butter-beer-gryffindor.png'),
+    ('loongnoom-square-butter-beer-ravenclaw', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/butter-beer-ravenclaw.png'),
+    ('loongnoom-square-butter-beer-hufflepuff', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/butter-beer-hufflepuff.png'),
+    ('loongnoom-square-butter-beer-blueberry', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/butter-beer-blueberry.png'),
+    ('loongnoom-square-milk-caramel', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/milk-smoothies.png'),
+    ('loongnoom-square-milk-honey', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/milk-smoothies.png'),
+    ('loongnoom-square-milk-chocolate', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/milk-smoothies.png'),
+    ('loongnoom-square-smoothie-coconut', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/smoothie-coconut.png'),
+    ('loongnoom-square-smoothie-orange', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/fruit-smoothies.png'),
+    ('loongnoom-square-smoothie-watermelon', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/fruit-smoothies.png'),
+    ('loongnoom-square-smoothie-strawberry', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/fruit-smoothies.png'),
+    ('loongnoom-square-smoothie-pineapple', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/fruit-smoothies.png'),
+    ('loongnoom-square-smoothie-carrot', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/fruit-smoothies.png'),
+    ('loongnoom-square-smoothie-mixed-fruit', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/fruit-smoothies.png'),
+    ('loongnoom-square-smoothie-strawberry-yogurt', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/smoothie-strawberry-yogurt.png'),
+    ('loongnoom-square-soda-lychee', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/italian-sodas.png'),
+    ('loongnoom-square-soda-blue-hawaii', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/italian-sodas.png'),
+    ('loongnoom-square-soda-blueberry', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/italian-sodas.png'),
+    ('loongnoom-square-soda-strawberry', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/italian-sodas.png'),
+    ('loongnoom-square-thai-tea', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/thai-tea.png'),
+    ('loongnoom-square-cocoa', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/cocoa.png'),
+    ('loongnoom-square-milk-tea', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/milk-tea.png'),
+    ('loongnoom-square-green-tea', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/green-tea.png'),
+    ('loongnoom-square-white-malt', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/white-malt.png'),
+    ('loongnoom-square-black-tea', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/black-tea.png'),
+    ('loongnoom-square-waffle-banana', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/waffle-banana.png'),
+    ('loongnoom-square-waffle-almond', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/waffle-almond.png'),
+    ('loongnoom-square-waffle-chocolate', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/waffle-chocolate.png'),
+    ('loongnoom-square-waffle-strawberry', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/waffle-strawberry.png'),
+    ('loongnoom-square-waffle-blueberry', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/waffle-assortment.png'),
+    ('loongnoom-square-waffle-butter-milk', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/waffle-assortment.png'),
+    ('loongnoom-square-waffle-pandan', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/waffle-assortment.png'),
+    ('loongnoom-square-takoyaki-mussel-1', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/takoyaki.png'),
+    ('loongnoom-square-takoyaki-mussel-3', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/takoyaki.png'),
+    ('loongnoom-square-takoyaki-squid-1', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/takoyaki.png'),
+    ('loongnoom-square-takoyaki-squid-3', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/takoyaki.png'),
+    ('loongnoom-square-takoyaki-sausage-1', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/takoyaki.png'),
+    ('loongnoom-square-takoyaki-sausage-3', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/takoyaki.png'),
+    ('loongnoom-square-takoyaki-crab-1', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/takoyaki.png'),
+    ('loongnoom-square-takoyaki-crab-3', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/takoyaki.png'),
+    ('loongnoom-square-takoyaki-salmon-1', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/takoyaki.png'),
+    ('loongnoom-square-takoyaki-salmon-3', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/takoyaki.png'),
+    ('loongnoom-square-takoyaki-tobiko-1', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/takoyaki.png'),
+    ('loongnoom-square-takoyaki-tobiko-3', 'https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/takoyaki.png')
+  ) as photos(id, image_url)
+  where m.id = photos.id and m.store_id = 'loongnoom-square'
+    and coalesce(m.image_url, '') = '' and not m.archived;
+  get diagnostics updated_count = row_count;
+  if updated_count > 0 then
+    insert into public.admin_log(actor_name, action, target_type, target_id, target_label, detail)
+    values ('SQL import (Supabase CLI)', 'STORE_EDITED', 'store', 'loongnoom-square', 'ลุงหนุ่ม Square',
+      jsonb_build_object('note', 'Added original menu-board photos', 'menu_photos_added', updated_count,
+        'source', 'src/picture/ร้านลุงหนุ่ม/-1536x307.jpg', 'photo_manifest', 'loongnoom_photos.json'));
+  end if;
+end
+$photos$;
+commit;

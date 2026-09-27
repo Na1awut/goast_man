@@ -20,7 +20,7 @@
   "notes": [
     "ผู้ใช้ยืนยันที่ตั้งอาคาร CB1 และราคากาแฟคู่หมายถึงเย็น / ปั่น เมื่อ 2026-09-27",
     "ราคาอ้างอิงป้ายที่ผู้ใช้ให้ ไม่ได้ยืนยันกับร้านว่าเป็นราคาปัจจุบัน",
-    "รูปเครื่องดื่มและวาฟเฟิลใช้เป็นภาพรวมร้าน ไม่จับคู่กับเมนูเฉพาะที่ไม่มีหลักฐาน",
+    "รูปเมนูแยกจากป้ายต้นฉบับ ใช้ภาพหมวดร่วมกันเมื่อป้ายไม่ได้แสดงรูปเฉพาะรสชาติหรือชนิด ดู imageKind และ photoManifest",
     "รายการที่ยังอ่านไม่ชัดเก็บใน pending ไม่ใส่ราคาเดาหรือเปิดให้สั่ง",
     "ทาโกยากิแยกจำนวน 1 ลูกและ 3 ลูกตามราคาในป้าย ไม่ใช้ special_price เพราะหน้าร้านเรียกตัวเลือกนั้นว่าพิเศษ",
     "ชื่อภาษาอังกฤษของเครื่องดื่ม Frozen คงตามป้าย ไม่เดาส่วนผสมจากชื่อแฟนซี",
@@ -30,139 +30,661 @@
     {
       "category": "กาแฟ",
       "items": [
-        { "code": "macchiato-iced", "name": "Macchiato เย็น", "price": 30 },
-        { "code": "macchiato-blended", "name": "Macchiato ปั่น", "price": 35 },
-        { "code": "espresso-iced", "name": "Espresso เย็น", "price": 25 },
-        { "code": "espresso-blended", "name": "Espresso ปั่น", "price": 30 },
-        { "code": "mocca-iced", "name": "Mocca เย็น", "price": 25 },
-        { "code": "mocca-blended", "name": "Mocca ปั่น", "price": 30 },
-        { "code": "cappuccino-iced", "name": "Cappuccino เย็น", "price": 25 },
-        { "code": "cappuccino-blended", "name": "Cappuccino ปั่น", "price": 30 },
-        { "code": "latte-iced", "name": "Latte เย็น", "price": 25 },
-        { "code": "latte-blended", "name": "Latte ปั่น", "price": 30 },
-        { "code": "americano-iced", "name": "Americano เย็น", "price": 25 },
-        { "code": "americano-blended", "name": "Americano ปั่น", "price": 30 }
+        {
+          "code": "macchiato-iced",
+          "name": "Macchiato เย็น",
+          "price": 30,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/coffee.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "macchiato-blended",
+          "name": "Macchiato ปั่น",
+          "price": 35,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/coffee.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "espresso-iced",
+          "name": "Espresso เย็น",
+          "price": 25,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/coffee.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "espresso-blended",
+          "name": "Espresso ปั่น",
+          "price": 30,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/coffee.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "mocca-iced",
+          "name": "Mocca เย็น",
+          "price": 25,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/coffee.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "mocca-blended",
+          "name": "Mocca ปั่น",
+          "price": 30,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/coffee.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "cappuccino-iced",
+          "name": "Cappuccino เย็น",
+          "price": 25,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/coffee.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "cappuccino-blended",
+          "name": "Cappuccino ปั่น",
+          "price": 30,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/coffee.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "latte-iced",
+          "name": "Latte เย็น",
+          "price": 25,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/coffee.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "latte-blended",
+          "name": "Latte ปั่น",
+          "price": 30,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/coffee.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "americano-iced",
+          "name": "Americano เย็น",
+          "price": 25,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/coffee.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "americano-blended",
+          "name": "Americano ปั่น",
+          "price": 30,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/coffee.png",
+          "imageKind": "shared-board-artwork"
+        }
       ]
     },
     {
       "category": "Frozen",
       "items": [
-        { "code": "frozen-blueberry", "name": "Blueberry & Cream Frozen", "price": 45 },
-        { "code": "frozen-cantaloupe", "name": "Cantaloupe & Cream Frozen", "price": 40 },
-        { "code": "frozen-fuji", "name": "Fuji Green Tea Frozen", "price": 40 },
-        { "code": "frozen-white-malt", "name": "White Malt Cookies Frozen", "price": 45 },
-        { "code": "frozen-fuji-white-white", "name": "Fuji White White Honey Corn Flake Frozen", "price": 45 },
-        { "code": "frozen-pink-milk", "name": "Pink Milk Frozen", "price": 40 },
-        { "code": "frozen-corn-milk", "name": "Corn Milk Frozen", "price": 40 },
-        { "code": "frozen-extra-milo", "name": "Extra Milo Raw Frozen", "price": 50 },
-        { "code": "frozen-x-tream", "name": "X-tream Caramel Milo Frozen", "price": 45 },
-        { "code": "frozen-black-white", "name": "Extra Black & White Cookies Frozen", "price": 45 },
-        { "code": "frozen-pink-sky", "name": "Pink Sky Frozen", "price": 45 },
-        { "code": "frozen-taro", "name": "Taro Milk & Cream Frozen", "price": 40 },
-        { "code": "frozen-elsa", "name": "Elsa Frozen", "price": 40 },
-        { "code": "frozen-strawberry-yogurt", "name": "Strawberry Yogurt Frozen", "price": 45 },
-        { "code": "frozen-anna", "name": "Anna Frozen", "price": 40 },
-        { "code": "frozen-mint", "name": "Mint Frozen", "price": 40 },
-        { "code": "frozen-vanilla", "name": "Vanilla Charcoal Frozen", "price": 40 },
-        { "code": "frozen-mocha", "name": "Mocha Cookie Frozen", "price": 45 },
-        { "code": "frozen-banana", "name": "Banana & Cream Frozen", "price": 40 },
-        { "code": "frozen-strawberry", "name": "Strawberry & Cream Frozen", "price": 40 },
-        { "code": "black-widow", "name": "Black Widow", "price": 40 },
-        { "code": "chathai-frozen", "name": "Chathai Frozen", "price": 45 },
-        { "code": "extra-cocoa", "name": "Extra Cocoa Aftershock Foam", "price": 45 },
-        { "code": "strawberry-cream-cheese", "name": "Strawberry Cream Cheese", "price": 45 },
-        { "code": "dsi", "name": "DSI", "price": 45 },
-        { "code": "brown-sugar-milk", "name": "บราวน์ชูการ์มิลค์", "price": 40 },
-        { "code": "cs", "name": "CS", "price": 50 }
+        {
+          "code": "frozen-blueberry",
+          "name": "Blueberry & Cream Frozen",
+          "price": 45,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-blueberry.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "frozen-cantaloupe",
+          "name": "Cantaloupe & Cream Frozen",
+          "price": 40,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-cantaloupe.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "frozen-fuji",
+          "name": "Fuji Green Tea Frozen",
+          "price": 40,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-fuji.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "frozen-white-malt",
+          "name": "White Malt Cookies Frozen",
+          "price": 45,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-white-malt.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "frozen-fuji-white-white",
+          "name": "Fuji White White Honey Corn Flake Frozen",
+          "price": 45,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-fuji-white-white.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "frozen-pink-milk",
+          "name": "Pink Milk Frozen",
+          "price": 40,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-pink-milk.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "frozen-corn-milk",
+          "name": "Corn Milk Frozen",
+          "price": 40,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-corn-milk.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "frozen-extra-milo",
+          "name": "Extra Milo Raw Frozen",
+          "price": 50,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-extra-milo.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "frozen-x-tream",
+          "name": "X-tream Caramel Milo Frozen",
+          "price": 45,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-x-tream.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "frozen-black-white",
+          "name": "Extra Black & White Cookies Frozen",
+          "price": 45,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-black-white.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "frozen-pink-sky",
+          "name": "Pink Sky Frozen",
+          "price": 45,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-pink-sky.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "frozen-taro",
+          "name": "Taro Milk & Cream Frozen",
+          "price": 40,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-taro.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "frozen-elsa",
+          "name": "Elsa Frozen",
+          "price": 40,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-elsa.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "frozen-strawberry-yogurt",
+          "name": "Strawberry Yogurt Frozen",
+          "price": 45,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-strawberry-yogurt.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "frozen-anna",
+          "name": "Anna Frozen",
+          "price": 40,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-anna.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "frozen-mint",
+          "name": "Mint Frozen",
+          "price": 40,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-mint.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "frozen-vanilla",
+          "name": "Vanilla Charcoal Frozen",
+          "price": 40,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-vanilla.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "frozen-mocha",
+          "name": "Mocha Cookie Frozen",
+          "price": 45,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-mocha.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "frozen-banana",
+          "name": "Banana & Cream Frozen",
+          "price": 40,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-banana.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "frozen-strawberry",
+          "name": "Strawberry & Cream Frozen",
+          "price": 40,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/frozen-strawberry.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "black-widow",
+          "name": "Black Widow",
+          "price": 40,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/black-widow.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "chathai-frozen",
+          "name": "Chathai Frozen",
+          "price": 45,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/chathai-frozen.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "extra-cocoa",
+          "name": "Extra Cocoa Aftershock Foam",
+          "price": 45,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/extra-cocoa.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "strawberry-cream-cheese",
+          "name": "Strawberry Cream Cheese",
+          "price": 45,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/strawberry-cream-cheese.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "dsi",
+          "name": "DSI",
+          "price": 45,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/dsi.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "brown-sugar-milk",
+          "name": "บราวน์ชูการ์มิลค์",
+          "price": 40,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/brown-sugar-milk.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "cs",
+          "name": "CS",
+          "price": 50,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/cs.png",
+          "imageKind": "individual-board-artwork"
+        }
       ]
     },
     {
       "category": "โกโก้นมเหนียว",
       "items": [
-        { "code": "sticky-cocoa-teen", "name": "โกโก้นมเหนียว วัยทีน", "price": 35 },
-        { "code": "sticky-cocoa-pro", "name": "โกโก้นมเหนียว วัยเก๋า", "price": 40 }
+        {
+          "code": "sticky-cocoa-teen",
+          "name": "โกโก้นมเหนียว วัยทีน",
+          "price": 35,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/sticky-cocoa.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "sticky-cocoa-pro",
+          "name": "โกโก้นมเหนียว วัยเก๋า",
+          "price": 40,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/sticky-cocoa.png",
+          "imageKind": "shared-board-artwork"
+        }
       ]
     },
     {
       "category": "Butter Beer",
       "description": "ไม่มีส่วนผสมแอลกอฮอล์ ตามป้ายร้าน",
       "items": [
-        { "code": "butter-beer-original", "name": "Butter Beer Original", "price": 35 },
-        { "code": "butter-beer-slytherin", "name": "Butter Beer Slytherin (Apple)", "price": 40 },
-        { "code": "butter-beer-gryffindor", "name": "Butter Beer Gryffindor (Strawberry)", "price": 40 },
-        { "code": "butter-beer-ravenclaw", "name": "Butter Beer Ravenclaw (Blue Hawaii)", "price": 40 },
-        { "code": "butter-beer-hufflepuff", "name": "Butter Beer Hufflepuff (Lychee)", "price": 40 },
-        { "code": "butter-beer-blueberry", "name": "Butter Beer Blueberry", "price": 40 }
+        {
+          "code": "butter-beer-original",
+          "name": "Butter Beer Original",
+          "price": 35,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/butter-beer-original.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "butter-beer-slytherin",
+          "name": "Butter Beer Slytherin (Apple)",
+          "price": 40,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/butter-beer-slytherin.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "butter-beer-gryffindor",
+          "name": "Butter Beer Gryffindor (Strawberry)",
+          "price": 40,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/butter-beer-gryffindor.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "butter-beer-ravenclaw",
+          "name": "Butter Beer Ravenclaw (Blue Hawaii)",
+          "price": 40,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/butter-beer-ravenclaw.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "butter-beer-hufflepuff",
+          "name": "Butter Beer Hufflepuff (Lychee)",
+          "price": 40,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/butter-beer-hufflepuff.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "butter-beer-blueberry",
+          "name": "Butter Beer Blueberry",
+          "price": 40,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/butter-beer-blueberry.png",
+          "imageKind": "individual-board-artwork"
+        }
       ]
     },
     {
       "category": "นมสดปั่น",
       "items": [
-        { "code": "milk-caramel", "name": "นมสดคาราเมลปั่น", "price": 30 },
-        { "code": "milk-honey", "name": "นมสดน้ำผึ้งปั่น", "price": 30 },
-        { "code": "milk-chocolate", "name": "นมสดช็อกโกแลตปั่น", "price": 30 }
+        {
+          "code": "milk-caramel",
+          "name": "นมสดคาราเมลปั่น",
+          "price": 30,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/milk-smoothies.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "milk-honey",
+          "name": "นมสดน้ำผึ้งปั่น",
+          "price": 30,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/milk-smoothies.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "milk-chocolate",
+          "name": "นมสดช็อกโกแลตปั่น",
+          "price": 30,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/milk-smoothies.png",
+          "imageKind": "shared-board-artwork"
+        }
       ]
     },
     {
       "category": "น้ำผลไม้ปั่น",
       "items": [
-        { "code": "smoothie-coconut", "name": "มะพร้าวปั่น", "price": 30 },
-        { "code": "smoothie-orange", "name": "น้ำส้มปั่น", "price": 30 },
-        { "code": "smoothie-watermelon", "name": "น้ำแตงโมปั่น", "price": 30 },
-        { "code": "smoothie-strawberry", "name": "น้ำสตรอเบอร์รี่ปั่น", "price": 30 },
-        { "code": "smoothie-pineapple", "name": "น้ำสับปะรดปั่น", "price": 30 },
-        { "code": "smoothie-carrot", "name": "น้ำแครอทปั่น", "price": 30 },
-        { "code": "smoothie-mixed-fruit", "name": "น้ำผลไม้รวมปั่น", "price": 35 },
-        { "code": "smoothie-strawberry-yogurt", "name": "สตรอเบอร์รี่โยเกิร์ต", "price": 30 }
+        {
+          "code": "smoothie-coconut",
+          "name": "มะพร้าวปั่น",
+          "price": 30,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/smoothie-coconut.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "smoothie-orange",
+          "name": "น้ำส้มปั่น",
+          "price": 30,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/fruit-smoothies.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "smoothie-watermelon",
+          "name": "น้ำแตงโมปั่น",
+          "price": 30,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/fruit-smoothies.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "smoothie-strawberry",
+          "name": "น้ำสตรอเบอร์รี่ปั่น",
+          "price": 30,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/fruit-smoothies.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "smoothie-pineapple",
+          "name": "น้ำสับปะรดปั่น",
+          "price": 30,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/fruit-smoothies.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "smoothie-carrot",
+          "name": "น้ำแครอทปั่น",
+          "price": 30,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/fruit-smoothies.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "smoothie-mixed-fruit",
+          "name": "น้ำผลไม้รวมปั่น",
+          "price": 35,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/fruit-smoothies.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "smoothie-strawberry-yogurt",
+          "name": "สตรอเบอร์รี่โยเกิร์ต",
+          "price": 30,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/smoothie-strawberry-yogurt.png",
+          "imageKind": "individual-board-artwork"
+        }
       ]
     },
     {
       "category": "อิตาเลี่ยนโซดา",
       "items": [
-        { "code": "soda-lychee", "name": "ลิ้นจี่โซดา", "price": 25 },
-        { "code": "soda-blue-hawaii", "name": "บลูฮาวายโซดา", "price": 25 },
-        { "code": "soda-blueberry", "name": "บลูเบอร์รี่โซดา", "price": 25 },
-        { "code": "soda-strawberry", "name": "สตรอเบอร์รี่โซดา", "price": 25 }
+        {
+          "code": "soda-lychee",
+          "name": "ลิ้นจี่โซดา",
+          "price": 25,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/italian-sodas.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "soda-blue-hawaii",
+          "name": "บลูฮาวายโซดา",
+          "price": 25,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/italian-sodas.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "soda-blueberry",
+          "name": "บลูเบอร์รี่โซดา",
+          "price": 25,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/italian-sodas.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "soda-strawberry",
+          "name": "สตรอเบอร์รี่โซดา",
+          "price": 25,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/italian-sodas.png",
+          "imageKind": "shared-board-artwork"
+        }
       ]
     },
     {
       "category": "ชาและนม",
       "items": [
-        { "code": "thai-tea", "name": "ชาเย็น", "price": 25 },
-        { "code": "cocoa", "name": "โกโก้", "price": 25 },
-        { "code": "milk-tea", "name": "ชานม", "price": 25 },
-        { "code": "green-tea", "name": "ชาเขียว", "price": 25 },
-        { "code": "white-malt", "name": "ไวท์มอลต์", "price": 25 },
-        { "code": "black-tea", "name": "ชาดำ", "price": 25 }
+        {
+          "code": "thai-tea",
+          "name": "ชาเย็น",
+          "price": 25,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/thai-tea.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "cocoa",
+          "name": "โกโก้",
+          "price": 25,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/cocoa.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "milk-tea",
+          "name": "ชานม",
+          "price": 25,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/milk-tea.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "green-tea",
+          "name": "ชาเขียว",
+          "price": 25,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/green-tea.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "white-malt",
+          "name": "ไวท์มอลต์",
+          "price": 25,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/white-malt.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "black-tea",
+          "name": "ชาดำ",
+          "price": 25,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/black-tea.png",
+          "imageKind": "individual-board-artwork"
+        }
       ]
     },
     {
       "category": "วาฟเฟิล",
       "items": [
-        { "code": "waffle-banana", "name": "วาฟเฟิล กล้วยหอม", "price": 12 },
-        { "code": "waffle-almond", "name": "วาฟเฟิล อัลมอนด์", "price": 12 },
-        { "code": "waffle-chocolate", "name": "วาฟเฟิล ช็อกโกแลต", "price": 12 },
-        { "code": "waffle-strawberry", "name": "วาฟเฟิล สตรอเบอร์รี่", "price": 12 },
-        { "code": "waffle-blueberry", "name": "วาฟเฟิล บลูเบอร์รี่", "price": 12 },
-        { "code": "waffle-butter-milk", "name": "วาฟเฟิล เนยนม", "price": 12 },
-        { "code": "waffle-pandan", "name": "วาฟเฟิล ใบเตย", "price": 12 }
+        {
+          "code": "waffle-banana",
+          "name": "วาฟเฟิล กล้วยหอม",
+          "price": 12,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/waffle-banana.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "waffle-almond",
+          "name": "วาฟเฟิล อัลมอนด์",
+          "price": 12,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/waffle-almond.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "waffle-chocolate",
+          "name": "วาฟเฟิล ช็อกโกแลต",
+          "price": 12,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/waffle-chocolate.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "waffle-strawberry",
+          "name": "วาฟเฟิล สตรอเบอร์รี่",
+          "price": 12,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/waffle-strawberry.png",
+          "imageKind": "individual-board-artwork"
+        },
+        {
+          "code": "waffle-blueberry",
+          "name": "วาฟเฟิล บลูเบอร์รี่",
+          "price": 12,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/waffle-assortment.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "waffle-butter-milk",
+          "name": "วาฟเฟิล เนยนม",
+          "price": 12,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/waffle-assortment.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "waffle-pandan",
+          "name": "วาฟเฟิล ใบเตย",
+          "price": 12,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/waffle-assortment.png",
+          "imageKind": "shared-board-artwork"
+        }
       ]
     },
     {
       "category": "ทาโกยากิ",
       "items": [
-        { "code": "takoyaki-mussel-1", "name": "ทาโกยากิ หอยแมลงภู่ (1 ลูก)", "price": 7 },
-        { "code": "takoyaki-mussel-3", "name": "ทาโกยากิ หอยแมลงภู่ (3 ลูก)", "price": 20 },
-        { "code": "takoyaki-squid-1", "name": "ทาโกยากิ ปลาหมึก (1 ลูก)", "price": 7 },
-        { "code": "takoyaki-squid-3", "name": "ทาโกยากิ ปลาหมึก (3 ลูก)", "price": 20 },
-        { "code": "takoyaki-sausage-1", "name": "ทาโกยากิ ไส้กรอก (1 ลูก)", "price": 7 },
-        { "code": "takoyaki-sausage-3", "name": "ทาโกยากิ ไส้กรอก (3 ลูก)", "price": 20 },
-        { "code": "takoyaki-crab-1", "name": "ทาโกยากิ ปูอัด (1 ลูก)", "price": 7 },
-        { "code": "takoyaki-crab-3", "name": "ทาโกยากิ ปูอัด (3 ลูก)", "price": 20 },
-        { "code": "takoyaki-salmon-1", "name": "ทาโกยากิ ปลาแซลมอน (1 ลูก)", "price": 7 },
-        { "code": "takoyaki-salmon-3", "name": "ทาโกยากิ ปลาแซลมอน (3 ลูก)", "price": 20 },
-        { "code": "takoyaki-tobiko-1", "name": "ทาโกยากิ ไข่กุ้ง (1 ลูก)", "price": 7 },
-        { "code": "takoyaki-tobiko-3", "name": "ทาโกยากิ ไข่กุ้ง (3 ลูก)", "price": 20 }
+        {
+          "code": "takoyaki-mussel-1",
+          "name": "ทาโกยากิ หอยแมลงภู่ (1 ลูก)",
+          "price": 7,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/takoyaki.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "takoyaki-mussel-3",
+          "name": "ทาโกยากิ หอยแมลงภู่ (3 ลูก)",
+          "price": 20,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/takoyaki.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "takoyaki-squid-1",
+          "name": "ทาโกยากิ ปลาหมึก (1 ลูก)",
+          "price": 7,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/takoyaki.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "takoyaki-squid-3",
+          "name": "ทาโกยากิ ปลาหมึก (3 ลูก)",
+          "price": 20,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/takoyaki.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "takoyaki-sausage-1",
+          "name": "ทาโกยากิ ไส้กรอก (1 ลูก)",
+          "price": 7,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/takoyaki.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "takoyaki-sausage-3",
+          "name": "ทาโกยากิ ไส้กรอก (3 ลูก)",
+          "price": 20,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/takoyaki.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "takoyaki-crab-1",
+          "name": "ทาโกยากิ ปูอัด (1 ลูก)",
+          "price": 7,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/takoyaki.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "takoyaki-crab-3",
+          "name": "ทาโกยากิ ปูอัด (3 ลูก)",
+          "price": 20,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/takoyaki.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "takoyaki-salmon-1",
+          "name": "ทาโกยากิ ปลาแซลมอน (1 ลูก)",
+          "price": 7,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/takoyaki.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "takoyaki-salmon-3",
+          "name": "ทาโกยากิ ปลาแซลมอน (3 ลูก)",
+          "price": 20,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/takoyaki.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "takoyaki-tobiko-1",
+          "name": "ทาโกยากิ ไข่กุ้ง (1 ลูก)",
+          "price": 7,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/takoyaki.png",
+          "imageKind": "shared-board-artwork"
+        },
+        {
+          "code": "takoyaki-tobiko-3",
+          "name": "ทาโกยากิ ไข่กุ้ง (3 ลูก)",
+          "price": 20,
+          "imageUrl": "https://pguhzjtdwgualqeqzleu.supabase.co/storage/v1/object/public/store-banners/loongnoom-square/menu/takoyaki.png",
+          "imageKind": "shared-board-artwork"
+        }
       ]
     }
   ],
@@ -170,7 +692,11 @@
     {
       "reason": "กรอบเล็กซ้ายของคำว่า Takoyaki อ่านชื่อสินค้าไม่ชัด มีราคา 20 และเพิ่มชีส 30 บาท",
       "kind": "unreadable-snack",
-      "prices": [20, 30]
+      "prices": [
+        20,
+        30
+      ]
     }
-  ]
+  ],
+  "photoManifest": "supabase/data/loongnoom_photos.json"
 }

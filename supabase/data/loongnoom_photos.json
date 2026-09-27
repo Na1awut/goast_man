@@ -1,0 +1,721 @@
+{
+  "source": "src/picture/ร้านลุงหนุ่ม/-1536x307.jpg",
+  "sourceSize": [
+    1536,
+    307
+  ],
+  "outputSize": 256,
+  "crops": [
+    {
+      "id": "frozen-blueberry",
+      "rect": [
+        165,
+        13,
+        47,
+        70
+      ],
+      "codes": [
+        "frozen-blueberry"
+      ],
+      "shared": false
+    },
+    {
+      "id": "frozen-cantaloupe",
+      "rect": [
+        224,
+        13,
+        43,
+        70
+      ],
+      "codes": [
+        "frozen-cantaloupe"
+      ],
+      "shared": false
+    },
+    {
+      "id": "frozen-fuji",
+      "rect": [
+        280,
+        13,
+        44,
+        70
+      ],
+      "codes": [
+        "frozen-fuji"
+      ],
+      "shared": false
+    },
+    {
+      "id": "frozen-white-malt",
+      "rect": [
+        340,
+        13,
+        43,
+        70
+      ],
+      "codes": [
+        "frozen-white-malt"
+      ],
+      "shared": false
+    },
+    {
+      "id": "frozen-fuji-white-white",
+      "rect": [
+        396,
+        13,
+        47,
+        70
+      ],
+      "codes": [
+        "frozen-fuji-white-white"
+      ],
+      "shared": false
+    },
+    {
+      "id": "frozen-pink-milk",
+      "rect": [
+        450,
+        13,
+        45,
+        70
+      ],
+      "codes": [
+        "frozen-pink-milk"
+      ],
+      "shared": false
+    },
+    {
+      "id": "frozen-corn-milk",
+      "rect": [
+        508,
+        13,
+        46,
+        70
+      ],
+      "codes": [
+        "frozen-corn-milk"
+      ],
+      "shared": false
+    },
+    {
+      "id": "frozen-extra-milo",
+      "rect": [
+        565,
+        13,
+        46,
+        70
+      ],
+      "codes": [
+        "frozen-extra-milo"
+      ],
+      "shared": false
+    },
+    {
+      "id": "frozen-x-tream",
+      "rect": [
+        621,
+        13,
+        46,
+        70
+      ],
+      "codes": [
+        "frozen-x-tream"
+      ],
+      "shared": false
+    },
+    {
+      "id": "frozen-black-white",
+      "rect": [
+        44,
+        112,
+        41,
+        62
+      ],
+      "codes": [
+        "frozen-black-white"
+      ],
+      "shared": false
+    },
+    {
+      "id": "frozen-pink-sky",
+      "rect": [
+        108,
+        111,
+        41,
+        64
+      ],
+      "codes": [
+        "frozen-pink-sky"
+      ],
+      "shared": false
+    },
+    {
+      "id": "frozen-taro",
+      "rect": [
+        164,
+        111,
+        43,
+        63
+      ],
+      "codes": [
+        "frozen-taro"
+      ],
+      "shared": false
+    },
+    {
+      "id": "frozen-elsa",
+      "rect": [
+        221,
+        111,
+        43,
+        63
+      ],
+      "codes": [
+        "frozen-elsa"
+      ],
+      "shared": false
+    },
+    {
+      "id": "frozen-strawberry-yogurt",
+      "rect": [
+        282,
+        111,
+        41,
+        63
+      ],
+      "codes": [
+        "frozen-strawberry-yogurt"
+      ],
+      "shared": false
+    },
+    {
+      "id": "frozen-anna",
+      "rect": [
+        337,
+        111,
+        41,
+        63
+      ],
+      "codes": [
+        "frozen-anna"
+      ],
+      "shared": false
+    },
+    {
+      "id": "frozen-mint",
+      "rect": [
+        394,
+        111,
+        42,
+        63
+      ],
+      "codes": [
+        "frozen-mint"
+      ],
+      "shared": false
+    },
+    {
+      "id": "frozen-vanilla",
+      "rect": [
+        450,
+        111,
+        47,
+        63
+      ],
+      "codes": [
+        "frozen-vanilla"
+      ],
+      "shared": false
+    },
+    {
+      "id": "frozen-mocha",
+      "rect": [
+        512,
+        111,
+        41,
+        63
+      ],
+      "codes": [
+        "frozen-mocha"
+      ],
+      "shared": false
+    },
+    {
+      "id": "frozen-banana",
+      "rect": [
+        568,
+        111,
+        42,
+        63
+      ],
+      "codes": [
+        "frozen-banana"
+      ],
+      "shared": false
+    },
+    {
+      "id": "frozen-strawberry",
+      "rect": [
+        625,
+        111,
+        46,
+        63
+      ],
+      "codes": [
+        "frozen-strawberry"
+      ],
+      "shared": false
+    },
+    {
+      "id": "black-widow",
+      "rect": [
+        401,
+        216,
+        39,
+        59
+      ],
+      "codes": [
+        "black-widow"
+      ],
+      "shared": false
+    },
+    {
+      "id": "chathai-frozen",
+      "rect": [
+        457,
+        211,
+        43,
+        62
+      ],
+      "codes": [
+        "chathai-frozen"
+      ],
+      "shared": false
+    },
+    {
+      "id": "extra-cocoa",
+      "rect": [
+        512,
+        211,
+        45,
+        62
+      ],
+      "codes": [
+        "extra-cocoa"
+      ],
+      "shared": false
+    },
+    {
+      "id": "strawberry-cream-cheese",
+      "rect": [
+        568,
+        219,
+        47,
+        56
+      ],
+      "codes": [
+        "strawberry-cream-cheese"
+      ],
+      "shared": false
+    },
+    {
+      "id": "dsi",
+      "rect": [
+        629,
+        211,
+        44,
+        62
+      ],
+      "codes": [
+        "dsi"
+      ],
+      "shared": false
+    },
+    {
+      "id": "brown-sugar-milk",
+      "rect": [
+        682,
+        218,
+        51,
+        60
+      ],
+      "codes": [
+        "brown-sugar-milk"
+      ],
+      "shared": false
+    },
+    {
+      "id": "cs",
+      "rect": [
+        739,
+        220,
+        51,
+        56
+      ],
+      "codes": [
+        "cs"
+      ],
+      "shared": false
+    },
+    {
+      "id": "coffee",
+      "rect": [
+        988,
+        58,
+        55,
+        74
+      ],
+      "codes": [
+        "macchiato-iced",
+        "macchiato-blended",
+        "espresso-iced",
+        "espresso-blended",
+        "mocca-iced",
+        "mocca-blended",
+        "cappuccino-iced",
+        "cappuccino-blended",
+        "latte-iced",
+        "latte-blended",
+        "americano-iced",
+        "americano-blended"
+      ],
+      "shared": true
+    },
+    {
+      "id": "sticky-cocoa",
+      "rect": [
+        895,
+        111,
+        68,
+        64
+      ],
+      "codes": [
+        "sticky-cocoa-teen",
+        "sticky-cocoa-pro"
+      ],
+      "shared": true
+    },
+    {
+      "id": "milk-smoothies",
+      "rect": [
+        1163,
+        51,
+        56,
+        80
+      ],
+      "codes": [
+        "milk-caramel",
+        "milk-honey",
+        "milk-chocolate"
+      ],
+      "shared": true
+    },
+    {
+      "id": "smoothie-coconut",
+      "rect": [
+        1071,
+        63,
+        51,
+        94
+      ],
+      "codes": [
+        "smoothie-coconut"
+      ],
+      "shared": false
+    },
+    {
+      "id": "fruit-smoothies",
+      "rect": [
+        1241,
+        107,
+        111,
+        75
+      ],
+      "codes": [
+        "smoothie-orange",
+        "smoothie-watermelon",
+        "smoothie-strawberry",
+        "smoothie-pineapple",
+        "smoothie-carrot",
+        "smoothie-mixed-fruit"
+      ],
+      "shared": true
+    },
+    {
+      "id": "smoothie-strawberry-yogurt",
+      "rect": [
+        1443,
+        68,
+        69,
+        90
+      ],
+      "codes": [
+        "smoothie-strawberry-yogurt"
+      ],
+      "shared": false
+    },
+    {
+      "id": "italian-sodas",
+      "rect": [
+        1354,
+        74,
+        71,
+        65
+      ],
+      "codes": [
+        "soda-lychee",
+        "soda-blue-hawaii",
+        "soda-blueberry",
+        "soda-strawberry"
+      ],
+      "shared": true
+    },
+    {
+      "id": "butter-beer-original",
+      "rect": [
+        890,
+        200,
+        49,
+        70
+      ],
+      "codes": [
+        "butter-beer-original"
+      ],
+      "shared": false
+    },
+    {
+      "id": "butter-beer-slytherin",
+      "rect": [
+        942,
+        200,
+        49,
+        70
+      ],
+      "codes": [
+        "butter-beer-slytherin"
+      ],
+      "shared": false
+    },
+    {
+      "id": "butter-beer-gryffindor",
+      "rect": [
+        994,
+        200,
+        49,
+        70
+      ],
+      "codes": [
+        "butter-beer-gryffindor"
+      ],
+      "shared": false
+    },
+    {
+      "id": "butter-beer-ravenclaw",
+      "rect": [
+        1046,
+        200,
+        49,
+        70
+      ],
+      "codes": [
+        "butter-beer-ravenclaw"
+      ],
+      "shared": false
+    },
+    {
+      "id": "butter-beer-hufflepuff",
+      "rect": [
+        1098,
+        200,
+        49,
+        70
+      ],
+      "codes": [
+        "butter-beer-hufflepuff"
+      ],
+      "shared": false
+    },
+    {
+      "id": "butter-beer-blueberry",
+      "rect": [
+        1150,
+        200,
+        49,
+        70
+      ],
+      "codes": [
+        "butter-beer-blueberry"
+      ],
+      "shared": false
+    },
+    {
+      "id": "thai-tea",
+      "rect": [
+        1234,
+        195,
+        59,
+        63
+      ],
+      "codes": [
+        "thai-tea"
+      ],
+      "shared": false
+    },
+    {
+      "id": "cocoa",
+      "rect": [
+        1275,
+        222,
+        49,
+        63
+      ],
+      "codes": [
+        "cocoa"
+      ],
+      "shared": false
+    },
+    {
+      "id": "milk-tea",
+      "rect": [
+        1311,
+        196,
+        53,
+        63
+      ],
+      "codes": [
+        "milk-tea"
+      ],
+      "shared": false
+    },
+    {
+      "id": "green-tea",
+      "rect": [
+        1350,
+        222,
+        53,
+        63
+      ],
+      "codes": [
+        "green-tea"
+      ],
+      "shared": false
+    },
+    {
+      "id": "white-malt",
+      "rect": [
+        1382,
+        198,
+        57,
+        61
+      ],
+      "codes": [
+        "white-malt"
+      ],
+      "shared": false
+    },
+    {
+      "id": "black-tea",
+      "rect": [
+        1418,
+        223,
+        59,
+        63
+      ],
+      "codes": [
+        "black-tea"
+      ],
+      "shared": false
+    },
+    {
+      "id": "waffle-banana",
+      "rect": [
+        204,
+        229,
+        45,
+        36
+      ],
+      "codes": [
+        "waffle-banana"
+      ],
+      "shared": false
+    },
+    {
+      "id": "waffle-almond",
+      "rect": [
+        251,
+        229,
+        45,
+        36
+      ],
+      "codes": [
+        "waffle-almond"
+      ],
+      "shared": false
+    },
+    {
+      "id": "waffle-chocolate",
+      "rect": [
+        298,
+        229,
+        44,
+        36
+      ],
+      "codes": [
+        "waffle-chocolate"
+      ],
+      "shared": false
+    },
+    {
+      "id": "waffle-strawberry",
+      "rect": [
+        343,
+        229,
+        43,
+        36
+      ],
+      "codes": [
+        "waffle-strawberry"
+      ],
+      "shared": false
+    },
+    {
+      "id": "waffle-assortment",
+      "rect": [
+        204,
+        229,
+        183,
+        36
+      ],
+      "codes": [
+        "waffle-blueberry",
+        "waffle-butter-milk",
+        "waffle-pandan"
+      ],
+      "shared": true
+    },
+    {
+      "id": "takoyaki",
+      "rect": [
+        78,
+        232,
+        88,
+        70
+      ],
+      "codes": [
+        "takoyaki-mussel-1",
+        "takoyaki-mussel-3",
+        "takoyaki-squid-1",
+        "takoyaki-squid-3",
+        "takoyaki-sausage-1",
+        "takoyaki-sausage-3",
+        "takoyaki-crab-1",
+        "takoyaki-crab-3",
+        "takoyaki-salmon-1",
+        "takoyaki-salmon-3",
+        "takoyaki-tobiko-1",
+        "takoyaki-tobiko-3"
+      ],
+      "shared": true
+    }
+  ]
+}

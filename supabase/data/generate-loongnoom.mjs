@@ -41,7 +41,7 @@ begin
   insert into public.menu_items
     (id, store_id, name, price, description, image_url, category, is_available, sort)
   values
-${items.map((i, index) => '    ' + values([`${s.id}-${i.code}`, s.id, i.name, i.price, i.description, '', i.category, true, index + 1])).join(',\n')}
+${items.map((i, index) => '    ' + values([`${s.id}-${i.code}`, s.id, i.name, i.price, i.description, i.imageUrl ?? '', i.category, true, index + 1])).join(',\n')}
   on conflict (id) do nothing;
   get diagnostics menus_added = row_count;
 
