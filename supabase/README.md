@@ -22,6 +22,7 @@
 | `migrations/20261004000000_partner_dashboard.sql` | ร้านค้า: ยอดขายของร้านตัวเอง, เปิด/ปิดร้าน, กดเมนูหมด |
 | `migrations/20261005000000_team_personal_email.sql` | ทีมงานสมัคร/login ด้วยอีเมลส่วนตัวได้ ถ้า ADMIN เพิ่มอีเมลไว้ |
 | `migrations/20261006000000_partner_menu.sql` | ร้านเพิ่ม/แก้/ลบเมนู ใส่รูป และแก้ข้อมูลร้านเอง |
+| `migrations/20261007000000_free_delivery_team_only.sql` | ฟรีค่าหิ้วได้เฉพาะโปรร่วมที่ทีมอนุมัติ |
 | `functions/verify-slip/` | Edge Function ตรวจสลิปกับ SlipOK แล้วบันทึกว่าจ่ายแล้ว |
 | `seed.sql` | ร้านจริง 12 ร้านของโรงอาหาร KFC (หลัก) และเมนู (สร้างจาก `frontend/src/lib/data/stores.ts`) |
 | `generate-seed.mjs` | สร้าง `seed.sql` ใหม่หลังแก้ข้อมูลร้านในแอป: `node supabase/generate-seed.mjs` |
@@ -44,13 +45,14 @@
    11. `migrations/20261004000000_partner_dashboard.sql`
    12. `migrations/20261005000000_team_personal_email.sql`
    13. `migrations/20261006000000_partner_menu.sql`
-   14. `seed.sql`
+   14. `migrations/20261007000000_free_delivery_team_only.sql`
+   15. `seed.sql`
 3. เพิ่ม ADMIN คนแรกของหน้าทีมงาน (คนต่อไป ADMIN เพิ่มเองในหน้าทีมงาน):
    ```sql
    insert into team_members (email, role, note) values ('<อีเมล มจธ.>', 'ADMIN', 'first admin');
    ```
 
-**โปรเจกต์ที่ใช้อยู่ (`pguhzjtdwgualqeqzleu`):** รันครบถึง `20261006000000_partner_menu.sql` แล้ว (รันด้วย `npx supabase db query --linked --project-ref pguhzjtdwgualqeqzleu -f <ไฟล์>` ได้ หลัง `npx supabase login`) ADMIN คนแรกคือ `natthawut.napa@mail.kmutt.ac.th`
+**โปรเจกต์ที่ใช้อยู่ (`pguhzjtdwgualqeqzleu`):** รันครบถึง `20261007000000_free_delivery_team_only.sql` แล้ว (รันด้วย `npx supabase db query --linked --project-ref pguhzjtdwgualqeqzleu -f <ไฟล์>` ได้ หลัง `npx supabase login`) ADMIN คนแรกคือ `natthawut.napa@mail.kmutt.ac.th`
 
 **บันทึก deploy 27 กันยายน 2569:** รัน `client_errors_deploy.sql` แล้วต่อด้วย `rider_tools_deploy.sql` ผ่าน Supabase CLI ไปยังโปรเจกต์ `goose-man` แต่ละไฟล์ครอบด้วย `begin;` … `commit;` และสำเร็จแล้ว ตรวจหลัง deploy พบตาราง `client_errors`, `rider_presence`, `rider_applications` เปิด RLS, คอลัมน์ `orders.tip_in_total` และฟังก์ชันครบ ตรวจสิทธิ์การเรียกฟังก์ชันและสูตรทิปผ่าน ส่วน API `riders_online` ตอบ HTTP 200 และค่า `0` ณ เวลาตรวจ ก่อน deploy ชุดทดสอบ SQL ในเครื่องผ่าน 233 รายการ ไม่ได้สร้างออเดอร์หรือใบสมัครทดสอบบนฐานข้อมูลจริง **ไม่ต้องรันสองไฟล์นี้ซ้ำ** เพราะคำสั่งสร้างตาราง/เพิ่มคอลัมน์ไม่ได้รองรับการรันซ้ำ
 
