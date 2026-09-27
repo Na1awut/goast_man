@@ -33,3 +33,9 @@ bench/routing/instances.json
 
 # Supabase CLI local state (project link, CLI version)
 supabase/.temp/
+
+# Vercel CLI project link
+.vercel
+
+.vercel
+.env*
