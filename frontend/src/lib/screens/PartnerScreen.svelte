@@ -101,7 +101,7 @@
 		if (!draft) return {};
 		return {
 			title: draft.title.trim().length < 3 ? 'ตั้งชื่อโปรอย่างน้อย 3 ตัวอักษร' : '',
-			benefit: !(draft.discount > 0) && !draft.freeDelivery ? 'ต้องมีส่วนลด หรือฟรีค่าหิ้ว อย่างน้อยหนึ่งอย่าง' : '',
+			benefit: !(draft.discount > 0) && !(draft.kind === 'CO_PROMO' && draft.freeDelivery) ? (draft.kind === 'CO_PROMO' ? 'ต้องมีส่วนลด หรือขอฟรีค่าหิ้ว อย่างน้อยหนึ่งอย่าง' : 'ใส่ส่วนลดเป็นบาท') : '',
 			discount: draft.discount < 0 || draft.discount > 200 ? 'ส่วนลด 0-200 บาท' : '',
 			minQty: draft.minQty < 1 || draft.minQty > 20 ? 'จำนวนขั้นต่ำ 1-20 ชิ้น' : ''
 		};
@@ -134,7 +134,8 @@
 				description: draft.description.trim(),
 				minQty: Math.round(draft.minQty),
 				discount: Math.round(draft.discount || 0),
-				freeDelivery: draft.freeDelivery,
+				// A store's own deal never carries free delivery (the database refuses it too)
+				freeDelivery: draft.kind === 'CO_PROMO' && draft.freeDelivery,
 				// End of the chosen day, Bangkok time
 				endsAt: draft.endsOn ? new Date(`${draft.endsOn}T23:59:59+07:00`).toISOString() : undefined,
 				active: draft.active
@@ -354,9 +355,15 @@
 					<input type="number" inputmode="numeric" min="1" max="20" bind:value={draft.minQty} class="w-full rounded-xl bg-slate-100 px-3.5 py-3 text-sm outline-none focus:ring-2 focus:ring-brand" />
 				</label>
 			</div>
-			<label class="flex cursor-pointer items-center gap-2 text-sm text-slate-800">
-				<input type="checkbox" bind:checked={draft.freeDelivery} class="h-4 w-4 accent-brand" /> ฟรีค่าหิ้วให้ลูกค้าด้วย
-			</label>
+			<!-- Free delivery is paid by Goose Man, so only a joint promotion (team-approved) may ask for it -->
+			{#if draft.kind === 'CO_PROMO'}
+				<label class="flex cursor-pointer items-start gap-2 text-sm text-slate-800">
+					<input type="checkbox" bind:checked={draft.freeDelivery} class="mt-0.5 h-4 w-4 accent-brand" />
+					<span>ขอฟรีค่าหิ้วให้ลูกค้าด้วย <span class="block text-xs text-slate-500">Goose Man เป็นคนออกค่าหิ้วให้ ทีมจะพิจารณาก่อนอนุมัติ</span></span>
+				</label>
+			{:else}
+				<p class="text-xs text-slate-500">ร้านลดราคาเองได้ทันที · ถ้าอยากให้ฟรีค่าหิ้ว เลือก "โปรร่วม Goose Man" แล้วขอให้ทีมพิจารณา</p>
+			{/if}
 			<label class="block">
 				<span class="mb-1 block text-sm font-medium text-slate-900">สิ้นสุดวันที่ <span class="font-normal text-slate-400">(ไม่บังคับ)</span></span>
 				<input type="date" bind:value={draft.endsOn} min={new Date().toISOString().slice(0, 10)} class="w-full rounded-xl bg-slate-100 px-3.5 py-3 text-sm outline-none focus:ring-2 focus:ring-brand" />

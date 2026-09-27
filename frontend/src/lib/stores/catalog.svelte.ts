@@ -163,7 +163,8 @@ class CatalogStore {
 			await this.#reloadStore(draft.storeId);
 			return saved;
 		}
-		// Demo: same approval rule as the database trigger
+		// Demo: same rules as the database trigger
+		if (draft.kind === 'DEAL' && draft.freeDelivery) throw new Error('FREE_DELIVERY_NEEDS_TEAM');
 		const existing = draft.id ? this.byId(draft.storeId)?.promotions.find((p) => p.id === draft.id) : undefined;
 		const termsChanged =
 			!existing ||

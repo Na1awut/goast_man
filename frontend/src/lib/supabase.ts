@@ -84,6 +84,7 @@ export function friendlyError(error: unknown): string {
 		BAD_SPECIAL_PRICE: 'ราคาพิเศษต้องมากกว่าราคาธรรมดา (ไม่เกิน 2,000 บาท)',
 		BAD_STORE_NAME: 'ชื่อร้านต้องมี 1-60 ตัวอักษร',
 		BAD_QUEUE: 'เวลาคิวต้องอยู่ระหว่าง 0-120 นาที',
+		FREE_DELIVERY_NEEDS_TEAM: 'ฟรีค่าหิ้วต้องทำเป็นโปรร่วมกับ Goose Man ให้ทีมอนุมัติก่อน',
 		SLIPOK_NOT_CONFIGURED: 'ยังไม่เปิดรับชำระผ่าน PromptPay ใช้เงินสดไปก่อนนะ',
 		SLIPOK_UNAVAILABLE: 'ระบบตรวจสลิปขัดข้องชั่วคราว ลองแนบใหม่อีกครั้ง',
 		SLIP_USED: 'สลิปนี้ถูกใช้ไปแล้ว ใช้สลิปของการโอนครั้งนี้',

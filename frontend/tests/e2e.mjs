@@ -505,6 +505,7 @@ await check('storefront saved', await bodyHas('บันทึกหน้าร
 await shot('18-partner-storefront');
 
 await click('สร้างโปร');
+await check('a store-only deal cannot offer free delivery', !(await bodyHas('ขอฟรีค่าหิ้วให้ลูกค้า')));
 await page.evaluate(() => [...document.querySelectorAll('[role=dialog] label')].find((l) => l.innerText.includes('โปรร่วม Goose Man'))?.click());
 await sleep(200);
 await page.type('[role=dialog] input[maxlength="80"]', 'ห่านหิ้วฟรีวันศุกร์');

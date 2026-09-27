@@ -84,6 +84,7 @@ try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20261004000000_partner_dashboard.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261005000000_team_personal_email.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261006000000_partner_menu.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261007000000_free_delivery_team_only.sql`, 'utf8'));
 	ok('profile-at-first-order migration applies cleanly', true);
 } catch (e) {
 	ok('profile-at-first-order migration applies cleanly', false, e.message);
@@ -893,6 +894,17 @@ await as(panee, async () => {
 await as(tina, async () => {
 	const acts = new Set((await rpc(`admin_activity()`)).filter((l) => l.detail?.by === 'partner').map((l) => l.action));
 	ok('the team sees every menu and store change', ['ITEM_ADDED', 'ITEM_EDITED', 'ITEM_REMOVED', 'STORE_EDITED'].every((a) => acts.has(a)), [...acts].join(','));
+});
+
+// ---------- Free delivery is the team's call ----------
+await as(panee, async () => {
+	await expectError('a store cannot give free delivery on its own', `insert into promotions (store_id, kind, title, free_delivery) values ('kfc-05', 'DEAL', 'ฟรีค่าหิ้วเอง', true)`, 'FREE_DELIVERY_NEEDS_TEAM');
+	const deal = await one(`insert into promotions (store_id, kind, title, discount) values ('kfc-05', 'DEAL', 'ลด 5 บาท', 5) returning id, approved`);
+	ok('a plain store discount still goes live at once', deal.approved === true);
+	await expectError('nor turn free delivery on later', `update promotions set free_delivery = true where id = '${deal.id}'`, 'FREE_DELIVERY_NEEDS_TEAM');
+	const ask = await one(`insert into promotions (store_id, kind, title, free_delivery) values ('kfc-05', 'CO_PROMO', 'ขอฟรีค่าหิ้ว', true) returning approved`);
+	ok('asking for free delivery in a joint promotion waits for the team', ask.approved === false);
+	await db.exec(`delete from promotions where id = '${deal.id}'`);
 });
 
 // Anonymous visitors can browse the catalogue
