@@ -12,6 +12,8 @@
 	import { nav } from '$lib/stores/nav.svelte';
 	import { orders } from '$lib/stores/orders.svelte';
 	import { profileGate } from '$lib/stores/profileGate.svelte';
+	import { riderApplication } from '$lib/stores/riderApplication.svelte';
+	import { onMount } from 'svelte';
 	import { rider } from '$lib/stores/rider.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { formatBaht } from '$lib/utils';
@@ -25,10 +27,18 @@
 	let confirmLogout = $state(false);
 
 	const user = $derived(auth.user);
+	/** Students who are not riders yet can apply; the latest application decides what the card says */
+	const canApply = $derived(!!user && user.role === 'STUDENT' && !user.isRider);
+	const app = $derived(riderApplication.application);
+
+	onMount(() => {
+		if (canApply) void riderApplication.load();
+	});
 
 	async function logout() {
 		orders.reset();
 		rider.reset();
+		riderApplication.reset();
 		cart.clear();
 		toast.reset();
 		await auth.logout();
@@ -63,6 +73,38 @@
 					</span>
 					<Icon name="chevron-right" class="h-5 w-5" />
 				</button>
+			{/if}
+
+			{#if canApply && riderApplication.loaded}
+				{#if app?.status === 'PENDING'}
+					<section class="flex items-center gap-3 rounded-2xl border border-brand-100 bg-brand-50 p-4">
+						<span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-brand"><Icon name="clock" /></span>
+						<span class="min-w-0 flex-1">
+							<span class="block text-sm font-semibold text-slate-900">ส่งใบสมัครคนหิ้วแล้ว</span>
+							<span class="block text-xs text-slate-600">รอทีมติดต่อนัดตรวจบัตรและอบรม · ว่าง {app.availability}</span>
+						</span>
+					</section>
+				{:else if app?.status === 'APPROVED'}
+					<button type="button" onclick={() => location.reload()} class="flex w-full items-center gap-3 rounded-2xl bg-fresh-700 p-4 text-left text-white">
+						<span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15"><Icon name="check-circle" /></span>
+						<span class="min-w-0 flex-1">
+							<span class="block text-sm font-semibold">ผ่านการตรวจแล้ว</span>
+							<span class="block text-xs text-white/85">แตะเพื่อโหลดใหม่ แล้วจะเห็นปุ่มโหมดคนหิ้ว</span>
+						</span>
+						<Icon name="refresh" class="h-5 w-5" />
+					</button>
+				{:else}
+					<button type="button" onclick={() => profileGate.ensure() && nav.go('RIDER_APPLY')} class="flex w-full items-center gap-3 rounded-2xl border border-slate-100 bg-white p-4 text-left">
+						<span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand"><Icon name="walk" /></span>
+						<span class="min-w-0 flex-1">
+							<span class="block text-sm font-semibold text-slate-900">{app?.status === 'REJECTED' ? 'สมัครเป็นคนหิ้วอีกครั้ง' : 'สมัครเป็นคนหิ้ว'}</span>
+							<span class="block text-xs text-slate-500">
+								{app?.status === 'REJECTED' ? `รอบก่อนยังไม่ผ่าน: ${app.reviewNote ?? ''}` : 'หิ้วให้เพื่อนในมอ ได้ค่าหิ้วงานละ 15 บาท + ทิป'}
+							</span>
+						</span>
+						<Icon name="chevron-right" class="h-5 w-5 text-slate-400" />
+					</button>
+				{/if}
 			{/if}
 
 			{#if auth.isPartner}

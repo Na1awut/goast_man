@@ -1,7 +1,7 @@
 // Checkout draft shared by the summary and PromptPay screens (Svelte 5 runes)
 import type { Order, PaymentMethod } from '$lib/types';
 import { promptPayEnabled } from '$lib/payments';
-import { lineName, netTotal, promoDiscount, STORE_DELIVERY_FEE } from '$lib/pricing';
+import { lineName, netTotal, promoDiscount, roundUpTip, STORE_DELIVERY_FEE } from '$lib/pricing';
 import { campus } from './campus.svelte';
 import { cart } from './cart.svelte';
 import { orders } from './orders.svelte';
@@ -18,7 +18,8 @@ class CheckoutStore {
 	/** Fee still payable after a partner free-delivery promotion, so GOOSEFREE can't waive it twice */
 	feeAfterPromotion = $derived(cart.appliedPromotion?.promotion.freeDelivery ? 0 : STORE_DELIVERY_FEE);
 	codeDiscount = $derived(promoDiscount(cart.promo, this.feeAfterPromotion));
-	total = $derived(
+	/** Before the tip */
+	baseTotal = $derived(
 		netTotal({
 			foodTotal: cart.subtotal,
 			deliveryFee: STORE_DELIVERY_FEE,
@@ -26,6 +27,12 @@ class CheckoutStore {
 			partnerDiscount: cart.partnerDiscount
 		})
 	);
+	/** The buyer said yes to rounding the total up; the difference is a tip for the rider */
+	roundUp = $state(false);
+	/** What rounding up would add (0 when the total already ends in 0 or 5) */
+	tipOffer = $derived(roundUpTip(this.baseTotal));
+	tip = $derived(this.roundUp ? this.tipOffer : 0);
+	total = $derived(this.baseTotal + this.tip);
 
 	startPayment() {
 		this.reference = `GM${Date.now().toString().slice(-8)}`;
@@ -54,11 +61,13 @@ class CheckoutStore {
 				partnerDiscount: cart.partnerDiscount,
 				promoCode: cart.promo ?? undefined,
 				totalPrice: this.total,
+				tip: this.tip,
 				paymentMethod: this.payment,
 				note: this.note.trim() || undefined
 			});
 			cart.clear();
 			this.note = '';
+			this.roundUp = false;
 			this.reference = '';
 			return order;
 		} finally {

@@ -21,7 +21,8 @@ export type Screen =
 	| 'ONBOARDING'
 	| 'EDIT_PROFILE'
 	| 'RIDER'
-	| 'RIDER_EARNINGS';
+	| 'RIDER_EARNINGS'
+	| 'RIDER_APPLY';
 
 export type TabId = 'HOME' | 'ORDERS' | 'STORES' | 'CHAT' | 'PROFILE';
 
@@ -209,6 +210,8 @@ export interface RiderJob {
 	totalPrice: number;
 	paymentMethod: PaymentMethod;
 	status: OrderStatus;
+	/** Round-up tip for the rider, already inside totalPrice */
+	tip?: number;
 	note?: string;
 	createdAt: string;
 	acceptedAt?: string;
@@ -226,6 +229,8 @@ export interface RiderEarning {
 	foodTotal: number;
 	deliveryFee: number;
 	totalPrice: number;
+	/** Round-up tip the buyer paid with the order */
+	tip: number;
 	/** The team's transfer for this job; 0 when the cash taken at the door already covered it */
 	owed: number;
 	/** When the team recorded the transfer, and its bank reference */

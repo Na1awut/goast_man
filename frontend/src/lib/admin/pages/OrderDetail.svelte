@@ -179,6 +179,7 @@
 					<p class="flex justify-between"><span>ค่าหิ้ว</span><span class="tabular-nums">{baht(order.delivery_fee)}</span></p>
 					{#if order.code_discount}<p class="flex justify-between"><span>ส่วนลดโค้ด {order.promo_code ?? ''}</span><span class="text-fresh-700 tabular-nums">-{baht(order.code_discount)}</span></p>{/if}
 					{#if order.partner_discount}<p class="flex justify-between"><span>ส่วนลดโปรร้าน</span><span class="text-fresh-700 tabular-nums">-{baht(order.partner_discount)}</span></p>{/if}
+					{#if order.tip}<p class="flex justify-between"><span>ทิปคนหิ้ว (ปัดเศษ)</span><span class="tabular-nums">{baht(order.tip)}</span></p>{/if}
 					<p class="flex justify-between pt-1 text-base font-bold text-slate-900"><span>ยอดสุทธิ</span><span class="tabular-nums">{baht(order.total)}</span></p>
 					<p class="flex justify-between"><span>วิธีจ่าย</span><span>{order.payment === 'CASH' ? 'เงินสดปลายทาง' : 'PromptPay'}</span></p>
 					{#if order.payment === 'PROMPTPAY'}

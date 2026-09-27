@@ -8,6 +8,8 @@ import type {
 	AdminPromo,
 	AdminRider,
 	AdminStore,
+	ApplicationStatus,
+	Badges,
 	ClientError,
 	ErrorStatus,
 	LogEntry,
@@ -19,6 +21,7 @@ import type {
 	Partners,
 	Payment,
 	RefundDue,
+	RiderApplicationRow,
 	RiderPayout,
 	TeamMe,
 	TeamMember,
@@ -69,6 +72,9 @@ export interface AdminApi {
 	errors(status: ErrorStatus): Promise<ClientError[]>;
 	errorCount(): Promise<number>;
 	resolveError(id: number): Promise<void>;
+	badges(): Promise<Badges>;
+	riderApplications(status?: ApplicationStatus | null): Promise<RiderApplicationRow[]>;
+	reviewRiderApplication(id: string, approve: boolean, note: string): Promise<void>;
 }
 
 /** A database error code or message, in the team's words */
@@ -126,7 +132,10 @@ const liveApi: AdminApi = {
 	activity: (limit, before) => call('admin_activity', { p_limit: limit ?? 100, p_before: before ?? null }),
 	errors: (status) => call('admin_errors', { p_status: status }),
 	errorCount: () => call('admin_error_count'),
-	resolveError: (id) => call('admin_resolve_error', { p_id: id })
+	resolveError: (id) => call('admin_resolve_error', { p_id: id }),
+	badges: () => call('admin_badges'),
+	riderApplications: (status) => call('admin_rider_applications', { p_status: status === undefined ? 'PENDING' : status }),
+	reviewRiderApplication: (id, approve, note) => call('admin_review_rider_application', { p_id: id, p_approve: approve, p_note: note })
 };
 
 let demo: import('./demo').DemoApi | null = null;

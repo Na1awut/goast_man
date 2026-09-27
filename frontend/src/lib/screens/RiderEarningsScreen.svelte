@@ -18,9 +18,10 @@
 
 	/** One line on why this job owes what it owes */
 	function why(e: RiderEarning): string {
-		if (e.paymentMethod === 'PROMPTPAY') return `ค่าอาหาร ${formatBaht(e.foodTotal)} ที่ออกไปก่อน + ค่าหิ้ว ${formatBaht(e.deliveryFee)}`;
+		const tip = e.tip ? ` + ทิป ${formatBaht(e.tip)}` : '';
+		if (e.paymentMethod === 'PROMPTPAY') return `ค่าอาหาร ${formatBaht(e.foodTotal)} ที่ออกไปก่อน + ค่าหิ้ว ${formatBaht(e.deliveryFee)}${tip}`;
 		if (e.owed > 0) return `เก็บเงินสด ${formatBaht(e.totalPrice)} แล้ว ทีมจ่ายส่วนลดที่ลูกค้าไม่ได้จ่ายให้`;
-		return `เก็บเงินสด ${formatBaht(e.totalPrice)} แล้ว ได้ค่าหิ้ว ${formatBaht(e.deliveryFee)} ไปในนั้น`;
+		return `เก็บเงินสด ${formatBaht(e.totalPrice)} แล้ว ได้ค่าหิ้ว ${formatBaht(e.deliveryFee)}${tip} ไปในนั้น`;
 	}
 </script>
 
@@ -94,7 +95,8 @@
 			<p class="mb-1 text-sm font-semibold text-slate-900">ทีมโอนเท่าไร</p>
 			<p><span class="font-medium text-slate-800">ลูกค้าจ่าย PromptPay:</span> เงินเข้าบัญชีทีม คุณออกค่าอาหารไปก่อน ทีมโอนคืนค่าอาหาร + ค่าหิ้ว</p>
 			<p class="mt-1"><span class="font-medium text-slate-800">ลูกค้าจ่ายเงินสด:</span> คุณได้ค่าอาหารและค่าหิ้วจากลูกค้าแล้ว ทีมโอนเฉพาะส่วนลดที่ลูกค้าไม่ได้จ่าย (ถ้ามี)</p>
-			<p class="mt-1">ทีมโอนหลังคุณกรอก OTP สำเร็จ · ทิปยังไม่มีช่องให้ลูกค้าจ่ายเข้ามา จึงยังไม่รวม</p>
+			<p class="mt-1"><span class="font-medium text-slate-800">ทิป:</span> ลูกค้าเลือกปัดยอดขึ้นตอนสั่ง (เช่น 52 เป็น 55) ส่วนที่ปัดเป็นทิปของคุณ รวมอยู่ในยอดด้านบนแล้ว</p>
+			<p class="mt-1">ทีมโอนหลังคุณกรอก OTP สำเร็จ</p>
 		</section>
 	</div>
 </div>

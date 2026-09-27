@@ -24,7 +24,8 @@
 
 	const minutes = (seconds: number) => Math.max(1, Math.round(seconds / 60));
 	const waitedMinutes = (job: RiderJob) => Math.max(0, Math.floor((rider.now - Date.parse(job.createdAt)) / 60_000));
-	const money = (job: RiderJob) => (job.paymentMethod === 'CASH' ? `เก็บเงินสด ${formatBaht(job.totalPrice)}` : 'จ่ายแล้วทาง PromptPay');
+	const tipNote = (job: RiderJob) => (job.tip ? ` · รวมทิป ${formatBaht(job.tip)}` : '');
+	const money = (job: RiderJob) => (job.paymentMethod === 'CASH' ? `เก็บเงินสด ${formatBaht(job.totalPrice)}${tipNote(job)}` : `จ่ายแล้วทาง PromptPay${tipNote(job)}`);
 
 	/** The planned order when every stop is on the map, otherwise the order the jobs were taken */
 	const stops = $derived.by<Stop[]>(() => {
@@ -83,6 +84,29 @@
 	<AppBar title="โหมดคนหิ้ว" />
 
 	<div class="space-y-5 px-4 pt-4 pb-8">
+		<button
+			type="button"
+			role="switch"
+			aria-checked={rider.online}
+			disabled={rider.switchingOnline}
+			onclick={() => rider.setOnline(!rider.online)}
+			class="flex w-full items-center gap-3 rounded-2xl p-4 text-left transition-colors disabled:opacity-70 {rider.online ? 'bg-fresh-700 text-white' : 'border border-slate-200 bg-white'}"
+		>
+			<span class="relative flex h-3 w-3 shrink-0">
+				{#if rider.online}<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-white/70 motion-reduce:animate-none"></span>{/if}
+				<span class="relative inline-flex h-3 w-3 rounded-full {rider.online ? 'bg-white' : 'bg-slate-300'}"></span>
+			</span>
+			<span class="min-w-0 flex-1">
+				<span class="block text-sm font-semibold {rider.online ? '' : 'text-slate-900'}">{rider.online ? 'พร้อมรับงาน' : 'ออฟไลน์อยู่'}</span>
+				<span class="block text-xs {rider.online ? 'text-white/85' : 'text-slate-500'}">
+					{rider.online ? 'มีงานใหม่จะมีเสียงและสั่นเตือน · เปิดหน้านี้ค้างไว้' : 'กดเพื่อพร้อมรับงาน ลูกค้าจะเห็นว่ามีเพื่อนพร้อมหิ้ว'}
+				</span>
+			</span>
+			<span class="relative h-7 w-12 shrink-0 rounded-full transition-colors {rider.online ? 'bg-white/30' : 'bg-slate-200'}" aria-hidden="true">
+				<span class="absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all {rider.online ? 'left-6' : 'left-1'}"></span>
+			</span>
+		</button>
+
 		<button type="button" onclick={() => nav.go('RIDER_EARNINGS')} class="flex w-full items-center gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3 text-left">
 			<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-fresh-50 text-fresh-700"><Icon name="wallet" class="h-5 w-5" /></span>
 			<span class="min-w-0 flex-1">
@@ -195,7 +219,7 @@
 							<div class="min-w-0 flex-1">
 								<p class="truncate text-sm font-medium text-slate-900">{job.pickupName} → {job.dropoffName}</p>
 								<p class="text-xs text-slate-600">
-									{holding ? `ใช้เวลาเพิ่ม ~${minutes(seconds)} นาที` : `ใช้เวลาทั้งงาน ~${minutes(seconds)} นาที`} · ค่าหิ้ว {formatBaht(job.deliveryFee)}
+									{holding ? `ใช้เวลาเพิ่ม ~${minutes(seconds)} นาที` : `ใช้เวลาทั้งงาน ~${minutes(seconds)} นาที`} · ค่าหิ้ว {formatBaht(job.deliveryFee)}{job.tip ? ` +ทิป ${formatBaht(job.tip)}` : ''}
 								</p>
 							</div>
 							{@render acceptButton(job)}
@@ -236,7 +260,10 @@
 										<span class="truncate">{job.dropoffName}</span>
 									</p>
 								</div>
-								<span class="shrink-0 text-right text-sm font-semibold text-slate-900 tabular-nums"><span class="block text-xs font-normal text-slate-500">ค่าหิ้ว</span>{formatBaht(job.deliveryFee)}</span>
+								<span class="shrink-0 text-right text-sm font-semibold text-slate-900 tabular-nums">
+									<span class="block text-xs font-normal text-slate-500">ค่าหิ้ว</span>{formatBaht(job.deliveryFee)}
+									{#if job.tip}<span class="block text-xs font-medium text-fresh-700">+ทิป {formatBaht(job.tip)}</span>{/if}
+								</span>
 							</div>
 							<p class="mt-2 line-clamp-2 text-sm text-slate-700">{job.itemDetails}</p>
 							<div class="mt-3 flex items-center justify-between gap-3 border-t border-slate-100 pt-3">

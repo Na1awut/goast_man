@@ -74,3 +74,12 @@ export function netTotal(parts: {
 }): number {
 	return Math.max(0, parts.foodTotal + parts.deliveryFee - parts.codeDiscount - parts.partnerDiscount);
 }
+
+/**
+ * Round-up tip offered at checkout: the baht that bring the total to the next
+ * multiple of 5 (52 → 3, 58 → 2, 55 → 0). Mirrors round_up_tip() in the database,
+ * which accepts no other tip.
+ */
+export function roundUpTip(total: number): number {
+	return (5 - (total % 5)) % 5;
+}

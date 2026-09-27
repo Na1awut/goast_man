@@ -3,6 +3,7 @@
 import { takeAuthRedirectError } from '$lib/api/live';
 import { db, friendlyError, isLive } from '$lib/supabase';
 import { toast } from '$lib/stores/toast.svelte';
+import { chime as beep, unlockChime } from '$lib/chime';
 import { adminApi, adminError, demoSetRole, type AdminApi } from './api';
 import { DEMO_ADMIN } from './demo';
 import { bangkokToday } from './format';
@@ -55,6 +56,8 @@ class Console {
 	overview = $state<Overview | null>(null);
 	/** Open errors seen in the last 24 hours (menu badge) */
 	errorCount = $state(0);
+	/** Rider applications waiting for an ADMIN */
+	riderApplications = $state(0);
 	overviewError = $state('');
 	sound = $state(false);
 
@@ -63,7 +66,8 @@ class Console {
 		orders: this.overview?.problems ?? 0,
 		finance: (this.overview?.refunds_due ?? 0) + (this.overview?.payouts_due_riders ?? 0),
 		partners: this.isAdmin ? (this.overview?.pending_promos ?? 0) : 0,
-		errors: this.errorCount
+		errors: this.errorCount,
+		riders: this.isAdmin ? this.riderApplications : 0
 	});
 
 	api: AdminApi | null = null;
@@ -174,9 +178,13 @@ class Console {
 	async refresh() {
 		if (!this.api || this.session !== 'ready') return;
 		// The badge is a nice-to-have: a failure here must not hide the overview
-		void this.api.errorCount().then(
-			(n) => (this.errorCount = n),
-			() => {}
+		void this.api.badges().then(
+			(b) => {
+				this.errorCount = b.errors;
+				this.riderApplications = b.rider_applications;
+			},
+			// Before the rider-tools migration: errors only
+			() => this.api?.errorCount().then((n) => (this.errorCount = n), () => {})
 		);
 		try {
 			this.overview = await this.api.overview(this.day);
@@ -202,6 +210,7 @@ class Console {
 
 	toggleSound() {
 		this.sound = !this.sound;
+		unlockChime();
 		try {
 			localStorage.setItem(SOUND_KEY, this.sound ? '1' : '0');
 		} catch {
@@ -247,27 +256,6 @@ class Console {
 			toast.show(adminError(err), 'error', { duration: 6000 });
 			return false;
 		}
-	}
-}
-
-/** A short two-tone chime, drawn with Web Audio so there is no sound file to load */
-function beep() {
-	try {
-		const ctx = new AudioContext();
-		const now = ctx.currentTime;
-		for (const [i, freq] of [880, 1320].entries()) {
-			const osc = ctx.createOscillator();
-			const gain = ctx.createGain();
-			osc.frequency.value = freq;
-			gain.gain.setValueAtTime(0.0001, now + i * 0.16);
-			gain.gain.exponentialRampToValueAtTime(0.2, now + i * 0.16 + 0.02);
-			gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.16 + 0.15);
-			osc.connect(gain).connect(ctx.destination);
-			osc.start(now + i * 0.16);
-			osc.stop(now + i * 0.16 + 0.16);
-		}
-	} catch {
-		/* no audio */
 	}
 }
 

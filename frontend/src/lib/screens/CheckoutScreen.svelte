@@ -201,6 +201,9 @@
 				{#if cart.partnerDiscount > 0 && cart.appliedPromotion}
 					<div class="flex justify-between gap-3 text-slate-600"><span class="min-w-0 truncate">{cart.appliedPromotion.promotion.kind === 'CO_PROMO' ? 'โปรร่วม' : 'โปรร้าน'}: {cart.appliedPromotion.promotion.title}</span><span class="font-medium text-fresh-700 tabular-nums">-{formatBaht(cart.partnerDiscount)}</span></div>
 				{/if}
+				{#if checkout.tip > 0}
+					<div class="flex justify-between text-slate-600" transition:slide={{ duration: 180 }}><span>ทิปให้เพื่อน (ปัดเศษ)</span><span class="text-slate-900 tabular-nums">{formatBaht(checkout.tip)}</span></div>
+				{/if}
 				<div class="flex items-center justify-between border-t border-slate-100 pt-3">
 					<span class="font-semibold text-slate-900">ยอดชำระสุทธิ</span>
 					<AnimatedNumber value={checkout.total} class="text-xl font-bold text-brand" />
@@ -236,6 +239,26 @@
 					<p class="mt-1 flex items-center gap-1.5 text-xs text-slate-500"><Icon name="info" class="h-3.5 w-3.5 shrink-0" /> จ่ายผ่าน PromptPay ได้เร็วๆ นี้</p>
 				{/if}
 			</section>
+
+			<!-- Round-up tip: asked last, right before paying -->
+			{#if checkout.tipOffer > 0}
+				<button
+					type="button"
+					role="switch"
+					aria-checked={checkout.roundUp}
+					onclick={() => (checkout.roundUp = !checkout.roundUp)}
+					class="flex w-full items-center gap-3 rounded-2xl border p-4 text-left transition-colors {checkout.roundUp ? 'border-brand bg-brand-50' : 'border-slate-100 bg-white'}"
+				>
+					<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {checkout.roundUp ? 'bg-brand text-white' : 'bg-brand-50 text-brand'}"><Icon name="heart" class="h-5 w-5" /></span>
+					<span class="min-w-0 flex-1">
+						<span class="block text-sm font-semibold text-slate-900">ปัดเป็น {formatBaht(checkout.baseTotal + checkout.tipOffer)} ไหม?</span>
+						<span class="block text-xs text-slate-600">ส่วนต่าง {checkout.tipOffer} บาทเป็นทิปให้เพื่อนที่หิ้ว{checkout.payment === 'CASH' ? ' และทอนเงินง่ายขึ้น' : ''}</span>
+					</span>
+					<span class="relative h-6 w-10 shrink-0 rounded-full transition-colors {checkout.roundUp ? 'bg-brand' : 'bg-slate-200'}" aria-hidden="true">
+						<span class="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all {checkout.roundUp ? 'left-[18px]' : 'left-0.5'}"></span>
+					</span>
+				</button>
+			{/if}
 		</div>
 
 		<BottomBar>

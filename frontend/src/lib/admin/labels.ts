@@ -70,6 +70,8 @@ export const ACTION_LABEL: Record<string, string> = {
 	ITEM_OFF: 'ปิดเมนู (หมด)',
 	RIDER_ADDED: 'เพิ่มคนหิ้ว',
 	RIDER_REMOVED: 'นำคนหิ้วออก',
+	RIDER_APPROVED: 'อนุมัติใบสมัครคนหิ้ว',
+	RIDER_REJECTED: 'ไม่อนุมัติใบสมัครคนหิ้ว',
 	PROMO_APPROVED: 'อนุมัติโปร',
 	PROMO_REJECTED: 'ไม่อนุมัติโปร',
 	PROMO_ON: 'เปิดโปร',

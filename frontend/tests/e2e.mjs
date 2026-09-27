@@ -161,6 +161,7 @@ await shot('05-store-sizes');
 await click('ดูตะกร้าสินค้า');
 await check('checkout lists the พิเศษ line', await bodyHas('ข้าวมันไก่ทอด (พิเศษ)'));
 await check('checkout net 105', await bodyHas('105 ฿'));
+await check('no round-up offer when the total already ends in 0 or 5', !(await bodyHas('ปัดเป็น')));
 await page.type('input[aria-label="โค้ดส่วนลด"]', 'wrongcode');
 await click('ใช้โค้ด');
 await check('invalid promo message', await bodyHas('ไม่พบโค้ด'));
@@ -249,7 +250,7 @@ await click('จำลอง: คนหิ้วกรอก OTP สำเร็
 await sleep(1800);
 await check('success screen', await bodyHas('ส่งมอบอาหารสำเร็จแล้ว'));
 await clickSel('button[aria-label="5 ดาว"]');
-await clickIn('[aria-label="ทิป"]', '+10');
+await check('no tip picker after delivery (the tip is a round-up at checkout)', (await page.$('[aria-label="ทิป"]')) === null);
 await click('ตรงเวลา');
 await shot('12-success');
 await click('เสร็จสิ้น กลับสู่หน้าหลัก');
@@ -259,7 +260,7 @@ await check('review submitted → home', await bodyHas('ขี้เกียจ
 await clickIn('nav', 'คำสั่งซื้อ');
 await clickIn('[role=tablist]', 'สำเร็จ');
 await check('completed orders listed (3)', (await page.$$('main ul > li button')).length === 3);
-await check('rating + tip saved (100 ฿)', await page.evaluate(() => document.querySelector('main ul > li button').innerText.includes('100 ฿')));
+await check('history shows what was paid (90 ฿, no after-delivery tip)', await page.evaluate(() => document.querySelector('main ul > li button').innerText.includes('90 ฿')));
 await shot('13-orders');
 
 // Chat tab with no active order
@@ -309,6 +310,20 @@ await check('no horizontal overflow', await page.evaluate(() => document.documen
 await clickIn('nav', 'โปรไฟล์');
 await sleep(300);
 await check('profile has no rider-mode entry', !(await bodyHas('โหมดคนหิ้ว')));
+
+// A student who is not a rider can apply; the team approves in the console
+await check('profile offers the rider application', await bodyHas('สมัครเป็นคนหิ้ว'));
+await clickIn('main', 'สมัครเป็นคนหิ้ว');
+await sleep(300);
+await click('ส่งใบสมัคร');
+await check('application needs a day and a time', await bodyHas('เลือกวันและช่วงเวลาที่ว่าง'));
+await clickIn('main', 'พ.');
+await clickIn('main', 'เที่ยง');
+await page.click('main input[type=checkbox]');
+await shot('16b-rider-apply');
+await click('ส่งใบสมัคร');
+await sleep(500);
+await check('application sent and shown as waiting', (await bodyHas('ส่งใบสมัครคนหิ้วแล้ว')) && (await bodyHas('ว่าง พ. · เที่ยง')));
 await clickIn('nav', 'หน้าแรก');
 
 await page.setViewport({ width: 1280, height: 800 });
@@ -350,6 +365,12 @@ await sleep(400);
 await check('rider board lists open jobs', (await bodyHas('งานที่รอคนรับ')) && (await bodyHas('#KM-3121')) && (await bodyHas('5 งาน')));
 await check('empty-handed rider sees nearby jobs', await bodyHas('งานใกล้คุณ'));
 await check('rider sees what the team still owes', (await bodyHas('รอทีมโอน 45')) && (await bodyHas('ทีมจะโอนเข้าเบอร์')));
+await check('rider starts offline', await bodyHas('ออฟไลน์อยู่'));
+await clickIn('main', 'ออฟไลน์อยู่');
+await sleep(400);
+await check('switching on says ready', await bodyHas('พร้อมรับงานแล้ว'));
+await sleep(6800);
+await check('a new job rings in while ready', (await bodyHas('งานใหม่ #KM-3133')) && (await bodyHas('+ทิป 2')));
 await shot('19-rider-board');
 
 await check('accept first job', await acceptJob('#KM-3121'));

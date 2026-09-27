@@ -52,6 +52,8 @@ export interface NewOrderInput {
 	partnerDiscount: number;
 	promoCode?: string;
 	totalPrice: number;
+	/** Round-up tip, already inside totalPrice */
+	tip?: number;
 	paymentMethod: PaymentMethod;
 	note?: string;
 }
@@ -81,7 +83,7 @@ class OrdersStore {
 	currentOrderId = $state<string | null>(null);
 	chats = $state<Record<string, ChatMessage[]>>({});
 	typingOrderId = $state<string | null>(null);
-	/** Demo only. Live mode has no rider presence feed yet, so the count is hidden rather than invented. */
+	/** Riders switched on as ready (live: riders_online(), every minute). null = unknown, so hidden rather than invented */
 	onlineRiders = $state<number | null>(isLive ? null : 42);
 
 	active = $derived(this.orders.filter((o) => ACTIVE_STATUSES.includes(o.status)));
@@ -89,7 +91,7 @@ class OrdersStore {
 	completed = $derived(this.orders.filter((o) => o.status === 'COMPLETED'));
 	current = $derived(this.orders.find((o) => o.id === this.currentOrderId) ?? null);
 	currentChat = $derived(this.currentOrderId ? (this.chats[this.currentOrderId] ?? []) : []);
-	totalSpent = $derived(this.completed.reduce((sum, o) => sum + o.totalPrice + (o.tip ?? 0), 0));
+	totalSpent = $derived(this.completed.reduce((sum, o) => sum + o.totalPrice, 0));
 
 	#timers = new Map<string, ReturnType<typeof setTimeout>[]>();
 	#ridersTicker: ReturnType<typeof setInterval> | null = null;
@@ -111,6 +113,7 @@ class OrdersStore {
 		}
 		this.#unsubscribeOrders?.();
 		this.#unsubscribeOrders = api.subscribeMyOrders(customerId, (orderId) => void this.#refresh(orderId, true));
+		this.#startRidersTicker();
 	}
 
 	/** Re-read one order from the server (after a realtime event or our own RPC) */
@@ -185,7 +188,8 @@ class OrdersStore {
 							dropoffName: input.dropoffName,
 							note: input.note,
 							paymentMethod: input.paymentMethod,
-							promoCode: input.promoCode
+							promoCode: input.promoCode,
+							tip: input.tip
 						})
 					: await api.placeCustomOrder({
 							pickupName: input.pickupName,
@@ -287,16 +291,16 @@ class OrdersStore {
 		return true;
 	}
 
-	async rate(orderId: string, rating: number, tags: string[], tip: number) {
+	/** The tip is chosen at checkout (round-up), not here */
+	async rate(orderId: string, rating: number, tags: string[]) {
 		const order = this.#get(orderId);
 		if (!order) return;
-		// 0 = skipped rating; the tip is still recorded
+		// 0 = skipped rating
 		order.rating = rating > 0 ? Math.min(5, Math.max(1, Math.round(rating))) : undefined;
 		order.feedbackTags = tags;
-		order.tip = Math.max(0, tip);
 		if (isLive) {
 			try {
-				await api.rateOrder(orderId, rating, tags, tip);
+				await api.rateOrder(orderId, rating, tags);
 			} catch (err) {
 				toast.show(friendlyError(err), 'error');
 			}
@@ -329,6 +333,19 @@ class OrdersStore {
 
 	#startRidersTicker() {
 		if (this.#ridersTicker) return;
+		if (isLive) {
+			// Zero is shown too: "เพื่อนพร้อมหิ้ว 0 คน" is true. A failed call hides the count instead of guessing.
+			const load = () =>
+				api.fetchRidersOnline().then(
+					(n) => (this.onlineRiders = n),
+					() => (this.onlineRiders = null)
+				);
+			void load();
+			this.#ridersTicker = setInterval(() => {
+				if (!document.hidden) void load();
+			}, 60_000);
+			return;
+		}
 		this.#ridersTicker = setInterval(() => {
 			const delta = Math.floor(Math.random() * 5) - 2;
 			this.onlineRiders = Math.min(68, Math.max(28, (this.onlineRiders ?? 42) + delta));
@@ -380,8 +397,7 @@ class OrdersStore {
 				deliveringAt: hoursAgo(25.8),
 				completedAt: hoursAgo(25.6),
 				rating: 5,
-				feedbackTags: ['ส่งไวมาก'],
-				tip: 5
+				feedbackTags: ['ส่งไวมาก']
 			},
 			{
 				id: 'ord-seed-6100',

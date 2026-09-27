@@ -80,6 +80,7 @@ try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20260930000000_promptpay_slips.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261001000000_team_console.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261002000000_client_errors.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261003000000_rider_tools.sql`, 'utf8'));
 	ok('profile-at-first-order migration applies cleanly', true);
 } catch (e) {
 	ok('profile-at-first-order migration applies cleanly', false, e.message);
@@ -249,7 +250,8 @@ await as(bob, async () => {
 await as(alice, async () => {
 	await db.exec(`select rate_order('${orderId}', 5, array['ส่งไวมาก'], 10)`);
 	const r = await orderRow(orderId);
-	ok('rating + tip saved', r.rating === 5 && r.tip === 10);
+	// The tip is chosen at checkout now (round-up); rating leaves it alone
+	ok('rating saved, tip left as ordered', r.rating === 5 && r.tip === 0);
 	await db.exec(`select rate_order('${orderId}', 5, null, 500)`);
 });
 ok('tip over 100 clamped to 100', (await orderRow(orderId)).tip <= 100);
@@ -677,6 +679,105 @@ ok('a fixed error that comes back opens a new row', Number((await one(`select co
 await as(tina, async () => {
 	ok('closing an error is in the activity log', (await rpc(`admin_activity()`)).some((l) => l.action === 'ERROR_RESOLVED' && l.by === 'แซม'));
 });
+
+// ---------- Rider tools: ready/offline, applications, round-up tip ----------
+// Ready / offline
+await as(alice, () => expectError('a non-rider cannot switch on', `select set_rider_online(true)`, 'RIDER_ONLY'));
+await as(bob, async () => {
+	await db.exec(`select set_rider_online(true)`);
+	ok('a ready rider shows on the board', (await rpc(`rider_board()`)).online === true);
+});
+await db.exec(`set role anon;`);
+ok('anyone can see how many riders are ready', (await rpc(`riders_online()`)) === 1);
+await db.exec(`reset role;`);
+await as(sam, async () => {
+	const r = await rpc(`admin_riders()`);
+	ok('the console shows who is ready', r.find((x) => x.email === 'bob@kmutt.ac.th')?.online === true && r.find((x) => x.email === 'carl@mail.kmutt.ac.th')?.online === false);
+});
+await db.exec(`update rider_presence set last_seen = now() - interval '11 minutes' where rider_id = '${bob}'`);
+ok('a rider not seen for 10 minutes drops out', (await rpc(`riders_online()`)) === 0);
+await as(bob, () => db.exec(`select set_rider_online(true)`));
+ok('opening the rider screen again counts them back', (await rpc(`riders_online()`)) === 1);
+await as(bob, () => db.exec(`select set_rider_online(false)`));
+ok('switching off drops out at once', (await rpc(`riders_online()`)) === 0);
+await db.exec(`delete from rider_roster where email = 'bob@kmutt.ac.th'`);
+await db.exec(`update rider_presence set online = true, last_seen = now() where rider_id = '${bob}'`);
+ok('someone taken off the roster is never counted', (await rpc(`riders_online()`)) === 0);
+await db.exec(`insert into rider_roster (email) values ('bob@kmutt.ac.th'); update rider_presence set online = false where rider_id = '${bob}'`);
+
+// Applications
+const hana = await newUser('hana@mail.kmutt.ac.th', 'Hana Student');
+await as(hana, () => expectError('applying needs the profile first', `select apply_rider('จันทร์-พุธ เที่ยง', null)`, 'PROFILE_REQUIRED'));
+await ready(hana, 'ฮานะ', '0866666666', '66070501001');
+await as(hana, async () => {
+	await expectError('availability is required', `select apply_rider('  ', null)`, 'BAD_AVAILABILITY');
+	await db.exec(`select apply_rider('จันทร์-พุธ เที่ยง', 'มีจักรยาน')`);
+	await expectError('one application at a time', `select apply_rider('ทุกวัน', null)`, 'APPLICATION_PENDING');
+	ok('the student sees their application is waiting', (await rpc(`my_rider_application()`))?.status === 'PENDING');
+});
+await as(bob, () => expectError('a rider does not apply again', `select apply_rider('ทุกวัน', null)`, 'ALREADY_RIDER'));
+await as(panee, () => expectError('a shop owner cannot apply', `select apply_rider('ทุกวัน', null)`, 'STUDENT_ONLY'));
+let hanaApp;
+await as(sam, async () => {
+	const apps = await rpc(`admin_rider_applications()`);
+	hanaApp = apps.find((a) => a.email === 'hana@mail.kmutt.ac.th');
+	ok('staff see applications with the student details', !!hanaApp && hanaApp.nickname === 'ฮานะ' && hanaApp.student_id === '66070501001' && hanaApp.availability === 'จันทร์-พุธ เที่ยง');
+	ok('the badge counts applications waiting', (await rpc(`admin_badges()`)).rider_applications === 1);
+	await expectError('staff cannot approve riders', `select admin_review_rider_application('${hanaApp.id}', true, null)`, 'ADMIN_ONLY');
+});
+await as(tina, async () => {
+	await expectError('rejecting needs a reason', `select admin_review_rider_application('${hanaApp.id}', false, ' ')`, 'REASON_REQUIRED');
+	await db.exec(`select admin_review_rider_application('${hanaApp.id}', false, 'มาตรวจบัตรก่อนนะ')`);
+	await expectError('a reviewed application cannot be reviewed again', `select admin_review_rider_application('${hanaApp.id}', true, null)`, 'BAD_STATE');
+});
+await as(hana, async () => {
+	const mine = await rpc(`my_rider_application()`);
+	ok('the student sees the reason for a rejection', mine.status === 'REJECTED' && mine.review_note === 'มาตรวจบัตรก่อนนะ');
+	await db.exec(`select apply_rider('จันทร์-ศุกร์ เที่ยง', null)`);
+	ok('a rejected student can apply again', (await rpc(`my_rider_application()`)).status === 'PENDING');
+	ok('still not a rider while waiting', (await one(`select is_rider() r`)).r === false);
+});
+await as(tina, async () => {
+	const again = (await rpc(`admin_rider_applications()`)).find((a) => a.email === 'hana@mail.kmutt.ac.th');
+	await db.exec(`select admin_review_rider_application('${again.id}', true, 'ตรวจบัตรแล้ว')`);
+	const hanaRoster = (await rpc(`admin_riders()`)).find((r) => r.email === 'hana@mail.kmutt.ac.th'); ok('approving puts the student on the roster', hanaRoster?.note === 'ตรวจบัตรแล้ว' && hanaRoster.added_by === 'ทีน่า', JSON.stringify(hanaRoster));
+	ok('approval is in the activity log', (await rpc(`admin_activity()`)).some((l) => l.action === 'RIDER_APPROVED' && l.target === 'ฮานะ'));
+});
+await as(hana, async () => ok('an approved student is a rider', (await one(`select is_rider() r`)).r === true));
+
+// Round-up tip
+ok('round-up tip goes to the next 5 baht', (await rpc(`jsonb_build_array(round_up_tip(52), round_up_tip(58), round_up_tip(55))`)).join() === '3,2,0');
+const tipped = (cart, pay, tip) =>
+	one(`select place_order_tipped('kfc-05', '${JSON.stringify(cart)}'::jsonb, 'อาคาร SIT ชั้น 1', null, '${pay}', null, ${tip}) as id`);
+let cashTipped, ppTipped;
+await as(alice, async () => {
+	// A cart whose total is not already a multiple of 5
+	let cart, base;
+	for (let q = 1; q <= 4; q++) {
+		cart = [{ menu_item_id: 'kfc-05-1', quantity: q }];
+		const probe = await orderRow((await tipped(cart, 'CASH', 0)).id);
+		await db.exec(`select cancel_order('${probe.id}')`);
+		base = probe.total_price;
+		if (base % 5) break;
+	}
+	const tip = (5 - (base % 5)) % 5;
+	await expectError('only the round-up is accepted as a tip', `select place_order_tipped('kfc-05', '${JSON.stringify(cart)}'::jsonb, 'x', null, 'CASH', null, ${tip + 1})`, 'BAD_TIP');
+	cashTipped = await orderRow((await tipped(cart, 'CASH', tip)).id);
+	ok('the tip is added to the order total', tip > 0 && cashTipped.total_price === base + tip && cashTipped.tip === tip && cashTipped.tip_in_total === true, JSON.stringify({ base, tip, total: cashTipped.total_price }));
+	ok('the rounded total ends in 0 or 5', cashTipped.total_price % 5 === 0);
+	ppTipped = await orderRow((await tipped(cart, 'PROMPTPAY', tip)).id);
+});
+await db.exec(`update orders set rider_id = '${gina}', status = 'COMPLETED', completed_at = now() where id in ('${cashTipped.id}', '${ppTipped.id}')`);
+const owedOf = async (id) => (await one(`select rider_owed(o) v from orders o where id = '${id}'`)).v;
+ok('PromptPay: the rider is owed food + fee + tip', (await owedOf(ppTipped.id)) === ppTipped.food_total + ppTipped.delivery_fee + ppTipped.tip);
+ok('cash: the rider kept the tip at the door (only discounts are owed)', (await owedOf(cashTipped.id)) === cashTipped.code_discount + cashTipped.partner_discount);
+await as(alice, async () => {
+	await db.exec(`select rate_order('${ppTipped.id}', 5, '{}', 50)`);
+	ok('rating no longer changes the tip', (await orderRow(ppTipped.id)).tip === ppTipped.tip);
+});
+await db.exec(`update orders set tip = 20, tip_in_total = false where id = '${ppTipped.id}'`);
+ok('a tip that was never paid in is left out of the payout', (await owedOf(ppTipped.id)) === ppTipped.food_total + ppTipped.delivery_fee);
+await db.exec(`update orders set payout_paid_at = now() where id in ('${cashTipped.id}', '${ppTipped.id}')`);
 
 // Anonymous visitors can browse the catalogue
 await db.exec(`set role anon;`);

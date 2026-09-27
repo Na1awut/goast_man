@@ -35,7 +35,11 @@ export function attentionOf(o: RuleOrder, now = Date.now()): Attention[] {
 	return out;
 }
 
-/** What the team owes the rider for a finished job (mirrors rider_payouts_due) */
-export function owedToRider(o: { payment: Payment; food_total: number; delivery_fee: number; total: number }): number {
-	return o.food_total + o.delivery_fee - (o.payment === 'CASH' ? o.total : 0);
+/**
+ * What the team owes the rider for a finished job (mirrors rider_owed() in the
+ * database). `tip` is the round-up tip that is part of `total`; a tip the buyer
+ * never paid in (older rating-screen tips) must be left out by the caller.
+ */
+export function owedToRider(o: { payment: Payment; food_total: number; delivery_fee: number; total: number; tip?: number }): number {
+	return o.food_total + o.delivery_fee + (o.tip ?? 0) - (o.payment === 'CASH' ? o.total : 0);
 }

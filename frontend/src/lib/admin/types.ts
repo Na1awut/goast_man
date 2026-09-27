@@ -212,6 +212,9 @@ export interface AdminRider {
 	phone: string;
 	faculty: string;
 	level: string | null;
+	/** Switched on as ready and seen in the last 10 minutes */
+	online: boolean;
+	last_seen: string | null;
 	holding: number;
 	delivering: boolean;
 	busy: boolean;
@@ -290,4 +293,32 @@ export interface ClientError {
 	count: number;
 	resolved_at: string | null;
 	resolved_by: string | null;
+}
+
+export type ApplicationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+/** A student's request to become a rider; an ADMIN approves after meeting them */
+export interface RiderApplicationRow {
+	id: string;
+	email: string;
+	availability: string;
+	note: string | null;
+	status: ApplicationStatus;
+	review_note: string | null;
+	created_at: string;
+	reviewed_at: string | null;
+	reviewed_by: string | null;
+	nickname: string | null;
+	full_name: string | null;
+	student_id: string;
+	phone: string;
+	faculty: string;
+	level: string | null;
+	/** Orders they finished as a buyer: a hint of how they use the app */
+	orders_as_buyer: number;
+}
+
+export interface Badges {
+	errors: number;
+	rider_applications: number;
 }

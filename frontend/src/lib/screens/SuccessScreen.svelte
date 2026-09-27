@@ -9,25 +9,19 @@
 
 	const TAGS = ['ส่งไวมาก', 'อาหารยังร้อน', 'พูดจาสุภาพ', 'ตรงเวลา'];
 	const RATING_WORDS = ['', 'ยังไม่ประทับใจ', 'พอใช้', 'โอเคเลย', 'ดีมาก', 'หิ้วดีที่สุด'];
-	const TIPS: { amount: number; label: string }[] = [
-		{ amount: 5, label: '+5' },
-		{ amount: 10, label: '+10' },
-		{ amount: 0, label: 'ไม่ระบุ' }
-	];
 
 	const order = $derived(orders.current);
 
 	let rating = $state(0);
 	let tags = $state<string[]>([]);
-	let tip = $state(0);
 
 	function toggleTag(tag: string) {
 		tags = tags.includes(tag) ? tags.filter((t) => t !== tag) : [...tags, tag];
 	}
 
 	function finish() {
-		if (order) orders.rate(order.id, rating, tags, tip);
-		if (rating > 0 || tip > 0) toast.show(tip > 0 ? `ขอบคุณสำหรับรีวิวและน้ำใจ ${tip} บาท` : 'ขอบคุณสำหรับรีวิว', 'success');
+		if (order) orders.rate(order.id, rating, tags);
+		if (rating > 0) toast.show('ขอบคุณสำหรับรีวิว', 'success');
 		nav.reset('HOME');
 	}
 </script>
@@ -53,9 +47,12 @@
 				{#if order.codeDiscount + order.partnerDiscount > 0}
 					<div class="flex justify-between text-slate-500"><span>ส่วนลด</span><span class="text-fresh-700 tabular-nums">-{formatBaht(order.codeDiscount + order.partnerDiscount)}</span></div>
 				{/if}
+				{#if order.tip}
+					<div class="flex justify-between text-slate-500"><span>ทิปให้เพื่อน (ปัดเศษ)</span><span class="text-slate-900 tabular-nums">{formatBaht(order.tip)}</span></div>
+				{/if}
 				<div class="flex items-center justify-between border-t border-slate-100 pt-2">
 					<span class="text-slate-500">รวมชำระ</span>
-					<span class="text-lg font-bold text-brand tabular-nums">{formatBaht(order.totalPrice + tip)}</span>
+					<span class="text-lg font-bold text-brand tabular-nums">{formatBaht(order.totalPrice)}</span>
 				</div>
 				<p class="flex items-center gap-1.5 text-xs text-fresh-700">
 					<Icon name="check-circle" class="h-4 w-4" />
@@ -84,16 +81,6 @@
 			</div>
 		</section>
 
-		<section>
-			<h2 class="mb-2 text-sm font-semibold text-slate-900">น้ำใจเพิ่มเติม (ไม่บังคับ)</h2>
-			<div class="grid grid-cols-3 gap-2" role="radiogroup" aria-label="ทิป">
-				{#each TIPS as t (t.amount)}
-					<button type="button" role="radio" aria-checked={tip === t.amount} onclick={() => (tip = t.amount)} class="rounded-xl border py-3 text-sm font-medium transition-colors {tip === t.amount ? 'border-brand bg-brand text-white' : 'border-slate-200 bg-white text-brand'}">
-						{t.label}
-					</button>
-				{/each}
-			</div>
-		</section>
 	</div>
 
 	<BottomBar>

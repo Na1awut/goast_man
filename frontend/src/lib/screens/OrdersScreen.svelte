@@ -75,7 +75,7 @@
 										<span class="ml-1 flex items-center gap-0.5 text-slate-600"><Icon name="star" class="h-3.5 w-3.5 text-beak" filled strokeWidth={0} />{order.rating}</span>
 									{/if}
 								</span>
-								<span class="text-sm font-semibold text-slate-900 tabular-nums">{formatBaht(order.totalPrice + (order.tip ?? 0))}</span>
+								<span class="text-sm font-semibold text-slate-900 tabular-nums">{formatBaht(order.totalPrice)}</span>
 							</div>
 						</button>
 					</li>

@@ -9,6 +9,7 @@ import { owedToRider } from '$lib/admin/rules';
 import * as api from '$lib/api/live';
 import { STORE_CATALOGUE, findStore } from '$lib/data/stores';
 import { PLACES, planRound, START_OPTIONS, suggestAddOns, toRouteOrder, travelFn, type Route, type RouteOrder } from '$lib/routing';
+import { chime, unlockChime } from '$lib/chime';
 import { friendlyError, isLive } from '$lib/supabase';
 import { auth } from './auth.svelte';
 import { catalog } from './catalog.svelte';
@@ -22,6 +23,10 @@ const SUGGESTION_LIMIT = 3;
 /** Hide on-the-way jobs that would make the round more than this much longer */
 const MAX_EXTRA_S = 5 * 60;
 const CLOCK_TICK_MS = 30_000;
+/** Keep a ready rider counted as ready (the server drops anyone not seen for 10 minutes) */
+const HEARTBEAT_MS = 2 * 60_000;
+/** Demo: a new job turns up this long after switching on */
+const DEMO_NEW_JOB_MS = 6_000;
 const travel = travelFn();
 
 export interface JobSuggestion {
@@ -35,14 +40,17 @@ export type ConfirmResult = 'ok' | 'wrong' | 'error';
 /** "YYYY-MM-DD" in Bangkok, to group jobs by the day they were delivered */
 const bangkokDay = (iso: string | number) => new Date(new Date(iso).getTime() + 7 * 3_600_000).toISOString().slice(0, 10);
 
-const owedFor = (job: Pick<RiderJob, 'paymentMethod' | 'foodTotal' | 'deliveryFee' | 'totalPrice'>) =>
-	Math.max(0, owedToRider({ payment: job.paymentMethod, food_total: job.foodTotal, delivery_fee: job.deliveryFee, total: job.totalPrice }));
+const owedFor = (job: Pick<RiderJob, 'paymentMethod' | 'foodTotal' | 'deliveryFee' | 'totalPrice' | 'tip'>) =>
+	Math.max(0, owedToRider({ payment: job.paymentMethod, food_total: job.foodTotal, delivery_fee: job.deliveryFee, total: job.totalPrice, tip: job.tip ?? 0 }));
 
 class RiderStore {
 	open = $state<RiderJob[]>([]);
 	mine = $state<RiderJob[]>([]);
 	capacity = $state(DEFAULT_CAPACITY);
 	loaded = $state(false);
+	/** "พร้อมรับงาน": counted as ready for buyers and the team, and alerted to new jobs */
+	online = $state(false);
+	switchingOnline = $state(false);
 	/** Job whose action is in flight, to disable its buttons */
 	busyId = $state<string | null>(null);
 	startId = $state(START_OPTIONS[0].id);
@@ -100,8 +108,19 @@ class RiderStore {
 	#clock: ReturnType<typeof setInterval> | null = null;
 	#refreshTimer: ReturnType<typeof setTimeout> | null = null;
 	#demoSeeded = false;
+	#heartbeat: ReturnType<typeof setInterval> | null = null;
+	#demoArrival: ReturnType<typeof setTimeout> | null = null;
+	/** Open jobs already seen, so only new ones ring */
+	#seen = new Set<string>();
+	#primed = false;
+	#onVisible = () => {
+		if (document.visibilityState !== 'visible' || !isLive) return;
+		if (this.online) void api.setRiderOnline(true).catch(() => {});
+		void this.refresh();
+	};
 
 	async init() {
+		document.addEventListener('visibilitychange', this.#onVisible);
 		void this.loadEarnings();
 		const saved = localStorage.getItem(START_KEY);
 		if (saved && PLACES[saved]) this.startId = saved;
@@ -109,6 +128,7 @@ class RiderStore {
 		if (!isLive) {
 			if (!this.#demoSeeded) this.open = demoJobs();
 			this.#demoSeeded = true;
+			this.#noticeNew(this.open);
 			this.loaded = true;
 			return;
 		}
@@ -129,11 +149,66 @@ class RiderStore {
 			this.open = board?.open ?? [];
 			this.mine = board?.mine ?? [];
 			this.capacity = board?.capacity ?? DEFAULT_CAPACITY;
+			this.online = board?.online ?? false;
+			if (this.online) this.#startHeartbeat();
+			this.#noticeNew(this.open);
 		} catch (err) {
 			toast.show(friendlyError(err), 'error');
 		} finally {
 			this.now = Date.now();
 			this.loaded = true;
+		}
+	}
+
+	/** Rings for jobs that were not on the board before (only while switched on) */
+	#noticeNew(jobs: RiderJob[]) {
+		const fresh = jobs.filter((j) => !this.#seen.has(j.id));
+		fresh.forEach((j) => this.#seen.add(j.id));
+		if (!this.#primed) {
+			this.#primed = true;
+			return;
+		}
+		if (!this.online || !fresh.length) return;
+		chime();
+		navigator.vibrate?.([180, 80, 180]);
+		const job = fresh[0];
+		const more = fresh.length > 1 ? ` และอีก ${fresh.length - 1} งาน` : '';
+		toast.show(`งานใหม่ ${job.orderCode} · ${job.pickupName} → ${job.dropoffName}${more}`, 'info', { duration: 6000, notify: true });
+	}
+
+	#startHeartbeat() {
+		if (!isLive) return;
+		this.#heartbeat ??= setInterval(() => {
+			if (this.online) void api.setRiderOnline(true).catch(() => {});
+		}, HEARTBEAT_MS);
+	}
+
+	#stopHeartbeat() {
+		if (this.#heartbeat) clearInterval(this.#heartbeat);
+		this.#heartbeat = null;
+	}
+
+	async setOnline(on: boolean) {
+		if (this.switchingOnline) return;
+		// A tap: the moment the browser allows sound for the chimes that follow
+		if (on) unlockChime();
+		this.switchingOnline = true;
+		try {
+			if (isLive) await api.setRiderOnline(on);
+			this.online = on;
+			if (on) this.#startHeartbeat();
+			else this.#stopHeartbeat();
+			toast.show(on ? 'พร้อมรับงานแล้ว จะมีเสียงเตือนเมื่อมีงานใหม่' : 'ปิดรับงานแล้ว', on ? 'success' : 'info');
+			if (!isLive && on && !this.#demoArrival) {
+				this.#demoArrival = setTimeout(() => {
+					this.open = [...this.open, demoArrivalJob()];
+					this.#noticeNew(this.open);
+				}, DEMO_NEW_JOB_MS);
+			}
+		} catch (err) {
+			toast.show(friendlyError(err), 'error');
+		} finally {
+			this.switchingOnline = false;
 		}
 	}
 
@@ -247,6 +322,15 @@ class RiderStore {
 	}
 
 	reset() {
+		// Signing out: stop counting this rider as ready
+		if (isLive && this.online) void api.setRiderOnline(false).catch(() => {});
+		this.online = false;
+		this.#stopHeartbeat();
+		if (this.#demoArrival) clearTimeout(this.#demoArrival);
+		this.#demoArrival = null;
+		this.#seen.clear();
+		this.#primed = false;
+		if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', this.#onVisible);
 		this.#unsubscribe?.();
 		this.#unsubscribe = null;
 		if (this.#clock) clearInterval(this.#clock);
@@ -338,6 +422,7 @@ function demoEarning(job: RiderJob, completedAt: string, payoutRef?: string): Ri
 		foodTotal: job.foodTotal,
 		deliveryFee: job.deliveryFee,
 		totalPrice: job.totalPrice,
+		tip: job.tip ?? 0,
 		owed: owedFor(job),
 		paidOutAt: payoutRef ? completedAt : undefined,
 		payoutRef
@@ -351,4 +436,10 @@ function demoEarnings(): RiderEarning[] {
 		demoEarning(storeJob('demo-done-1', '#KM-3088', 'kfc-02', [['kfc-02-1', 1]], 'อาคารเรียนรวม CB3', 'PROMPTPAY', 0), hoursAgo(2)),
 		demoEarning(storeJob('demo-done-2', '#KM-3041', 'kfc-10', [['kfc-10-1', 1]], 'หอพักหญิง S6', 'PROMPTPAY', 0), hoursAgo(26), 'KBANK-DEMO-0917')
 	];
+}
+
+/** Demo: the job that turns up a few seconds after switching on; rounded up with a 2 baht tip */
+function demoArrivalJob(): RiderJob {
+	const job = storeJob('demo-job-6', '#KM-3133', 'kfc-02', [['kfc-02-1', 1]], 'อาคาร LX ชั้น 1 หน้าตู้เต่าบิน', 'CASH', 0);
+	return { ...job, tip: 2, totalPrice: job.totalPrice + 2 };
 }

@@ -272,19 +272,21 @@ export interface StoreOrderArgs {
 	note?: string;
 	paymentMethod: PaymentMethod;
 	promoCode?: string;
+	/** Round-up tip (0-4 baht); the database accepts only the round-up to the next 5 */
+	tip?: number;
 }
 
 export async function placeStoreOrder(a: StoreOrderArgs): Promise<string> {
-	return check(
-		await db().rpc('place_order', {
-			p_store_id: a.storeId,
-			p_items: a.items.map((i) => ({ menu_item_id: i.menuItemId, quantity: i.quantity, special: !!i.special })),
-			p_dropoff: a.dropoffName,
-			p_note: a.note ?? '',
-			p_payment: a.paymentMethod,
-			p_promo_code: a.promoCode ?? null
-		})
-	) as string;
+	const args = {
+		p_store_id: a.storeId,
+		p_items: a.items.map((i) => ({ menu_item_id: i.menuItemId, quantity: i.quantity, special: !!i.special })),
+		p_dropoff: a.dropoffName,
+		p_note: a.note ?? '',
+		p_payment: a.paymentMethod,
+		p_promo_code: a.promoCode ?? null
+	};
+	// Without a tip, the plain function: ordering keeps working even before the tip migration runs
+	return check(a.tip ? await db().rpc('place_order_tipped', { ...args, p_tip: a.tip }) : await db().rpc('place_order', args)) as string;
 }
 
 export async function placeCustomOrder(a: { pickupName: string; itemDetails: string; estimated: number; dropoffName: string; note?: string }): Promise<string> {
@@ -308,8 +310,9 @@ export async function cancelOrder(orderId: string): Promise<void> {
 	check(await db().rpc('cancel_order', { p_order_id: orderId }));
 }
 
-export async function rateOrder(orderId: string, rating: number, tags: string[], tip: number): Promise<void> {
-	check(await db().rpc('rate_order', { p_order_id: orderId, p_rating: rating, p_tags: tags, p_tip: tip }));
+export async function rateOrder(orderId: string, rating: number, tags: string[]): Promise<void> {
+	// p_tip is ignored by the database now (the tip is set at checkout); kept for the signature
+	check(await db().rpc('rate_order', { p_order_id: orderId, p_rating: rating, p_tags: tags, p_tip: 0 }));
 }
 
 /** Calls `onChange(orderId, status)` whenever one of this customer's orders changes */
@@ -440,6 +443,7 @@ function mapRiderJob(r: Row): RiderJob {
 		totalPrice: r.total_price,
 		paymentMethod: r.payment_method,
 		status: r.status,
+		tip: r.tip ?? 0,
 		note: r.note ?? undefined,
 		createdAt: r.created_at,
 		acceptedAt: r.accepted_at ?? undefined,
@@ -449,6 +453,8 @@ function mapRiderJob(r: Row): RiderJob {
 
 export interface RiderBoard {
 	capacity: number;
+	/** Switched on and seen in the last 10 minutes */
+	online: boolean;
 	open: RiderJob[];
 	mine: RiderJob[];
 }
@@ -457,7 +463,7 @@ export interface RiderBoard {
 export async function fetchRiderBoard(): Promise<RiderBoard | null> {
 	const board = check(await db().rpc('rider_board')) as Row | null;
 	if (!board) return null;
-	return { capacity: board.capacity, open: (board.open as Row[]).map(mapRiderJob), mine: (board.mine as Row[]).map(mapRiderJob) };
+	return { capacity: board.capacity, online: !!board.online, open: (board.open as Row[]).map(mapRiderJob), mine: (board.mine as Row[]).map(mapRiderJob) };
 }
 
 export async function acceptJob(orderId: string): Promise<void> {
@@ -483,27 +489,62 @@ export async function fetchRiderEarnings(riderId: string, days = 30): Promise<Ri
 	const rows = check(
 		await db()
 			.from('orders')
-			.select('id, order_code, completed_at, pickup_name, dropoff_name, payment_method, food_total, delivery_fee, total_price, payout_paid_at, payout_ref')
+			.select('id, order_code, completed_at, pickup_name, dropoff_name, payment_method, food_total, delivery_fee, total_price, tip, tip_in_total, payout_paid_at, payout_ref')
 			.eq('rider_id', riderId)
 			.eq('status', 'COMPLETED')
 			.gte('completed_at', since)
 			.order('completed_at', { ascending: false })
 			.limit(300)
 	) as Row[];
-	return rows.map((r) => ({
-		id: r.id,
-		orderCode: r.order_code,
-		completedAt: r.completed_at,
-		pickupName: r.pickup_name,
-		dropoffName: r.dropoff_name,
-		paymentMethod: r.payment_method,
-		foodTotal: r.food_total,
-		deliveryFee: r.delivery_fee,
-		totalPrice: r.total_price,
-		owed: Math.max(0, owedToRider({ payment: r.payment_method, food_total: r.food_total, delivery_fee: r.delivery_fee, total: r.total_price })),
-		paidOutAt: r.payout_paid_at ?? undefined,
-		payoutRef: r.payout_ref ?? undefined
-	}));
+	return rows.map((r) => {
+		// Only a tip paid with the order counts (older rating-screen tips were never paid in)
+		const tip = r.tip_in_total ? (r.tip ?? 0) : 0;
+		return {
+			id: r.id,
+			orderCode: r.order_code,
+			completedAt: r.completed_at,
+			pickupName: r.pickup_name,
+			dropoffName: r.dropoff_name,
+			paymentMethod: r.payment_method,
+			foodTotal: r.food_total,
+			deliveryFee: r.delivery_fee,
+			totalPrice: r.total_price,
+			tip,
+			owed: Math.max(0, owedToRider({ payment: r.payment_method, food_total: r.food_total, delivery_fee: r.delivery_fee, total: r.total_price, tip })),
+			paidOutAt: r.payout_paid_at ?? undefined,
+			payoutRef: r.payout_ref ?? undefined
+		};
+	});
+}
+
+/** Switch rider mode's "พร้อมรับงาน" on or off; calling it again keeps the rider counted as ready */
+export async function setRiderOnline(online: boolean): Promise<void> {
+	check(await db().rpc('set_rider_online', { p_online: online }));
+}
+
+/** Riders ready right now, for the home page */
+export async function fetchRidersOnline(): Promise<number> {
+	return check(await db().rpc('riders_online')) as number;
+}
+
+export interface RiderApplication {
+	id: string;
+	status: 'PENDING' | 'APPROVED' | 'REJECTED';
+	availability: string;
+	note: string | null;
+	reviewNote: string | null;
+	createdAt: string;
+	reviewedAt: string | null;
+}
+
+/** The student's latest rider application, or null */
+export async function fetchMyRiderApplication(): Promise<RiderApplication | null> {
+	const r = check(await db().rpc('my_rider_application')) as Row | null;
+	return r ? { id: r.id, status: r.status, availability: r.availability, note: r.note, reviewNote: r.review_note, createdAt: r.created_at, reviewedAt: r.reviewed_at } : null;
+}
+
+export async function applyRider(availability: string, note: string): Promise<void> {
+	check(await db().rpc('apply_rider', { p_availability: availability, p_note: note }));
 }
 
 /** Any change to orders a rider can see (RLS filters the feed): new jobs, jobs taken, own round */

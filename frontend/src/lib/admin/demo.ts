@@ -18,6 +18,7 @@ import type {
 	OrdersTab,
 	Overview,
 	Payment,
+	RiderApplicationRow,
 	Stage,
 	TeamMe,
 	TeamMember,
@@ -230,6 +231,9 @@ export function createDemoApi(): DemoApi {
 		phone: r.phone,
 		faculty: r.faculty,
 		level: r.level,
+		// The first three have switched on as ready
+		online: i < 3,
+		last_seen: new Date(now() - (i < 3 ? 1 : 90) * 60_000).toISOString(),
 		holding: 0,
 		delivering: false,
 		busy: false,
@@ -254,6 +258,12 @@ export function createDemoApi(): DemoApi {
 		log.unshift({ id: logId++, at: new Date().toISOString(), by: me.nickname, action, target_type, target_id, target, detail });
 	};
 	record('STORE_OPENED', 'store', 'kfc-02', 'ครัวกรุงศรี (KRUA KRUNGSRI)');
+
+	// Two students waiting for the team to meet them
+	const applications: RiderApplicationRow[] = [
+		{ id: 'demo-app-1', email: 'ploy.demo@mail.kmutt.ac.th', availability: 'จ. พ. ศ. · เที่ยง', note: 'อยู่หอ S6 มีเวลาช่วงเที่ยงแน่นอน', status: 'PENDING', review_note: null, created_at: new Date(now() - 3 * 3_600_000).toISOString(), reviewed_at: null, reviewed_by: null, nickname: 'พลอย', full_name: 'พลอยใส ตัวอย่าง', student_id: '66070500311', phone: '0891230001', faculty: 'คณะวิทยาศาสตร์', level: 'ปี 2', orders_as_buyer: 7 },
+		{ id: 'demo-app-2', email: 'tae.demo@mail.kmutt.ac.th', availability: 'อ. พฤ. · เที่ยง, บ่าย', note: null, status: 'PENDING', review_note: null, created_at: new Date(now() - 26 * 3_600_000).toISOString(), reviewed_at: null, reviewed_by: null, nickname: 'เต้', full_name: 'เตชินท์ สมมติ', student_id: '65070500412', phone: '0891230002', faculty: 'คณะวิศวกรรมศาสตร์', level: 'ปี 3', orders_as_buyer: 2 }
+	];
 
 	// Sample errors, one of each kind the page shows
 	const minsAgo = (m: number) => new Date(now() - m * 60_000).toISOString();
@@ -544,7 +554,7 @@ export function createDemoApi(): DemoApi {
 			if (me.role !== 'ADMIN') return fail('ADMIN_ONLY');
 			if (!/^[^@\s]+@(mail\.)?kmutt\.ac\.th$/.test(e)) return fail('KMUTT_ONLY');
 			if (roster.some((r) => r.email === e)) return fail('ALREADY_RIDER');
-			roster.push({ email: e, note: note.trim() || null, added_at: new Date().toISOString(), added_by: me.nickname, user_id: null, nickname: null, full_name: null, phone: '', faculty: '', level: null, holding: 0, delivering: false, busy: false, jobs_today: 0, jobs_total: 0, rating: null });
+			roster.push({ email: e, note: note.trim() || null, added_at: new Date().toISOString(), added_by: me.nickname, user_id: null, nickname: null, full_name: null, phone: '', faculty: '', level: null, online: false, last_seen: null, holding: 0, delivering: false, busy: false, jobs_today: 0, jobs_total: 0, rating: null });
 			record('RIDER_ADDED', 'rider', e, e, { note: note.trim() || null });
 			return wait(undefined);
 		},
@@ -634,6 +644,30 @@ export function createDemoApi(): DemoApi {
 		async errors(status) {
 			const rows = errors.filter((e) => (status === 'resolved') === (e.resolved_at !== null));
 			return wait(rows.sort((a, b) => (b.resolved_at ?? b.last_at).localeCompare(a.resolved_at ?? a.last_at)));
+		},
+		async badges() {
+			return wait({
+				errors: errors.filter((e) => !e.resolved_at && now() - Date.parse(e.last_at) < 86_400_000).length,
+				rider_applications: applications.filter((a) => a.status === 'PENDING').length
+			});
+		},
+		async riderApplications(status = 'PENDING') {
+			return wait(applications.filter((a) => !status || a.status === status).sort((a, b) => b.created_at.localeCompare(a.created_at)));
+		},
+		async reviewRiderApplication(id, approve, note) {
+			if (me.role !== 'ADMIN') return fail('ADMIN_ONLY');
+			const a = applications.find((x) => x.id === id);
+			if (!a || a.status !== 'PENDING') return fail('BAD_STATE');
+			if (!approve && !note.trim()) return fail('REASON_REQUIRED');
+			a.status = approve ? 'APPROVED' : 'REJECTED';
+			a.review_note = note.trim() || null;
+			a.reviewed_at = new Date().toISOString();
+			a.reviewed_by = me.nickname;
+			if (approve && !roster.some((r) => r.email === a.email)) {
+				roster.push({ email: a.email, note: a.review_note ?? `สมัครผ่านแอป · ว่าง ${a.availability}`, added_at: a.reviewed_at, added_by: me.nickname, user_id: null, nickname: a.nickname, full_name: a.full_name, phone: a.phone, faculty: a.faculty, level: a.level, online: false, last_seen: null, holding: 0, delivering: false, busy: false, jobs_today: 0, jobs_total: 0, rating: null });
+			}
+			record(approve ? 'RIDER_APPROVED' : 'RIDER_REJECTED', 'rider', a.email, a.nickname ?? a.email, { note: a.review_note });
+			return wait(undefined);
 		},
 		async errorCount() {
 			return wait(errors.filter((e) => !e.resolved_at && now() - Date.parse(e.last_at) < 86_400_000).length);

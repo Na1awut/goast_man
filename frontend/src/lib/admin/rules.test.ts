@@ -36,6 +36,9 @@ describe('order rules (same as the database)', () => {
 	it('owes PromptPay riders food + fee, cash riders only the discount', () => {
 		expect(owedToRider({ payment: 'PROMPTPAY', food_total: 75, delivery_fee: 15, total: 90 })).toBe(90);
 		expect(owedToRider({ payment: 'CASH', food_total: 40, delivery_fee: 15, total: 40 })).toBe(15);
+		// Round-up tip: PromptPay passes it on; cash already put it in the rider's hand
+		expect(owedToRider({ payment: 'PROMPTPAY', food_total: 37, delivery_fee: 15, total: 55, tip: 3 })).toBe(55);
+		expect(owedToRider({ payment: 'CASH', food_total: 37, delivery_fee: 15, total: 55, tip: 3 })).toBe(0);
 	});
 });
 
