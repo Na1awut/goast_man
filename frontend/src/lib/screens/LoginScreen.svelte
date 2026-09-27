@@ -8,18 +8,19 @@
 	import { nav } from '$lib/stores/nav.svelte';
 	import { welcome } from '$lib/stores/welcome.svelte';
 	import { orders } from '$lib/stores/orders.svelte';
+	import { isLive } from '$lib/supabase';
 
-	let loading = $state<'student' | 'partner' | null>(null);
+	let loading = $state<'student' | 'partner' | 'rider' | null>(null);
 	/** Shown on the page, not only as a toast: this is the one thing a rejected student needs to read */
 	let error = $state(auth.signInError);
 	let legal = $state<LegalPage | null>(null);
 
-	async function signIn(asPartner = false) {
+	async function signIn(as: 'student' | 'partner' | 'rider' = 'student') {
 		if (loading) return;
-		loading = asPartner ? 'partner' : 'student';
+		loading = as;
 		error = '';
 		try {
-			const user = await auth.signInWithGoogle({ asPartner });
+			const user = await auth.signInWithGoogle({ asPartner: as === 'partner', asRider: as === 'rider' });
 			nav.reset(auth.mustOnboardNow ? 'ONBOARDING' : auth.isPartner ? 'PARTNER' : 'HOME');
 			void orders.init(user.id);
 			welcome.show(auth.displayName);
@@ -97,13 +98,23 @@
 				</div>
 				<div class="partner-entry">
 					<p>สำหรับร้านค้า Partner</p>
-					<button type="button" onclick={() => signIn(true)} disabled={loading !== null} aria-busy={loading === 'partner'} aria-describedby={error ? 'sign-in-error' : undefined} class="partner-button">
+					<button type="button" onclick={() => signIn('partner')} disabled={loading !== null} aria-busy={loading === 'partner'} aria-describedby={error ? 'sign-in-error' : undefined} class="partner-button">
 						{#if loading === 'partner'}
 							<span class="spinner" aria-hidden="true"></span> กำลังเข้าสู่ระบบร้านค้า...
 						{:else}
 							<Icon name="store" class="h-4 w-4" /> เข้าสู่ระบบร้านค้า <Icon name="arrow-right" class="h-4 w-4" />
 						{/if}
 					</button>
+					{#if !isLive}
+						<!-- Demo only: real riders get rider mode once the team adds them in the team console -->
+						<button type="button" data-demo-rider onclick={() => signIn('rider')} disabled={loading !== null} aria-busy={loading === 'rider'} class="partner-button">
+							{#if loading === 'rider'}
+								<span class="spinner" aria-hidden="true"></span> กำลังเข้าสู่ระบบ...
+							{:else}
+								<Icon name="walk" class="h-4 w-4" /> เดโม: เข้าเป็นคนหิ้วทดลอง
+							{/if}
+						</button>
+					{/if}
 				</div>
 			</div>
 			<footer class="legal-links">

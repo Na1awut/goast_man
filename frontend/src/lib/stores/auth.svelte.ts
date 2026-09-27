@@ -32,6 +32,31 @@ export const DEMO_USER: User = {
 };
 
 /**
+ * Demo rider: a student the team has verified and put on the rider roster, with
+ * a finished profile. Real riders get rider mode only once the team adds their
+ * email in the team console; in the demo this account stands in for one.
+ */
+export const DEMO_RIDER: User = {
+	id: 'u-demo-rider',
+	email: 'hiw.demo@mail.kmutt.ac.th',
+	fullName: 'หิ้ว ทดลอง',
+	nickname: 'หิ้ว',
+	studentId: '66070500999',
+	faculty: 'คณะวิศวกรรมศาสตร์',
+	studyLevel: '3',
+	termsVersion: TERMS_VERSION,
+	consentedAt: '2026-09-01T00:00:00.000Z',
+	avatarUrl: '',
+	phoneNumber: '0812345678',
+	promptPayNo: '',
+	role: 'STUDENT',
+	isRider: true,
+	status: 'ACTIVE',
+	buyerRatingAvg: 5,
+	createdAt: '2025-08-01T00:00:00.000Z'
+};
+
+/**
  * Demo shop owner: not a student, bound to one store. The real stores have not
  * joined as partners, so the demo marks this one as a partner only in this
  * browser while the demo owner is signed in (see catalog.markDemoPartner).
@@ -99,15 +124,15 @@ class AuthStore {
 
 	/**
 	 * Live: redirects to Google and never resolves; the session is picked up by
-	 * init() on return. Demo: signs in as the demo student or demo partner.
+	 * init() on return. Demo: signs in as the demo student, partner or rider.
 	 */
-	async signInWithGoogle(options: { asPartner?: boolean } = {}): Promise<User> {
+	async signInWithGoogle(options: { asPartner?: boolean; asRider?: boolean } = {}): Promise<User> {
 		if (isLive) {
 			await api.signInWithGoogle(!!options.asPartner);
 			return new Promise<User>(() => {});
 		}
 		await new Promise((r) => setTimeout(r, 900));
-		const user = options.asPartner ? DEMO_PARTNER : DEMO_USER;
+		const user = options.asPartner ? DEMO_PARTNER : options.asRider ? DEMO_RIDER : DEMO_USER;
 		if (user.role !== 'PARTNER' && !isKmuttEmail(user.email)) {
 			throw new AuthError('ใช้ได้เฉพาะอีเมล @kmutt.ac.th หรือ @mail.kmutt.ac.th เท่านั้น');
 		}

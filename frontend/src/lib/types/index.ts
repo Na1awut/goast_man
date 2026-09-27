@@ -20,7 +20,8 @@ export type Screen =
 	| 'PARTNER'
 	| 'ONBOARDING'
 	| 'EDIT_PROFILE'
-	| 'RIDER';
+	| 'RIDER'
+	| 'RIDER_EARNINGS';
 
 export type TabId = 'HOME' | 'ORDERS' | 'STORES' | 'CHAT' | 'PROFILE';
 
@@ -212,6 +213,24 @@ export interface RiderJob {
 	createdAt: string;
 	acceptedAt?: string;
 	customer?: { nickname: string; phone: string };
+}
+
+/** A job the rider finished, and what the team owes them for it */
+export interface RiderEarning {
+	id: string;
+	orderCode: string;
+	completedAt: string;
+	pickupName: string;
+	dropoffName: string;
+	paymentMethod: PaymentMethod;
+	foodTotal: number;
+	deliveryFee: number;
+	totalPrice: number;
+	/** The team's transfer for this job; 0 when the cash taken at the door already covered it */
+	owed: number;
+	/** When the team recorded the transfer, and its bank reference */
+	paidOutAt?: string;
+	payoutRef?: string;
 }
 
 // --- Chat ---

@@ -17,7 +17,8 @@ const TAB_OF: Record<Screen, TabId | null> = {
 	PARTNER: 'PROFILE',
 	ONBOARDING: null,
 	EDIT_PROFILE: 'PROFILE',
-	RIDER: 'PROFILE'
+	RIDER: 'PROFILE',
+	RIDER_EARNINGS: 'PROFILE'
 };
 
 /** Only top-level tab screens show the bottom bar; task screens get the full height for their action bar */

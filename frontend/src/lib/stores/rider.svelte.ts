@@ -4,11 +4,13 @@
 // the roster, capacity and state on the server.
 // Demo mode: a few open jobs from made-up classmates, same rules in memory.
 // The OTP for demo jobs is DEMO_OTP.
-import type { RiderJob } from '$lib/types';
+import type { RiderEarning, RiderJob } from '$lib/types';
+import { owedToRider } from '$lib/admin/rules';
 import * as api from '$lib/api/live';
 import { STORE_CATALOGUE, findStore } from '$lib/data/stores';
 import { PLACES, planRound, START_OPTIONS, suggestAddOns, toRouteOrder, travelFn, type Route, type RouteOrder } from '$lib/routing';
 import { friendlyError, isLive } from '$lib/supabase';
+import { auth } from './auth.svelte';
 import { catalog } from './catalog.svelte';
 import { toast } from './toast.svelte';
 
@@ -30,6 +32,12 @@ export interface JobSuggestion {
 
 export type ConfirmResult = 'ok' | 'wrong' | 'error';
 
+/** "YYYY-MM-DD" in Bangkok, to group jobs by the day they were delivered */
+const bangkokDay = (iso: string | number) => new Date(new Date(iso).getTime() + 7 * 3_600_000).toISOString().slice(0, 10);
+
+const owedFor = (job: Pick<RiderJob, 'paymentMethod' | 'foodTotal' | 'deliveryFee' | 'totalPrice'>) =>
+	Math.max(0, owedToRider({ payment: job.paymentMethod, food_total: job.foodTotal, delivery_fee: job.deliveryFee, total: job.totalPrice }));
+
 class RiderStore {
 	open = $state<RiderJob[]>([]);
 	mine = $state<RiderJob[]>([]);
@@ -40,6 +48,23 @@ class RiderStore {
 	startId = $state(START_OPTIONS[0].id);
 	/** Ticks so ready times and deadlines stay current while the screen is open */
 	now = $state(Date.now());
+	/** Finished jobs of the last 30 days, newest first */
+	earnings = $state<RiderEarning[]>([]);
+	earningsLoaded = $state(false);
+
+	/** Delivered today (Bangkok): jobs and delivery fees earned */
+	today = $derived.by(() => {
+		const day = bangkokDay(this.now);
+		const jobs = this.earnings.filter((e) => bangkokDay(e.completedAt) === day);
+		return { jobs: jobs.length, fees: jobs.reduce((sum, e) => sum + e.deliveryFee, 0) };
+	});
+	/** Still to come from the team */
+	unpaid = $derived.by(() => {
+		const jobs = this.earnings.filter((e) => e.owed > 0 && !e.paidOutAt);
+		return { jobs: jobs.length, amount: jobs.reduce((sum, e) => sum + e.owed, 0) };
+	});
+	/** Transferred by the team in the last 30 days */
+	paidOut = $derived(this.earnings.filter((e) => e.paidOutAt).reduce((sum, e) => sum + e.owed, 0));
 
 	delivering = $derived(this.mine.some((j) => j.status === 'DELIVERING'));
 	/** Why taking another job is blocked right now, or '' */
@@ -77,6 +102,7 @@ class RiderStore {
 	#demoSeeded = false;
 
 	async init() {
+		void this.loadEarnings();
 		const saved = localStorage.getItem(START_KEY);
 		if (saved && PLACES[saved]) this.startId = saved;
 		this.#clock ??= setInterval(() => (this.now = Date.now()), CLOCK_TICK_MS);
@@ -108,6 +134,23 @@ class RiderStore {
 		} finally {
 			this.now = Date.now();
 			this.loaded = true;
+		}
+	}
+
+	async loadEarnings() {
+		if (!isLive) {
+			if (!this.earningsLoaded) this.earnings = demoEarnings();
+			this.earningsLoaded = true;
+			return;
+		}
+		const riderId = auth.user?.id;
+		if (!riderId) return;
+		try {
+			this.earnings = await api.fetchRiderEarnings(riderId);
+		} catch (err) {
+			toast.show(friendlyError(err), 'error');
+		} finally {
+			this.earningsLoaded = true;
 		}
 	}
 
@@ -186,8 +229,13 @@ class RiderStore {
 		try {
 			const matched = isLive ? await api.confirmDelivery(job.id, otp) : otp === DEMO_OTP;
 			if (!matched) return 'wrong';
-			if (isLive) await this.refresh();
-			else this.mine = this.mine.filter((j) => j.id !== job.id);
+			if (isLive) {
+				await this.refresh();
+				void this.loadEarnings();
+			} else {
+				this.mine = this.mine.filter((j) => j.id !== job.id);
+				this.earnings = [demoEarning(job, new Date().toISOString()), ...this.earnings];
+			}
 			toast.show(`ส่งมอบ ${job.orderCode} เรียบร้อย`, 'success');
 			return 'ok';
 		} catch (err) {
@@ -207,6 +255,8 @@ class RiderStore {
 		this.#refreshTimer = null;
 		this.open = [];
 		this.mine = [];
+		this.earnings = [];
+		this.earningsLoaded = false;
 		this.loaded = false;
 		this.busyId = null;
 		this.#demoSeeded = false;
@@ -272,5 +322,33 @@ function demoJobs(): RiderJob[] {
 		storeJob('demo-job-1', '#KM-3121', 'kfc-05', [['kfc-05-4', 2]], 'อาคารเรียนรวม CB2', 'CASH', 3),
 		storeJob('demo-job-2', '#KM-3124', 'kfc-03', [['kfc-03-1', 1], ['kfc-03-11', 1]], 'หอสมุด มจธ. (KMUTT Library)', 'CASH', 2),
 		storeJob('demo-job-3', '#KM-3130', 'kfc-10', [['kfc-10-1', 2]], 'อาคาร LX ชั้น 1 หน้าตู้เต่าบิน', 'PROMPTPAY', 1)
+	];
+}
+
+// ---------- Demo earnings ----------
+
+function demoEarning(job: RiderJob, completedAt: string, payoutRef?: string): RiderEarning {
+	return {
+		id: `earning-${job.id}`,
+		orderCode: job.orderCode,
+		completedAt,
+		pickupName: job.pickupName,
+		dropoffName: job.dropoffName,
+		paymentMethod: job.paymentMethod,
+		foodTotal: job.foodTotal,
+		deliveryFee: job.deliveryFee,
+		totalPrice: job.totalPrice,
+		owed: owedFor(job),
+		paidOutAt: payoutRef ? completedAt : undefined,
+		payoutRef
+	};
+}
+
+/** Two earlier jobs: one PromptPay the team has not paid yet, one it paid yesterday */
+function demoEarnings(): RiderEarning[] {
+	const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
+	return [
+		demoEarning(storeJob('demo-done-1', '#KM-3088', 'kfc-02', [['kfc-02-1', 1]], 'อาคารเรียนรวม CB3', 'PROMPTPAY', 0), hoursAgo(2)),
+		demoEarning(storeJob('demo-done-2', '#KM-3041', 'kfc-10', [['kfc-10-1', 1]], 'หอพักหญิง S6', 'PROMPTPAY', 0), hoursAgo(26), 'KBANK-DEMO-0917')
 	];
 }

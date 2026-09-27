@@ -6,6 +6,8 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import Sheet from '$lib/components/Sheet.svelte';
 	import { START_OPTIONS } from '$lib/routing';
+	import { auth } from '$lib/stores/auth.svelte';
+	import { nav } from '$lib/stores/nav.svelte';
 	import { DEMO_OTP, rider } from '$lib/stores/rider.svelte';
 	import { isLive } from '$lib/supabase';
 	import { formatBaht } from '$lib/utils';
@@ -81,6 +83,21 @@
 	<AppBar title="โหมดคนหิ้ว" />
 
 	<div class="space-y-5 px-4 pt-4 pb-8">
+		<button type="button" onclick={() => nav.go('RIDER_EARNINGS')} class="flex w-full items-center gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3 text-left">
+			<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-fresh-50 text-fresh-700"><Icon name="wallet" class="h-5 w-5" /></span>
+			<span class="min-w-0 flex-1">
+				<span class="block text-sm font-semibold text-slate-900">รอทีมโอน {formatBaht(rider.unpaid.amount)}</span>
+				<span class="block text-xs leading-snug text-slate-500">
+					{#if auth.user?.promptPayNo}
+						ส่งวันนี้ {rider.today.jobs} งาน · โอนเข้า PromptPay {auth.user.promptPayNo}
+					{:else}
+						ยังไม่ได้ใส่เลข PromptPay ทีมจะโอนเข้าเบอร์ {auth.user?.phoneNumber}
+					{/if}
+				</span>
+			</span>
+			<span class="shrink-0 text-sm font-medium text-brand">รายได้</span>
+		</button>
+
 		<label class="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3">
 			<Icon name="pin" class="h-5 w-5 shrink-0 text-brand" />
 			<span class="shrink-0 text-sm text-slate-500">ตอนนี้อยู่ที่</span>
@@ -109,7 +126,7 @@
 					<div class="border-b border-slate-100 px-4 py-3">
 						{#if rider.plan}
 							<p class="text-sm font-medium text-slate-900">ส่งครบในประมาณ {minutes(rider.plan.finishSeconds)} นาที ถ้าเดินตามลำดับนี้</p>
-							<p class="text-xs text-slate-400">เวลาเดินเป็นค่าประมาณ ยังไม่ได้ใช้แผนที่จริงของ มจธ.</p>
+							<p class="text-xs text-slate-400">เวลาเดินประมาณจากผัง มจธ. เดินจริงอาจต่างไปเล็กน้อย</p>
 						{:else}
 							<p class="text-sm text-slate-600">เรียงตามลำดับที่รับงาน บางจุดยังไม่อยู่ในแผนที่ จึงจัดเส้นทางให้ไม่ได้</p>
 						{/if}

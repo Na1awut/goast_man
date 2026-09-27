@@ -1,7 +1,8 @@
 // Every Supabase call the app makes lives here, so stores stay mode-agnostic and
 // the row ↔ type mapping has exactly one home. Only imported on live paths.
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import type { CartItem, ChatMessage, MenuItem, Order, OrderStatus, PaymentMethod, Promotion, Rider, RiderJob, Store, User } from '$lib/types';
+import type { CartItem, ChatMessage, MenuItem, Order, OrderStatus, PaymentMethod, Promotion, Rider, RiderEarning, RiderJob, Store, User } from '$lib/types';
+import { owedToRider } from '$lib/admin/rules';
 import { base } from '$app/paths';
 import { verifySlipUrl } from '$lib/payments';
 import { db } from '$lib/supabase';
@@ -474,6 +475,35 @@ export async function markPickedUp(orderId: string): Promise<void> {
 /** true when the OTP matched and the order is now COMPLETED */
 export async function confirmDelivery(orderId: string, otp: string): Promise<boolean> {
 	return check(await db().rpc('confirm_delivery', { p_order_id: orderId, p_otp: otp })) as boolean;
+}
+
+/** The rider's finished jobs in the last `days` days, newest first (RLS: only their own) */
+export async function fetchRiderEarnings(riderId: string, days = 30): Promise<RiderEarning[]> {
+	const since = new Date(Date.now() - days * 86_400_000).toISOString();
+	const rows = check(
+		await db()
+			.from('orders')
+			.select('id, order_code, completed_at, pickup_name, dropoff_name, payment_method, food_total, delivery_fee, total_price, payout_paid_at, payout_ref')
+			.eq('rider_id', riderId)
+			.eq('status', 'COMPLETED')
+			.gte('completed_at', since)
+			.order('completed_at', { ascending: false })
+			.limit(300)
+	) as Row[];
+	return rows.map((r) => ({
+		id: r.id,
+		orderCode: r.order_code,
+		completedAt: r.completed_at,
+		pickupName: r.pickup_name,
+		dropoffName: r.dropoff_name,
+		paymentMethod: r.payment_method,
+		foodTotal: r.food_total,
+		deliveryFee: r.delivery_fee,
+		totalPrice: r.total_price,
+		owed: Math.max(0, owedToRider({ payment: r.payment_method, food_total: r.food_total, delivery_fee: r.delivery_fee, total: r.total_price })),
+		paidOutAt: r.payout_paid_at ?? undefined,
+		payoutRef: r.payout_ref ?? undefined
+	}));
 }
 
 /** Any change to orders a rider can see (RLS filters the feed): new jobs, jobs taken, own round */

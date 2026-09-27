@@ -20,6 +20,7 @@
 	import PaymentScreen from '$lib/screens/PaymentScreen.svelte';
 	import ProfileScreen from '$lib/screens/ProfileScreen.svelte';
 	import RiderScreen from '$lib/screens/RiderScreen.svelte';
+	import RiderEarningsScreen from '$lib/screens/RiderEarningsScreen.svelte';
 	import StoreDetailScreen from '$lib/screens/StoreDetailScreen.svelte';
 	import StoresScreen from '$lib/screens/StoresScreen.svelte';
 	import SuccessScreen from '$lib/screens/SuccessScreen.svelte';
@@ -52,7 +53,8 @@
 		PARTNER: PartnerScreen,
 		ONBOARDING: OnboardingScreen,
 		EDIT_PROFILE: EditProfileScreen,
-		RIDER: RiderScreen
+		RIDER: RiderScreen,
+		RIDER_EARNINGS: RiderEarningsScreen
 	};
 
 	let ready = $state(false);

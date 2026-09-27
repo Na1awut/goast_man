@@ -11,6 +11,7 @@
 	import { cart } from '$lib/stores/cart.svelte';
 	import { nav } from '$lib/stores/nav.svelte';
 	import { orders } from '$lib/stores/orders.svelte';
+	import { profileGate } from '$lib/stores/profileGate.svelte';
 	import { rider } from '$lib/stores/rider.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { formatBaht } from '$lib/utils';
@@ -51,6 +52,18 @@
 				</div>
 				<button type="button" onclick={() => nav.go('EDIT_PROFILE')} class="ml-auto shrink-0 self-start rounded-full border border-slate-200 px-3 py-1.5 text-sm text-slate-700">แก้ไข</button>
 			</section>
+
+			{#if user.isRider && !auth.isPartner}
+				<!-- Only accounts the team has verified and added to the rider roster -->
+				<button type="button" onclick={() => profileGate.ensure() && nav.go('RIDER')} class="flex w-full items-center gap-3 rounded-2xl bg-brand p-4 text-left text-white">
+					<span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15"><Icon name="walk" /></span>
+					<span class="min-w-0 flex-1">
+						<span class="block text-sm font-semibold">โหมดคนหิ้ว</span>
+						<span class="block truncate text-xs text-white/85">รับงาน จัดลำดับจุดรับ-ส่ง และดูรายได้</span>
+					</span>
+					<Icon name="chevron-right" class="h-5 w-5" />
+				</button>
+			{/if}
 
 			{#if auth.isPartner}
 				<button type="button" onclick={() => nav.go('PARTNER')} class="flex w-full items-center gap-3 rounded-2xl bg-brand p-4 text-left text-white">
