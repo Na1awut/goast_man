@@ -12,8 +12,8 @@
 	import Tabs from '../ui/Tabs.svelte';
 	import Toggle from '../ui/Toggle.svelte';
 
-	type Tab = 'pending' | 'promos' | 'partners';
-	let tab = $state<Tab>('pending');
+	type Tab = 'promos' | 'partners';
+	let tab = $state<Tab>('promos');
 	let promos = $state<AdminPromo[] | null>(null);
 	let partners = $state<Partners | null>(null);
 	let error = $state('');
@@ -29,7 +29,6 @@
 			.catch((err) => (error = adminError(err)));
 	});
 
-	const pending = $derived((promos ?? []).filter((p) => p.state === 'PENDING'));
 	const others = $derived((promos ?? []).filter((p) => p.state !== 'PENDING'));
 	const img = (u: string) => (!u ? '' : /^(https?:|data:|\/)/.test(u) ? u : `${assets}/${u}`);
 	const benefit = (p: AdminPromo) => [p.discount ? `ลด ${p.discount} ฿` : '', p.free_delivery ? 'ฟรีค่าหิ้ว' : ''].filter(Boolean).join(' + ');
@@ -66,44 +65,16 @@
 		value={tab}
 		onchange={(t) => (tab = t)}
 		tabs={[
-			{ id: 'pending', label: 'โปรรออนุมัติ', count: pending.length },
 			{ id: 'promos', label: 'โปรทั้งหมด', count: others.length },
 			{ id: 'partners', label: 'ร้าน Partner', count: partners?.partners.length }
 		]}
 	/>
-	{#if !c.isAdmin}<p class="text-xs text-slate-500">STAFF ดูได้อย่างเดียว การอนุมัติโปรและเชิญร้านทำได้เฉพาะ ADMIN</p>{/if}
+	{#if !c.isAdmin}<p class="text-xs text-slate-500">STAFF ดูได้อย่างเดียว การปิดโปรและเชิญร้านทำได้เฉพาะ ADMIN</p>{/if}
 
 	{#if error && !promos}
 		<div class="rounded-2xl border border-slate-100 bg-white"><Empty title="โหลดข้อมูลไม่สำเร็จ" body={error} /></div>
 	{:else if !promos || !partners}
 		<div class="h-48 animate-pulse rounded-2xl bg-white"></div>
-	{:else if tab === 'pending'}
-		{#if pending.length === 0}
-			<div class="rounded-2xl border border-slate-100 bg-white"><Empty title="ไม่มีโปรรออนุมัติ" body="โปรร่วมที่ร้าน Partner ส่งมาจะขึ้นที่นี่" /></div>
-		{:else}
-			<div class="grid gap-4 lg:grid-cols-2">
-				{#each pending as p (p.id)}
-					<article class="rounded-2xl border border-slate-100 bg-white p-5">
-						<div class="flex items-center gap-3">
-							<img src={img(p.store_image)} alt="" class="h-12 w-12 rounded-xl object-cover" />
-							<div class="min-w-0"><p class="truncate font-semibold">{p.store}</p><p class="text-xs text-slate-500">โปรร่วม Goose Man · ส่งมา {ago(p.created_at)}</p></div>
-						</div>
-						<div class="mt-4 rounded-xl bg-brand-50 p-4">
-							<p class="text-lg font-bold text-slate-900">{p.title}</p>
-							<p class="mt-1 text-sm text-brand-700">{benefit(p)} · {condition(p)}</p>
-							<p class="mt-1 text-xs text-slate-600">{p.ends_at ? `หมดเขต ${thaiDate(p.ends_at)}` : 'ไม่มีวันหมดเขต'}</p>
-							{#if p.description}<p class="mt-2 text-sm text-slate-700">{p.description}</p>{/if}
-						</div>
-						{#if c.isAdmin}
-							<div class="mt-4 flex gap-2">
-								<button type="button" onclick={() => { rejecting = p; note = ''; dialogError = ''; }} class="h-11 flex-1 rounded-xl border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50">ไม่อนุมัติ</button>
-								<button type="button" onclick={() => c.act(() => c.api!.reviewPromo(p.id, true, ''), `อนุมัติโปร "${p.title}" แล้ว`)} class="h-11 flex-1 rounded-xl bg-brand text-sm font-semibold text-white hover:bg-brand-600">อนุมัติ</button>
-							</div>
-						{/if}
-					</article>
-				{/each}
-			</div>
-		{/if}
 	{:else if tab === 'promos'}
 		<div class="rounded-2xl border border-slate-100 bg-white">
 			{#if others.length === 0}
@@ -157,16 +128,6 @@
 		</div>
 	{/if}
 </div>
-
-<Modal open={!!rejecting} title="ไม่อนุมัติโปร &quot;{rejecting?.title ?? ''}&quot;" onclose={() => (rejecting = null)} confirmLabel="ไม่อนุมัติ" danger {busy} disabled={!note.trim()} error={dialogError}
-	onconfirm={() => run(() => c.api!.reviewPromo(rejecting!.id, false, note), `ส่งโปร "${rejecting!.title}" กลับให้ร้านแล้ว`)}>
-	<p>ร้านจะเห็นเหตุผลนี้ แก้ไขแล้วส่งมาให้ตรวจใหม่ได้</p>
-	<label class="mt-4 block">
-		<span class="mb-1 block font-medium text-slate-900">เหตุผล</span>
-		<textarea bind:value={note} rows="2" maxlength="200" class="w-full rounded-xl bg-slate-100 px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-brand"></textarea>
-	</label>
-</Modal>
-
 <Modal open={inviting} title="เชิญร้าน Partner" onclose={() => (inviting = false)} confirmLabel="ส่งคำเชิญ" {busy} disabled={!email.trim() || !storeId} error={dialogError}
 	onconfirm={() => run(() => c.api!.invitePartner(email, storeId), `เชิญ ${email.trim()} แล้ว`)}>
 	<label class="block">

@@ -242,8 +242,8 @@ export function createDemoApi(): DemoApi {
 		rating: [4.9, 4.8, 5, 4.7, 4.9, 4.6][i]
 	}));
 	const promos: AdminPromo[] = [
-		{ id: 'demo-promo-1', store_id: 'kfc-04', store: 'Dino Papa EXPRESS', store_image: 'stores/kfc-04.webp', kind: 'CO_PROMO', title: 'ไอศกรีมคู่ ลด 10 บาท', description: '', min_qty: 2, discount: 10, free_delivery: false, ends_at: null, active: true, approved: false, created_at: new Date(now() - 2 * 3600_000).toISOString(), review_note: null, state: 'PENDING', uses: 0 },
-		{ id: 'demo-promo-2', store_id: 'kfc-05', store: 'ร้านข้าวมันไก่ & ข้าวหมกไก่ (HALAL FOODS)', store_image: 'stores/kfc-05.webp', kind: 'CO_PROMO', title: 'สั่ง 3 กล่อง ฟรีค่าหิ้ว', description: '', min_qty: 3, discount: 0, free_delivery: true, ends_at: null, active: true, approved: true, created_at: new Date(now() - 5 * 86_400_000).toISOString(), review_note: null, state: 'LIVE', uses: 6 }
+		{ id: 'demo-promo-1', store_id: 'kfc-04', store: 'Dino Papa EXPRESS', store_image: 'stores/kfc-04.webp', kind: 'DEAL', title: 'ไอศกรีมคู่ ลด 10 บาท', description: '', min_qty: 2, discount: 10, free_delivery: false, ends_at: null, active: true, approved: true, created_at: new Date(now() - 2 * 3600_000).toISOString(), review_note: null, state: 'LIVE', uses: 0 },
+		{ id: 'demo-promo-2', store_id: 'kfc-05', store: 'ร้านข้าวมันไก่ & ข้าวหมกไก่ (HALAL FOODS)', store_image: 'stores/kfc-05.webp', kind: 'DEAL', title: 'สั่ง 3 กล่อง ลด 15 บาท', description: '', min_qty: 3, discount: 15, free_delivery: false, ends_at: null, active: true, approved: true, created_at: new Date(now() - 5 * 86_400_000).toISOString(), review_note: null, state: 'LIVE', uses: 6 }
 	];
 	const invites: { email: string; store_id: string; store: string; invited_at: string }[] = [];
 	const team: TeamMember[] = [

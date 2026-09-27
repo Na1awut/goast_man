@@ -24,11 +24,11 @@ class CatalogStore {
 	error = $state<string | null>(null);
 
 	browsing = $derived(sortForBrowsing(this.stores));
-	/** Joint Goose Man × store promotions that are live right now */
-	coPromotions = $derived(
+	/** Store deals that are live right now, across every store (home page) */
+	storeDeals = $derived(
 		this.stores.flatMap((store) =>
 			livePromotions(store)
-				.filter((p) => p.kind === 'CO_PROMO')
+				.filter((p) => p.kind === 'DEAL')
 				.map((promotion) => ({ store, promotion }))
 		)
 	);
@@ -164,7 +164,8 @@ class CatalogStore {
 			return saved;
 		}
 		// Demo: same rules as the database trigger
-		if (draft.kind === 'DEAL' && draft.freeDelivery) throw new Error('FREE_DELIVERY_NEEDS_TEAM');
+		if (draft.kind !== 'DEAL') throw new Error('STORE_DEALS_ONLY');
+		if (draft.freeDelivery) throw new Error('FREE_DELIVERY_NEEDS_TEAM');
 		const existing = draft.id ? this.byId(draft.storeId)?.promotions.find((p) => p.id === draft.id) : undefined;
 		const termsChanged =
 			!existing ||

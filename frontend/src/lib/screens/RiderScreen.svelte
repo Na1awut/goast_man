@@ -175,6 +175,9 @@
 										<p class="text-xs text-slate-500">{job.orderCode} · {job.itemDetails}</p>
 										{#if job.kind === 'CUSTOM'}
 											<p class="mt-1 text-xs text-slate-600">ฝากซื้อ สำรองจ่ายประมาณ {formatBaht(job.foodTotal)}</p>
+										{:else}
+											<!-- The store's own deal is taken off at the counter -->
+											<p class="mt-1 text-xs font-medium text-slate-800">จ่ายร้าน {formatBaht(job.foodTotal - (job.storeDiscount ?? 0))}{job.storeDiscount ? ` (ร้านลดให้ ${formatBaht(job.storeDiscount)} แล้ว)` : ''}</p>
 										{/if}
 										{#if job.note}<p class="mt-1 flex gap-1 text-xs text-slate-600"><Icon name="note" class="h-3.5 w-3.5 shrink-0" />{job.note}</p>{/if}
 										{#if stop.wait && stop.wait >= 60}

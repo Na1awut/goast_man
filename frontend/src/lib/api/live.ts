@@ -482,6 +482,7 @@ function mapRiderJob(r: Row): RiderJob {
 		paymentMethod: r.payment_method,
 		status: r.status,
 		tip: r.tip ?? 0,
+		storeDiscount: r.store_discount ?? 0,
 		note: r.note ?? undefined,
 		createdAt: r.created_at,
 		acceptedAt: r.accepted_at ?? undefined,
@@ -527,7 +528,7 @@ export async function fetchRiderEarnings(riderId: string, days = 30): Promise<Ri
 	const rows = check(
 		await db()
 			.from('orders')
-			.select('id, order_code, completed_at, pickup_name, dropoff_name, payment_method, food_total, delivery_fee, total_price, tip, tip_in_total, payout_paid_at, payout_ref')
+			.select('id, order_code, completed_at, pickup_name, dropoff_name, payment_method, food_total, delivery_fee, total_price, tip, tip_in_total, store_discount, payout_paid_at, payout_ref')
 			.eq('rider_id', riderId)
 			.eq('status', 'COMPLETED')
 			.gte('completed_at', since)
@@ -548,7 +549,8 @@ export async function fetchRiderEarnings(riderId: string, days = 30): Promise<Ri
 			deliveryFee: r.delivery_fee,
 			totalPrice: r.total_price,
 			tip,
-			owed: Math.max(0, owedToRider({ payment: r.payment_method, food_total: r.food_total, delivery_fee: r.delivery_fee, total: r.total_price, tip })),
+			storeDiscount: r.store_discount ?? 0,
+			owed: Math.max(0, owedToRider({ payment: r.payment_method, food_total: r.food_total, delivery_fee: r.delivery_fee, total: r.total_price, tip, store_discount: r.store_discount ?? 0 })),
 			paidOutAt: r.payout_paid_at ?? undefined,
 			payoutRef: r.payout_ref ?? undefined
 		};

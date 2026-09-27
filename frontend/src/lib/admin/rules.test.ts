@@ -39,6 +39,11 @@ describe('order rules (same as the database)', () => {
 		// Round-up tip: PromptPay passes it on; cash already put it in the rider's hand
 		expect(owedToRider({ payment: 'PROMPTPAY', food_total: 37, delivery_fee: 15, total: 55, tip: 3 })).toBe(55);
 		expect(owedToRider({ payment: 'CASH', food_total: 37, delivery_fee: 15, total: 55, tip: 3 })).toBe(0);
+		// A store deal is the store's money: the rider paid the stall less, the team adds nothing
+		expect(owedToRider({ payment: 'CASH', food_total: 40, delivery_fee: 15, total: 45, store_discount: 10 })).toBe(0);
+		expect(owedToRider({ payment: 'PROMPTPAY', food_total: 40, delivery_fee: 15, total: 45, store_discount: 10 })).toBe(45);
+		// An app code is the app's money: the team makes it up
+		expect(owedToRider({ payment: 'CASH', food_total: 40, delivery_fee: 15, total: 40, store_discount: 0 })).toBe(15);
 	});
 });
 

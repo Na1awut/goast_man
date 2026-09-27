@@ -101,7 +101,7 @@
 		if (!draft) return {};
 		return {
 			title: draft.title.trim().length < 3 ? 'ตั้งชื่อโปรอย่างน้อย 3 ตัวอักษร' : '',
-			benefit: !(draft.discount > 0) && !(draft.kind === 'CO_PROMO' && draft.freeDelivery) ? (draft.kind === 'CO_PROMO' ? 'ต้องมีส่วนลด หรือขอฟรีค่าหิ้ว อย่างน้อยหนึ่งอย่าง' : 'ใส่ส่วนลดเป็นบาท') : '',
+			benefit: !(draft.discount > 0) ? 'ใส่ส่วนลดเป็นบาท' : '',
 			discount: draft.discount < 0 || draft.discount > 200 ? 'ส่วนลด 0-200 บาท' : '',
 			minQty: draft.minQty < 1 || draft.minQty > 20 ? 'จำนวนขั้นต่ำ 1-20 ชิ้น' : ''
 		};
@@ -129,19 +129,19 @@
 			const saved = await catalog.savePromotion({
 				id: draft.id,
 				storeId: store.id,
-				kind: draft.kind,
 				title: draft.title.trim(),
 				description: draft.description.trim(),
 				minQty: Math.round(draft.minQty),
 				discount: Math.round(draft.discount || 0),
-				// A store's own deal never carries free delivery (the database refuses it too)
-				freeDelivery: draft.kind === 'CO_PROMO' && draft.freeDelivery,
+				// Stores make their own deals only: a discount on the food, never free delivery (the database refuses both)
+				kind: 'DEAL',
+				freeDelivery: false,
 				// End of the chosen day, Bangkok time
 				endsAt: draft.endsOn ? new Date(`${draft.endsOn}T23:59:59+07:00`).toISOString() : undefined,
 				active: draft.active
 			});
 			draft = null;
-			toast.show(saved.approved ? 'บันทึกโปรแล้ว ลูกค้าเห็นทันที' : 'ส่งโปรร่วมให้ทีม Goose Man ตรวจแล้ว จะขึ้นในแอปเมื่ออนุมัติ', 'success');
+			toast.show('บันทึกโปรแล้ว ลูกค้าเห็นทันที', 'success');
 		} catch (err) {
 			toast.show(friendlyError(err), 'error');
 		} finally {
@@ -284,7 +284,7 @@
 							<li class="rounded-2xl border border-slate-100 bg-white p-4">
 								<div class="flex items-start justify-between gap-3">
 									<div class="min-w-0">
-										<p class="text-[11px] font-medium {p.kind === 'CO_PROMO' ? 'text-brand' : 'text-slate-500'}">{p.kind === 'CO_PROMO' ? 'โปรร่วมกับ Goose Man' : 'โปรของร้าน'}</p>
+										<p class="text-[11px] font-medium {p.kind === 'CO_PROMO' ? 'text-brand' : 'text-slate-500'}">{p.kind === 'CO_PROMO' ? 'โปรร่วม (เลิกใช้แล้ว)' : 'โปรของร้าน'}</p>
 										<p class="text-sm font-semibold text-slate-900">{p.title}</p>
 										<p class="text-xs text-slate-600">{describeBenefit(p)}</p>
 									</div>
@@ -318,22 +318,7 @@
 				savePromo();
 			}}
 		>
-			<fieldset class="grid grid-cols-2 gap-2">
-				<legend class="mb-1.5 text-sm font-medium text-slate-900">ประเภท</legend>
-				{#each [
-					{ id: 'DEAL' as const, label: 'โปรของร้าน', sub: 'ขึ้นในแอปทันที' },
-					{ id: 'CO_PROMO' as const, label: 'โปรร่วม Goose Man', sub: 'ทีมตรวจก่อนขึ้น' }
-				] as k (k.id)}
-					<label class="cursor-pointer rounded-xl border p-3 {draft.kind === k.id ? 'border-brand bg-brand-50' : 'border-slate-200'}">
-						<input type="radio" name="kind" value={k.id} bind:group={draft.kind} class="sr-only" />
-						<span class="block text-sm font-medium text-slate-900">{k.label}</span>
-						<span class="block text-[11px] text-slate-500">{k.sub}</span>
-					</label>
-				{/each}
-			</fieldset>
-			{#if draft.kind === 'CO_PROMO'}
-				<p class="rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">โปรร่วมจะขึ้นในส่วน "โปรร่วมกับ Goose Man" บนหน้าแรกของแอป หลังทีมอนุมัติ ถ้าแก้เงื่อนไขภายหลังต้องรออนุมัติใหม่</p>
-			{/if}
+			<p class="rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">โปรของร้านขึ้นในแอปทันที และร้านเป็นคนออกส่วนลด: คนหิ้วจะจ่ายที่หน้าร้านในราคาที่ลดแล้ว · ลดได้เฉพาะค่าอาหาร (ค่าหิ้วเป็นของคนหิ้ว)</p>
 
 			<label class="block">
 				<span class="mb-1 block text-sm font-medium text-slate-900">ชื่อโปร</span>
@@ -355,15 +340,6 @@
 					<input type="number" inputmode="numeric" min="1" max="20" bind:value={draft.minQty} class="w-full rounded-xl bg-slate-100 px-3.5 py-3 text-sm outline-none focus:ring-2 focus:ring-brand" />
 				</label>
 			</div>
-			<!-- Free delivery is paid by Goose Man, so only a joint promotion (team-approved) may ask for it -->
-			{#if draft.kind === 'CO_PROMO'}
-				<label class="flex cursor-pointer items-start gap-2 text-sm text-slate-800">
-					<input type="checkbox" bind:checked={draft.freeDelivery} class="mt-0.5 h-4 w-4 accent-brand" />
-					<span>ขอฟรีค่าหิ้วให้ลูกค้าด้วย <span class="block text-xs text-slate-500">Goose Man เป็นคนออกค่าหิ้วให้ ทีมจะพิจารณาก่อนอนุมัติ</span></span>
-				</label>
-			{:else}
-				<p class="text-xs text-slate-500">ร้านลดราคาเองได้ทันที · ถ้าอยากให้ฟรีค่าหิ้ว เลือก "โปรร่วม Goose Man" แล้วขอให้ทีมพิจารณา</p>
-			{/if}
 			<label class="block">
 				<span class="mb-1 block text-sm font-medium text-slate-900">สิ้นสุดวันที่ <span class="font-normal text-slate-400">(ไม่บังคับ)</span></span>
 				<input type="date" bind:value={draft.endsOn} min={new Date().toISOString().slice(0, 10)} class="w-full rounded-xl bg-slate-100 px-3.5 py-3 text-sm outline-none focus:ring-2 focus:ring-brand" />
@@ -377,7 +353,7 @@
 
 			<button type="submit" disabled={!draftValid || savingPromo} class="flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-3.5 text-sm font-semibold text-white disabled:opacity-50">
 				{#if savingPromo}<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span>{/if}
-				{draft.kind === 'CO_PROMO' ? 'ส่งให้ทีม Goose Man ตรวจ' : 'บันทึกโปร'}
+				บันทึกโปร
 			</button>
 		</form>
 	{/if}

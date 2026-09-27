@@ -18,7 +18,7 @@ export const PAGES: { id: Page; label: string; title: string; subtitle: string; 
 	{ id: 'finance', label: 'การเงิน', title: 'การเงิน', subtitle: 'โอนเงินให้คนหิ้ว คืนเงินผู้ซื้อ และประวัติการโอน', icon: 'coins' },
 	{ id: 'stores', label: 'ร้านค้า', title: 'ร้านค้า', subtitle: 'เปิด/ปิดรับออเดอร์ และเมนูที่หมดวันนี้', icon: 'store' },
 	{ id: 'riders', label: 'คนหิ้ว', title: 'คนหิ้ว', subtitle: 'คนหิ้วที่ผ่านการ verify และงานที่ถืออยู่ตอนนี้', icon: 'bike' },
-	{ id: 'partners', label: 'Partner และโปร', title: 'Partner และโปร', subtitle: 'อนุมัติโปรร่วม และเชิญร้านเข้าร่วม', icon: 'tag' },
+	{ id: 'partners', label: 'Partner และโปร', title: 'Partner และโปร', subtitle: 'โปรของร้านที่เปิดอยู่ และเชิญร้านเข้าร่วม', icon: 'tag' },
 	{ id: 'errors', label: 'ข้อผิดพลาด', title: 'ข้อผิดพลาด', subtitle: 'error ที่ผู้ใช้เจอในแอปและหน้านี้ รวมเป็นกลุ่มตามจุดที่พัง', icon: 'alert' },
 	{ id: 'team', label: 'ทีมงาน', title: 'ทีมงาน', subtitle: 'ใครเข้าหน้านี้ได้ และทำอะไรได้บ้าง', icon: 'users', admin: true },
 	{ id: 'activity', label: 'บันทึกการทำงาน', title: 'บันทึกการทำงาน', subtitle: 'ทุกอย่างที่ทีมงานเปลี่ยนในระบบ ใครทำ เมื่อไร', icon: 'clipboard-list', admin: true },
@@ -65,7 +65,6 @@ class Console {
 	badges = $derived<Partial<Record<Page, number>>>({
 		orders: this.overview?.problems ?? 0,
 		finance: (this.overview?.refunds_due ?? 0) + (this.overview?.payouts_due_riders ?? 0),
-		partners: this.isAdmin ? (this.overview?.pending_promos ?? 0) : 0,
 		errors: this.errorCount,
 		riders: this.isAdmin ? this.riderApplications : 0
 	});

@@ -40,8 +40,8 @@ export type ConfirmResult = 'ok' | 'wrong' | 'error';
 /** "YYYY-MM-DD" in Bangkok, to group jobs by the day they were delivered */
 const bangkokDay = (iso: string | number) => new Date(new Date(iso).getTime() + 7 * 3_600_000).toISOString().slice(0, 10);
 
-const owedFor = (job: Pick<RiderJob, 'paymentMethod' | 'foodTotal' | 'deliveryFee' | 'totalPrice' | 'tip'>) =>
-	Math.max(0, owedToRider({ payment: job.paymentMethod, food_total: job.foodTotal, delivery_fee: job.deliveryFee, total: job.totalPrice, tip: job.tip ?? 0 }));
+const owedFor = (job: Pick<RiderJob, 'paymentMethod' | 'foodTotal' | 'deliveryFee' | 'totalPrice' | 'tip' | 'storeDiscount'>) =>
+	Math.max(0, owedToRider({ payment: job.paymentMethod, food_total: job.foodTotal, delivery_fee: job.deliveryFee, total: job.totalPrice, tip: job.tip ?? 0, store_discount: job.storeDiscount ?? 0 }));
 
 class RiderStore {
 	open = $state<RiderJob[]>([]);
@@ -423,6 +423,7 @@ function demoEarning(job: RiderJob, completedAt: string, payoutRef?: string): Ri
 		deliveryFee: job.deliveryFee,
 		totalPrice: job.totalPrice,
 		tip: job.tip ?? 0,
+		storeDiscount: job.storeDiscount ?? 0,
 		owed: owedFor(job),
 		paidOutAt: payoutRef ? completedAt : undefined,
 		payoutRef

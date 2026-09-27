@@ -212,6 +212,8 @@ export interface RiderJob {
 	status: OrderStatus;
 	/** Round-up tip for the rider, already inside totalPrice */
 	tip?: number;
+	/** The store's own deal: the stall charges this much less */
+	storeDiscount?: number;
 	note?: string;
 	createdAt: string;
 	acceptedAt?: string;
@@ -231,6 +233,8 @@ export interface RiderEarning {
 	totalPrice: number;
 	/** Round-up tip the buyer paid with the order */
 	tip: number;
+	/** The store's own deal, taken off at the counter */
+	storeDiscount: number;
 	/** The team's transfer for this job; 0 when the cash taken at the door already covered it */
 	owed: number;
 	/** When the team recorded the transfer, and its bank reference */

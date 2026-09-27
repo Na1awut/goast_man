@@ -85,6 +85,7 @@ try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20261005000000_team_personal_email.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261006000000_partner_menu.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261007000000_free_delivery_team_only.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261008000000_store_discount.sql`, 'utf8'));
 	ok('profile-at-first-order migration applies cleanly', true);
 } catch (e) {
 	ok('profile-at-first-order migration applies cleanly', false, e.message);
@@ -280,25 +281,20 @@ await as(panee, async () => {
 
 	const deal = await one(`insert into promotions (store_id, kind, title, discount) values ('kfc-05', 'DEAL', 'ลด 7 บาท', 7) returning approved`);
 	ok('DEAL goes live immediately', deal.approved === true);
-	const co = await one(`insert into promotions (store_id, kind, title, free_delivery) values ('kfc-05', 'CO_PROMO', 'ห่านหิ้วฟรี', true) returning id, approved`);
-	ok('CO_PROMO waits for approval', co.approved === false);
-	await db.exec(`update promotions set approved = true where id = '${co.id}'`);
-	ok('self-approve attempt ignored', (await one(`select approved from promotions where id = '${co.id}'`)).approved === false);
+	await expectError('stores cannot make joint promotions any more', `insert into promotions (store_id, kind, title, discount) values ('kfc-05', 'CO_PROMO', 'ห่านหิ้วฟรี', 10)`, 'STORE_DEALS_ONLY');
 
 	await expectError('partner cannot touch another store', `insert into promotions (store_id, kind, title, discount) values ('kfc-10', 'DEAL', 'แอบลด', 50)`);
 	await expectError('no benefit = refused', `insert into promotions (store_id, kind, title) values ('kfc-05', 'DEAL', 'ไม่มีอะไร')`, 'promotions_has_benefit');
 });
 
-// Admin approves the co-promo; partner edits terms → back to review
-await db.exec(`update promotions set approved = true where title = 'ห่านหิ้วฟรี'`);
+// A store runs its own deal: edit it, switch it off
 await as(panee, async () => {
-	await db.exec(`update promotions set active = false where title = 'ห่านหิ้วฟรี'`);
-	ok('toggling active keeps approval', (await one(`select approved from promotions where title = 'ห่านหิ้วฟรี'`)).approved === true);
-	await db.exec(`update promotions set discount = 30 where title = 'ห่านหิ้วฟรี'`);
-	ok('editing terms sends it back for review', (await one(`select approved from promotions where title = 'ห่านหิ้วฟรี'`)).approved === false);
+	await db.exec(`update promotions set discount = 8 where title = 'ลด 7 บาท'`);
+	ok('editing a store deal keeps it live', (await one(`select approved from promotions where title = 'ลด 7 บาท'`)).approved === true);
+	await db.exec(`update promotions set active = false where title = 'ลด 7 บาท'`);
 });
 await as(alice, async () => {
-	ok('buyers do not see unapproved promos', Number((await one(`select count(*) n from promotions where title = 'ห่านหิ้วฟรี'`)).n) === 0);
+	ok('buyers do not see a deal the store switched off', Number((await one(`select count(*) n from promotions where title = 'ลด 7 บาท'`)).n) === 0);
 	await expectError('student cannot edit storefront', `select update_storefront('x', null, null, null, null)`, 'PARTNER_ONLY');
 	await expectError('student cannot change own role', `update profiles set role = 'ADMIN' where id = '${alice}'`, 'permission denied');
 });
@@ -435,9 +431,11 @@ await asService(async () => {
 	const due = (await db.query(`select * from rider_payouts_due() where rider_id = '${fern}'`)).rows;
 	const pp = due.find((r) => r.order_id === ppOrder);
 	const cash = due.find((r) => r.order_id === cashOrder);
-	ok('PromptPay job: team owes the rider food + fee', pp?.owed === paid.food_total + paid.delivery_fee && pp?.collected_in_cash === 0, JSON.stringify(pp));
+	const ppRow = await orderRow(ppOrder);
+	ok('the store deal on this order is the store’s money', ppRow.store_discount === ppRow.partner_discount && ppRow.store_discount > 0, JSON.stringify({ sd: ppRow.store_discount, pd: ppRow.partner_discount }));
+	ok('PromptPay job: team owes the rider what they paid the stall + fee', pp?.owed === ppRow.food_total - ppRow.store_discount + ppRow.delivery_fee && pp?.collected_in_cash === 0, JSON.stringify(pp));
 	const c = await orderRow(cashOrder);
-	ok('cash job: team owes only the discount the buyer did not pay', cash?.collected_in_cash === c.total_price && cash?.owed === c.food_total + c.delivery_fee - c.total_price && cash.owed > 0, JSON.stringify(cash));
+	ok('cash job: team owes only the app’s discounts (the store gave its own at the counter)', cash?.collected_in_cash === c.total_price && cash?.owed === c.food_total - c.store_discount + c.delivery_fee - c.total_price && cash.owed === c.code_discount + c.partner_discount - c.store_discount, JSON.stringify(cash));
 	ok('payout shows where to transfer', pp?.rider_promptpay === '0866666666' && pp?.rider_name === 'เฟิร์น');
 	const n = (await one(`select mark_payout_paid(array['${ppOrder}', '${cashOrder}']::uuid[], 'KBANK-0001') as n`)).n;
 	ok('recording the transfer clears it from the list', n === 2 && Number((await one(`select count(*) n from rider_payouts_due() where rider_id = '${fern}'`)).n) === 0);
@@ -488,7 +486,8 @@ await as(alice, async () => {
 	cashLate = (await placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-1', quantity: 1 }])).id;
 	ppUnpaid = (await placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-1', quantity: 2 }], null, 'PROMPTPAY')).id;
 	ppPaid = (await placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-1', quantity: 3 }], null, 'PROMPTPAY')).id;
-	lockJob = (await placeOrder('kfc-05', [{ menu_item_id: 'kfc-05-4', quantity: 1 }])).id;
+	// GOOSEFREE is the app's money, so the team owes the rider for this cash job
+	lockJob = (await placeOrder('kfc-05', [{ menu_item_id: 'kfc-05-4', quantity: 1 }], 'GOOSEFREE')).id;
 	requeueJob = (await placeOrder('kfc-05', [{ menu_item_id: 'kfc-05-3', quantity: 1 }])).id;
 });
 await ago(cashLate, 12);
@@ -606,13 +605,10 @@ await as(tina, async () => {
 // Promotions and partners (admin only)
 let coPromo;
 await as(panee, async () => {
-	coPromo = (await one(`insert into promotions (store_id, kind, title, min_qty, discount, free_delivery) values ('kfc-05', 'CO_PROMO', 'ห่านหิ้วฟรีวันศุกร์', 2, 0, true) returning id`)).id;
+	coPromo = (await one(`insert into promotions (store_id, kind, title, min_qty, discount) values ('kfc-05', 'DEAL', 'ลดวันศุกร์', 2, 5) returning id`)).id;
 });
 await as(tina, async () => {
-	ok('new joint promo waits for review', (await rpc(`admin_promotions()`)).find((x) => x.id === coPromo)?.state === 'PENDING');
-	await expectError('rejecting needs a note for the store', `select admin_review_promo('${coPromo}', false, '')`, 'REASON_REQUIRED');
-	await db.exec(`select admin_review_promo('${coPromo}', true, null)`);
-	ok('approved joint promo goes live', (await rpc(`admin_promotions()`)).find((x) => x.id === coPromo)?.state === 'LIVE');
+	ok('the console lists store deals as live', (await rpc(`admin_promotions()`)).find((x) => x.id === coPromo)?.state === 'LIVE');
 	await db.exec(`select admin_set_promo_active('${coPromo}', false)`);
 	ok('admin can switch a promo off', (await rpc(`admin_promotions()`)).find((x) => x.id === coPromo)?.state === 'OFF');
 	await expectError('a store with an owner cannot be invited again', `select admin_invite_partner('other@example.com', 'kfc-05')`, 'STORE_HAS_OWNER');
@@ -637,7 +633,7 @@ await as(sam, async () => {
 await as(tina, async () => {
 	const log = await rpc(`admin_activity()`);
 	const actions = new Set(log.map((l) => l.action));
-	const expected = ['PAYMENT_CONFIRMED', 'OTP_UNLOCKED', 'ORDER_REQUEUED', 'ORDER_CANCELLED', 'REFUNDED', 'PAYOUT_PAID', 'STORE_CLOSED', 'ITEM_OFF', 'RIDER_ADDED', 'PROMO_APPROVED', 'PARTNER_INVITED', 'MEMBER_ADDED'];
+	const expected = ['PAYMENT_CONFIRMED', 'OTP_UNLOCKED', 'ORDER_REQUEUED', 'ORDER_CANCELLED', 'REFUNDED', 'PAYOUT_PAID', 'STORE_CLOSED', 'ITEM_OFF', 'RIDER_ADDED', 'PROMO_OFF', 'PARTNER_INVITED', 'MEMBER_ADDED'];
 	ok('activity log records the team actions', expected.every((a) => actions.has(a)), [...actions].join(','));
 	ok('activity log names who acted', log.find((l) => l.action === 'MEMBER_ADDED')?.by === 'ทีน่า');
 });
@@ -752,20 +748,21 @@ await as(hana, async () => ok('an approved student is a rider', (await one(`sele
 // Round-up tip
 ok('round-up tip goes to the next 5 baht', (await rpc(`jsonb_build_array(round_up_tip(52), round_up_tip(58), round_up_tip(55))`)).join() === '3,2,0');
 const tipped = (cart, pay, tip) =>
-	one(`select place_order_tipped('kfc-05', '${JSON.stringify(cart)}'::jsonb, 'อาคาร SIT ชั้น 1', null, '${pay}', null, ${tip}) as id`);
+	one(`select place_order_tipped('kfc-10', '${JSON.stringify(cart)}'::jsonb, 'อาคาร SIT ชั้น 1', null, '${pay}', null, ${tip}) as id`);
 let cashTipped, ppTipped;
 await as(alice, async () => {
 	// A cart whose total is not already a multiple of 5
 	let cart, base;
 	for (let q = 1; q <= 4; q++) {
-		cart = [{ menu_item_id: 'kfc-05-1', quantity: q }];
+		// 18-baht drinks: 18 + 15 = 33, so the round-up is 2
+		cart = [{ menu_item_id: 'kfc-10-1', quantity: q }];
 		const probe = await orderRow((await tipped(cart, 'CASH', 0)).id);
 		await db.exec(`select cancel_order('${probe.id}')`);
 		base = probe.total_price;
 		if (base % 5) break;
 	}
 	const tip = (5 - (base % 5)) % 5;
-	await expectError('only the round-up is accepted as a tip', `select place_order_tipped('kfc-05', '${JSON.stringify(cart)}'::jsonb, 'x', null, 'CASH', null, ${tip + 1})`, 'BAD_TIP');
+	await expectError('only the round-up is accepted as a tip', `select place_order_tipped('kfc-10', '${JSON.stringify(cart)}'::jsonb, 'x', null, 'CASH', null, ${tip + 1})`, 'BAD_TIP');
 	cashTipped = await orderRow((await tipped(cart, 'CASH', tip)).id);
 	ok('the tip is added to the order total', tip > 0 && cashTipped.total_price === base + tip && cashTipped.tip === tip && cashTipped.tip_in_total === true, JSON.stringify({ base, tip, total: cashTipped.total_price }));
 	ok('the rounded total ends in 0 or 5', cashTipped.total_price % 5 === 0);
@@ -773,25 +770,25 @@ await as(alice, async () => {
 });
 await db.exec(`update orders set rider_id = '${gina}', status = 'COMPLETED', completed_at = now() where id in ('${cashTipped.id}', '${ppTipped.id}')`);
 const owedOf = async (id) => (await one(`select rider_owed(o) v from orders o where id = '${id}'`)).v;
-ok('PromptPay: the rider is owed food + fee + tip', (await owedOf(ppTipped.id)) === ppTipped.food_total + ppTipped.delivery_fee + ppTipped.tip);
-ok('cash: the rider kept the tip at the door (only discounts are owed)', (await owedOf(cashTipped.id)) === cashTipped.code_discount + cashTipped.partner_discount);
+ok('PromptPay: the rider is owed what they paid the stall + fee + tip', (await owedOf(ppTipped.id)) === ppTipped.food_total - ppTipped.store_discount + ppTipped.delivery_fee + ppTipped.tip);
+ok('cash: the rider kept the tip at the door (only the app’s discounts are owed)', (await owedOf(cashTipped.id)) === cashTipped.code_discount + cashTipped.partner_discount - cashTipped.store_discount);
 await as(alice, async () => {
 	await db.exec(`select rate_order('${ppTipped.id}', 5, '{}', 50)`);
 	ok('rating no longer changes the tip', (await orderRow(ppTipped.id)).tip === ppTipped.tip);
 });
 await db.exec(`update orders set tip = 20, tip_in_total = false where id = '${ppTipped.id}'`);
-ok('a tip that was never paid in is left out of the payout', (await owedOf(ppTipped.id)) === ppTipped.food_total + ppTipped.delivery_fee);
+ok('a tip that was never paid in is left out of the payout', (await owedOf(ppTipped.id)) === ppTipped.food_total - ppTipped.store_discount + ppTipped.delivery_fee);
 await db.exec(`update orders set payout_paid_at = now() where id in ('${cashTipped.id}', '${ppTipped.id}')`);
 
 // ---------- Partner dashboard: own sales, open/close, sold out ----------
 await as(alice, () => expectError('a buyer has no store dashboard', `select partner_dashboard()`, 'PARTNER_ONLY'));
 await as(sam, () => expectError('team members are not partners either', `select partner_set_store_open(false)`, 'PARTNER_ONLY'));
-const expectedToday = await one(`select coalesce(sum(food_total), 0)::int as sales, count(*)::int as orders from orders
+const expectedToday = await one(`select coalesce(sum(food_total - store_discount), 0)::int as sales, count(*)::int as orders from orders
 	where store_id = 'kfc-05' and status = 'COMPLETED' and bkk(completed_at)::date = bkk_today()`);
 await as(panee, async () => {
 	const d = await rpc(`partner_dashboard()`);
 	ok('the dashboard is for the partner’s own store', d.store_id === 'kfc-05' && d.is_open === true);
-	ok('today’s sales are completed orders at menu price', Number(d.today.sales) === expectedToday.sales && Number(d.today.orders) === expectedToday.orders, JSON.stringify({ got: d.today, want: expectedToday }));
+	ok('today’s sales are what the store received (menu price less its own deals)', Number(d.today.sales) === expectedToday.sales && Number(d.today.orders) === expectedToday.orders, JSON.stringify({ got: d.today, want: expectedToday }));
 	ok('7 days by default, 30 on request', d.days.length === 7 && (await rpc(`partner_dashboard(30)`)).days.length === 30 && d.days.at(-1).sales === d.today.sales);
 	ok('best sellers come from finished orders', Array.isArray(d.top_items) && d.top_items.every((t) => t.qty > 0));
 	const text = JSON.stringify(d);
@@ -902,9 +899,26 @@ await as(panee, async () => {
 	const deal = await one(`insert into promotions (store_id, kind, title, discount) values ('kfc-05', 'DEAL', 'ลด 5 บาท', 5) returning id, approved`);
 	ok('a plain store discount still goes live at once', deal.approved === true);
 	await expectError('nor turn free delivery on later', `update promotions set free_delivery = true where id = '${deal.id}'`, 'FREE_DELIVERY_NEEDS_TEAM');
-	const ask = await one(`insert into promotions (store_id, kind, title, free_delivery) values ('kfc-05', 'CO_PROMO', 'ขอฟรีค่าหิ้ว', true) returning approved`);
-	ok('asking for free delivery in a joint promotion waits for the team', ask.approved === false);
+	await expectError('and there is no joint promotion to ask through', `insert into promotions (store_id, kind, title, free_delivery) values ('kfc-05', 'CO_PROMO', 'ขอฟรีค่าหิ้ว', true)`, 'STORE_DEALS_ONLY');
 	await db.exec(`delete from promotions where id = '${deal.id}'`);
+});
+
+// ---------- Who pays a discount ----------
+await db.exec(`update promotions set active = true where title = 'ลด 7 บาท'`);
+let dealOrder, codeOrder;
+await as(alice, async () => {
+	dealOrder = await orderRow((await placeOrder('kfc-05', [{ menu_item_id: 'kfc-05-1', quantity: 1 }])).id);
+	codeOrder = await orderRow((await placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-8', quantity: 1 }], 'GOOSEFREE')).id);
+});
+ok('a store deal is recorded as the store’s discount', dealOrder.partner_discount > 0 && dealOrder.store_discount === dealOrder.partner_discount, JSON.stringify({ pd: dealOrder.partner_discount, sd: dealOrder.store_discount }));
+ok('an app code is the app’s money', codeOrder.code_discount > 0 && codeOrder.store_discount === 0);
+await db.exec(`update orders set rider_id = '${gina}', status = 'COMPLETED', completed_at = now() where id in ('${dealOrder.id}', '${codeOrder.id}')`);
+ok('cash + store deal: the rider paid the stall less, nothing to make up', (await owedOf(dealOrder.id)) === 0);
+ok('cash + app code: the team makes up the code to the rider', (await owedOf(codeOrder.id)) === codeOrder.code_discount);
+await db.exec(`update orders set payout_paid_at = now() where id in ('${dealOrder.id}', '${codeOrder.id}')`);
+await as(gina, async () => {
+	const job = (await rpc(`rider_board()`)) ?? {};
+	ok('the rider board carries the store discount', !JSON.stringify(job).includes('"store_discount": null'));
 });
 
 // Anonymous visitors can browse the catalogue

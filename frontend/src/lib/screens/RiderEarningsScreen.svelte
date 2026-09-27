@@ -19,7 +19,7 @@
 	/** One line on why this job owes what it owes */
 	function why(e: RiderEarning): string {
 		const tip = e.tip ? ` + ทิป ${formatBaht(e.tip)}` : '';
-		if (e.paymentMethod === 'PROMPTPAY') return `ค่าอาหาร ${formatBaht(e.foodTotal)} ที่ออกไปก่อน + ค่าหิ้ว ${formatBaht(e.deliveryFee)}${tip}`;
+		if (e.paymentMethod === 'PROMPTPAY') return `ค่าอาหาร ${formatBaht(e.foodTotal - e.storeDiscount)} ที่จ่ายร้านไปก่อน + ค่าหิ้ว ${formatBaht(e.deliveryFee)}${tip}`;
 		if (e.owed > 0) return `เก็บเงินสด ${formatBaht(e.totalPrice)} แล้ว ทีมจ่ายส่วนลดที่ลูกค้าไม่ได้จ่ายให้`;
 		return `เก็บเงินสด ${formatBaht(e.totalPrice)} แล้ว ได้ค่าหิ้ว ${formatBaht(e.deliveryFee)}${tip} ไปในนั้น`;
 	}
@@ -94,7 +94,7 @@
 		<section class="rounded-2xl border border-slate-100 bg-white p-4 text-xs leading-relaxed text-slate-600">
 			<p class="mb-1 text-sm font-semibold text-slate-900">ทีมโอนเท่าไร</p>
 			<p><span class="font-medium text-slate-800">ลูกค้าจ่าย PromptPay:</span> เงินเข้าบัญชีทีม คุณออกค่าอาหารไปก่อน ทีมโอนคืนค่าอาหาร + ค่าหิ้ว</p>
-			<p class="mt-1"><span class="font-medium text-slate-800">ลูกค้าจ่ายเงินสด:</span> คุณได้ค่าอาหารและค่าหิ้วจากลูกค้าแล้ว ทีมโอนเฉพาะส่วนลดที่ลูกค้าไม่ได้จ่าย (ถ้ามี)</p>
+			<p class="mt-1"><span class="font-medium text-slate-800">ลูกค้าจ่ายเงินสด:</span> คุณได้ค่าอาหารและค่าหิ้วจากลูกค้าแล้ว ทีมโอนเฉพาะส่วนลดจากโค้ดของแอปที่ลูกค้าไม่ได้จ่าย (ถ้ามี) · ส่วนลดโปรของร้าน ร้านหักให้ตอนคุณจ่ายที่หน้าร้านแล้ว</p>
 			<p class="mt-1"><span class="font-medium text-slate-800">ทิป:</span> ลูกค้าเลือกปัดยอดขึ้นตอนสั่ง (เช่น 52 เป็น 55) ส่วนที่ปัดเป็นทิปของคุณ รวมอยู่ในยอดด้านบนแล้ว</p>
 			<p class="mt-1">ทีมโอนหลังคุณกรอก OTP สำเร็จ</p>
 		</section>

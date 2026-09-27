@@ -210,12 +210,12 @@
 			</div>
 		{/if}
 
-		<!-- Joint promotions: Goose Man × partner -->
-		{#if catalog.coPromotions.length}
-			<section class="space-y-3" aria-labelledby="co-promo-title">
-				<h2 id="co-promo-title" class="text-base font-semibold text-slate-900">โปรร่วมกับ Goose Man</h2>
+		<!-- Deals the stores run themselves -->
+		{#if catalog.storeDeals.length}
+			<section class="space-y-3" aria-labelledby="deals-title">
+				<h2 id="deals-title" class="text-base font-semibold text-slate-900">โปรจากร้านค้า</h2>
 				<div class="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1">
-					{#each catalog.coPromotions as { store, promotion } (promotion.id)}
+					{#each catalog.storeDeals as { store, promotion } (promotion.id)}
 						<button type="button" onclick={() => storeView.open(store.id)} class="w-72 shrink-0 snap-start overflow-hidden rounded-2xl bg-brand text-left text-white">
 							{#if promotion.bannerUrl}
 								<SmartImage src={promotion.bannerUrl} alt={promotion.title} class="aspect-[2/1] w-full" />
@@ -223,8 +223,6 @@
 								<div class="relative flex h-36 items-stretch">
 									<div class="flex min-w-0 flex-1 flex-col justify-between py-4 pr-2 pl-4">
 										<span class="flex min-w-0 items-center gap-1.5 text-xs font-medium text-white/90">
-											<GooseMark class="h-6 w-6 shrink-0 rounded-md" />
-											<span class="shrink-0">×</span>
 											<StoreLogo {store} class="h-6 w-6 text-[11px]" />
 											<span class="truncate">{store.name}</span>
 										</span>

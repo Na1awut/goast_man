@@ -81,6 +81,8 @@ export interface OrderDetail extends OrderRow {
 	payout_paid_at: string | null;
 	rating: number | null;
 	tip: number;
+	/** The part of partner_discount the store gave (its own deal) */
+	store_discount?: number;
 	otp_failed: number;
 	store: { id: string; name: string; lock: string; image_url: string } | null;
 	items: { name: string; price: number; quantity: number }[];
