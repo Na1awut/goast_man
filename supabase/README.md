@@ -16,6 +16,8 @@
 | `migrations/20260928000000_kfc_menu_sizes.sql` | โซนโรงอาหาร KFC (หลัก), เมนูขนาดธรรมดา/พิเศษ |
 | `migrations/20260929000000_profile_at_first_order.sql` | ไม่ต้องกรอกข้อมูลตอนล็อกอิน แต่ต้องมีข้อมูลครบก่อนสั่งหรือรับงาน |
 | `migrations/20260930000000_promptpay_slips.sql` | PromptPay: สถานะจ่ายเงิน, กันสลิปซ้ำ, ซ่อนออเดอร์ที่ยังไม่จ่ายจากคนหิ้ว, รายการเงินที่ต้องโอนให้คนหิ้ว |
+| `migrations/20261001000000_team_console.sql` | หน้าทีมงาน: รายชื่อทีม (ADMIN / STAFF), บันทึกการทำงาน, ฟังก์ชัน `admin_*` ทุกปุ่ม |
+| `migrations/20261002000000_client_errors.sql` | Error log: error จากเว็บ รวมเป็นกลุ่ม ให้ทีมดูในหน้าทีมงาน |
 | `functions/verify-slip/` | Edge Function ตรวจสลิปกับ SlipOK แล้วบันทึกว่าจ่ายแล้ว |
 | `seed.sql` | ร้านจริง 12 ร้านของโรงอาหาร KFC (หลัก) และเมนู (สร้างจาก `frontend/src/lib/data/stores.ts`) |
 | `generate-seed.mjs` | สร้าง `seed.sql` ใหม่หลังแก้ข้อมูลร้านในแอป: `node supabase/generate-seed.mjs` |
@@ -32,7 +34,15 @@
    5. `migrations/20260928000000_kfc_menu_sizes.sql` (ต้องกด Run ไฟล์นี้แยกก่อน `seed.sql`)
    6. `migrations/20260929000000_profile_at_first_order.sql`
    7. `migrations/20260930000000_promptpay_slips.sql`
-   8. `seed.sql`
+   8. `migrations/20261001000000_team_console.sql`
+   9. `migrations/20261002000000_client_errors.sql`
+   10. `seed.sql`
+3. เพิ่ม ADMIN คนแรกของหน้าทีมงาน (คนต่อไป ADMIN เพิ่มเองในหน้าทีมงาน):
+   ```sql
+   insert into team_members (email, role, note) values ('<อีเมล มจธ.>', 'ADMIN', 'first admin');
+   ```
+
+**โปรเจกต์ที่ใช้อยู่ (`pguhzjtdwgualqeqzleu`):** รันถึง `20261001000000_team_console.sql` แล้ว ADMIN คนแรกคือ `natthawut.napa@mail.kmutt.ac.th` · **ยังต้องรัน `20261002000000_client_errors.sql`** (ครอบด้วย `begin;` … `commit;` ถ้ามี error จะไม่มีอะไรเปลี่ยน)
 
 ### 2. เปิดล็อกอินด้วย Google
 1. ที่ [Google Cloud Console](https://console.cloud.google.com/apis/credentials) สร้าง **OAuth client ID** (ประเภท Web application)
@@ -41,6 +51,8 @@
 3. **Authentication → URL Configuration**
    - Site URL: โดเมนจริงของแอป (หรือ `http://localhost:5173` ตอนพัฒนา)
    - Redirect URLs: เพิ่ม `http://localhost:5173` และโดเมนจริง
+   - ตอนนี้ตั้งไว้: Site URL `https://goose-man.tech` · Redirect URLs `goose-man.tech/**`, `www.goose-man.tech/**`, `goastman.dev/**`, `www.goastman.dev/**` (หน้าทีมงาน), ลิงก์ Vercel และ `localhost:5173/**`, `localhost:5174/**`
+   - ถ้า login แล้วเด้งไป localhost แปลว่า Site URL ยังเป็น localhost หรือโดเมนที่เปิดไม่อยู่ใน Redirect URLs
 
 > ระบบจำกัดให้สมัครได้เฉพาะ `@kmutt.ac.th` / `@mail.kmutt.ac.th` **ที่ฝั่งฐานข้อมูล** (trigger `handle_new_user`)
 > ปุ่มในแอปแค่ช่วยให้ Google เลือกบัญชี มจธ. ให้ก่อน คนที่ใช้อีเมลอื่นจะถูกปฏิเสธแม้จะแก้โค้ดฝั่งแอป
@@ -65,7 +77,9 @@ PUBLIC_SUPABASE_ANON_KEY=<anon public key>
 
 ## คนหิ้ว (Rider)
 
-ตอนนี้ให้เฉพาะทีมเราหิ้ว ใครจะหิ้วได้ต้องมีอีเมลอยู่ในตาราง `rider_roster` (รันใน SQL Editor):
+ตอนนี้ให้เฉพาะทีมเราหิ้ว ใครจะหิ้วได้ต้องมีอีเมลอยู่ในตาราง `rider_roster`
+
+**ปกติทำในหน้าทีมงาน → คนหิ้ว (ADMIN)** จะบันทึกว่าใครเพิ่มและเหตุผลที่นำออก · SQL ด้านล่างใช้สำรอง (รันใน SQL Editor):
 
 ```sql
 -- เพิ่มคนหิ้ว (ใช้อีเมล มจธ. ที่เขาล็อกอิน สมัครก่อนหรือหลังเพิ่มก็ได้)
@@ -92,7 +106,7 @@ $$;
 
 ## เพิ่มร้าน Partner
 
-เจ้าของร้านไม่ใช่นักศึกษา จึงต้อง **เชิญด้วยอีเมล** ก่อน (รันใน SQL Editor):
+เจ้าของร้านไม่ใช่นักศึกษา จึงต้อง **เชิญด้วยอีเมล** ก่อน · **ปกติทำในหน้าทีมงาน → Partner และโปร → เชิญร้าน (ADMIN)** หรือรันใน SQL Editor:
 
 ```sql
 insert into partner_invites (email, store_id) values ('owner@gmail.com', 'kfc-05');
@@ -102,7 +116,7 @@ insert into partner_invites (email, store_id) values ('owner@gmail.com', 'kfc-05
 ระบบจะผูกบัญชีกับร้าน ตั้งเป็น Partner และเปิดหน้า "จัดการร้านของฉัน" ให้
 
 ### อนุมัติโปรร่วม (Co-promotion)
-โปรของร้าน (`DEAL`) ขึ้นแอปทันที ส่วน **โปรร่วมกับ Goose Man** (`CO_PROMO`) ต้องให้ทีมอนุมัติก่อน:
+โปรของร้าน (`DEAL`) ขึ้นแอปทันที ส่วน **โปรร่วมกับ Goose Man** (`CO_PROMO`) ต้องให้ทีมอนุมัติก่อน · **ปกติทำในหน้าทีมงาน → Partner และโปร (ADMIN)** หรือใช้ SQL:
 
 ```sql
 -- ดูโปรร่วมที่รออนุมัติ
@@ -126,11 +140,13 @@ update promotions set approved = true where id = '<promotion-id>';
 - **OTP:** เก็บในตารางแยกที่แอปอ่านตรงไม่ได้ ลูกค้าเห็นรหัสเฉพาะตอนที่ต้องใช้ ถ้าคนหิ้วกรอกผิด 5 ครั้งจะล็อกทันที
 - **แชท:** เห็นได้เฉพาะลูกค้ากับคนหิ้วของออเดอร์นั้น
 - **สิทธิ์ของตัวเอง:** ผู้ใช้เปลี่ยน role ของตัวเองไม่ได้ ร้าน Partner แก้ได้เฉพาะร้านตัวเอง
+- **หน้าทีมงาน:** ทุกฟังก์ชัน `admin_*` ตรวจว่าคนเรียกอยู่ใน `team_members` (บางอันต้องเป็น ADMIN) และบันทึก `admin_log` · ไม่มีฟังก์ชันไหนคืน OTP · เปลี่ยน/ลบตัวเองไม่ได้ และลบ ADMIN คนสุดท้ายไม่ได้
+- **Error log:** ทุกคนส่ง error เข้าได้ผ่าน `log_client_error` แต่อ่านตารางตรงไม่ได้ · ข้อความถูกตัดความยาว, error ใหม่เกิน 30 แบบต่อนาทีถูกทิ้ง, เก็บ 30 วัน
 
 ## ยังไม่มี (ต้องทำต่อ)
 
 - **จำนวนเพื่อนที่ออนไลน์:** ยังไม่มีข้อมูลจริง ในโหมดจริงแอปจึงซ่อนตัวเลขนี้ไว้ แทนการแสดงตัวเลขปลอม
-- **PromptPay:** QR ยังเป็นภาพจำลอง ยังไม่ได้ต่อกับระบบรับชำระเงินจริง
+- **PromptPay:** ระบบเสร็จแล้ว รอใส่ SlipOK secret และเลข PromptPay ของทีม (หัวข้อถัดไป) ระหว่างนี้เว็บจริงรับเงินสดอย่างเดียว
 
 ## PromptPay + SlipOK (รับเงินเข้าบัญชีทีม)
 
@@ -153,6 +169,9 @@ update promotions set approved = true where id = '<promotion-id>';
    ถ้าขาดตัวใดตัวหนึ่ง เว็บจริงจะซ่อน PromptPay และให้จ่ายเงินสดอย่างเดียว
 
 ### โอนเงินให้คนหิ้ว (หลังคนหิ้วกรอก OTP สำเร็จ)
+
+**ปกติทำในหน้าทีมงาน → การเงิน:** เห็นยอดต่อคนพร้อม QR PromptPay ของคนหิ้ว โอนแล้วใส่เลขอ้างอิง ระบบคำนวณยอดใหม่ตอนบันทึกเพื่อกันยอดเปลี่ยนระหว่างนั้น · SQL สำรอง:
+
 ```sql
 -- ดูว่าต้องโอนให้ใครเท่าไร (PromptPay: ค่าอาหาร + ค่าหิ้ว · เงินสด: เฉพาะส่วนลดที่ผู้ซื้อไม่ได้จ่าย)
 select rider_name, rider_promptpay, order_code, owed, completed_at from rider_payouts_due();
@@ -163,4 +182,4 @@ select rider_name, rider_promptpay, sum(owed) as total from rider_payouts_due() 
 -- โอนแล้ว: บันทึกเลขอ้างอิงการโอน รายการจะหายจากลิสต์
 select mark_payout_paid(array(select order_id from rider_payouts_due() where rider_name = 'เฟิร์น'), 'KBANK-0001');
 ```
-ทิปยังไม่รวม เพราะยังไม่มีช่องให้ผู้ซื้อจ่ายทิปเข้ามา · ยกเลิกหลังจ่ายแล้ว ให้ทีมคืนเงินเอง
+ทิปยังไม่รวม เพราะยังไม่มีช่องให้ผู้ซื้อจ่ายทิปเข้ามา · ยกเลิกหลังจ่ายแล้ว ออเดอร์จะขึ้นในหน้าทีมงาน → การเงิน → คืนเงิน ให้ทีมโอนคืนเองแล้วบันทึกเลขอ้างอิง
