@@ -67,6 +67,7 @@ export const ACTION_LABEL: Record<string, string> = {
 	STORE_OPENED: 'เปิดรับออเดอร์',
 	STORE_CLOSED: 'ปิดรับออเดอร์',
 	STORE_CREATED: 'สร้างร้าน',
+	STORE_IMPORTED: 'นำเข้าร้านและเมนู',
 	STORE_EDITED: 'แก้ข้อมูลร้าน',
 	STORE_HIDDEN: 'ซ่อนร้านจากแอป',
 	STORE_SHOWN: 'แสดงร้านในแอป',

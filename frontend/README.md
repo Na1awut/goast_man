@@ -35,6 +35,11 @@ npm run test:e2e # browser test against the preview on :4173 (needs Chrome)
 
 ## Structure
 
+The live catalogue also includes Loongnoom Square in the `cb1` zone (87 menu entries).
+CB1 is available in store filters, the home pickup list, team forms and route planning.
+Its route point is approximate (N20 on the campus master plan). Imported shops start hidden/closed;
+see [the import record](../supabase/data/loongnoom_square.md) for photos, source prices and the one unreadable item.
+
 ```text
 src/
 ├── routes/+page.svelte      # App shell: startup, screen switcher, bottom nav, sheets, toasts

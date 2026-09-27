@@ -89,6 +89,7 @@ try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20261009000000_team_store_editing.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261010000000_store_recycle_bin.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261011000000_female_dorm_zone.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261012000000_cb1_zone.sql`, 'utf8'));
 	ok('profile-at-first-order migration applies cleanly', true);
 } catch (e) {
 	ok('profile-at-first-order migration applies cleanly', false, e.message);
@@ -1066,6 +1067,32 @@ await as(alice, async () => {
 	await db.exec(`select cancel_order('${o.id}')`);
 });
 await as(tina, () => db.exec(`select admin_set_store_hidden('female-dorm-06', true)`));
+
+// ---------- CB1: source prices, repeatable import and real ordering ----------
+const loongnoomSQL = readFileSync(`${ROOT}/data/loongnoom_square.sql`, 'utf8');
+const loongnoomData = JSON.parse(readFileSync(`${ROOT}/data/loongnoom_square.json`, 'utf8'));
+await db.exec(loongnoomSQL);
+await db.exec(loongnoomSQL);
+const ln = await one(`select zone, hidden, is_open, logo_url, (select count(*) from menu_items where store_id = s.id) items from stores s where id = 'loongnoom-square'`);
+ok('CB1 import creates one hidden, closed store with 87 menus', ln.zone === 'cb1' && ln.hidden && !ln.is_open && Number(ln.items) === 87);
+const lnItems = (await db.query(`select id, name, price, category, sort from menu_items where store_id = 'loongnoom-square' order by sort`)).rows;
+const sourceItems = loongnoomData.sections.flatMap((section) => section.items.map((i) => ({ ...i, category: section.category })));
+ok('every imported name, price, category and order matches the reviewed source', sourceItems.every((i, n) => {
+	const actual = lnItems[n];
+	return actual.id === `loongnoom-square-${i.code}` && actual.name === i.name && actual.price === i.price && actual.category === i.category && actual.sort === n + 1;
+}));
+ok('repeat import adds only one audit entry', Number((await one(`select count(*) n from admin_log where action = 'STORE_IMPORTED' and target_id = 'loongnoom-square'`)).n) === 1);
+await as(tina, () => db.exec(`select admin_set_store_hidden('loongnoom-square', false); select admin_set_store_open('loongnoom-square', true)`));
+await as(alice, async () => {
+	const o = await orderRow((await placeOrder('loongnoom-square', [{ menu_item_id: 'loongnoom-square-latte-iced', quantity: 1 }, { menu_item_id: 'loongnoom-square-latte-blended', quantity: 1 }])).id);
+	ok('CB1 store can take orders with separate iced and blended prices', o.food_total === 55, String(o.food_total));
+	await db.exec(`select cancel_order('${o.id}')`);
+});
+await db.exec(`update menu_items set price = 26, is_available = false where id = 'loongnoom-square-latte-iced'`);
+await db.exec(loongnoomSQL);
+const preserved = await one(`select price, is_available, (select hidden from stores where id = 'loongnoom-square') hidden from menu_items where id = 'loongnoom-square-latte-iced'`);
+ok('reimport preserves team price, availability and store visibility edits', preserved.price === 26 && !preserved.is_available && !preserved.hidden);
+await as(tina, () => db.exec(`select admin_set_store_hidden('loongnoom-square', true); select admin_set_store_open('loongnoom-square', false)`));
 
 // Anonymous visitors can browse the catalogue
 await db.exec(`set role anon;`);
