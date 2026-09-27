@@ -184,7 +184,9 @@
 					<p class="flex justify-between"><span>วิธีจ่าย</span><span>{order.payment === 'CASH' ? 'เงินสดปลายทาง' : 'PromptPay'}</span></p>
 					{#if order.payment === 'PROMPTPAY'}
 						<p class="flex justify-between gap-3"><span>สถานะการจ่าย</span><span class="text-right">{order.paid_at ? `ชำระ ${clock(order.paid_at)}` : 'ยังไม่ชำระ'}</span></p>
-						{#if order.slip_ref}<p class="flex justify-between gap-3"><span>อ้างอิงสลิป</span><span class="truncate text-right tabular-nums">{order.slip_ref}</span></p>{/if}
+						{#if order.slip_ref?.startsWith('TEST:')}
+							<p class="flex justify-between gap-3"><span>อ้างอิงสลิป</span><span class="rounded-md bg-amber-50 px-1.5 text-right text-xs font-medium text-amber-800">จ่ายแบบทดสอบ ไม่มีเงินจริง</span></p>
+						{:else if order.slip_ref}<p class="flex justify-between gap-3"><span>อ้างอิงสลิป</span><span class="truncate text-right tabular-nums">{order.slip_ref}</span></p>{/if}
 					{/if}
 					<p class="flex justify-between"><span>OTP</span><span class={order.otp_failed >= 5 ? 'font-medium text-red-600' : ''}>กรอกผิด {order.otp_failed}/5 ครั้ง</span></p>
 				</div>

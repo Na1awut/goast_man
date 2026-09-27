@@ -74,6 +74,8 @@ export const ACTION_LABEL: Record<string, string> = {
 	STORE_DELETED: 'ลบร้าน (ย้ายไปถังขยะ)',
 	STORE_RESTORED: 'กู้คืนร้านจากถังขยะ',
 	STORE_PURGED: 'ลบร้านถาวร',
+	PAYMENT_TEST_ON: 'เปิดโหมดทดสอบจ่าย QR',
+	PAYMENT_TEST_OFF: 'ปิดโหมดทดสอบจ่าย QR',
 	MENU_CLEARED: 'ล้างเมนูทั้งร้าน',
 	ITEM_ADDED: 'เพิ่มเมนู',
 	ITEM_EDITED: 'แก้เมนู',

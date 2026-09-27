@@ -3,6 +3,9 @@
 	import { isLive } from '$lib/supabase';
 	import { consoleState as c } from '../console.svelte';
 	import Toggle from '../ui/Toggle.svelte';
+	import { dateTime } from '../format';
+
+	const testOn = $derived(!!c.flags?.payment_test_mode);
 </script>
 
 <div class="max-w-2xl space-y-4">
@@ -24,6 +27,27 @@
 			<Toggle checked={c.sound} label="เสียงแจ้งเตือน" onchange={() => c.toggleSound()} />
 		</div>
 		<p class="mt-4 text-sm text-slate-500">ข้อมูลทุกหน้าอัปเดตเองทุก 15 วินาทีขณะเปิดหน้านี้อยู่</p>
+	</section>
+
+	<section class="rounded-2xl border bg-white p-5 {testOn ? 'border-amber-300' : 'border-slate-100'}">
+		<h2 class="text-base font-semibold">โหมดทดสอบจ่าย QR</h2>
+		<div class="mt-3 flex items-center gap-4">
+			<div class="min-w-0 flex-1">
+				<p class="text-sm font-medium">{testOn ? 'เปิดอยู่: ลูกค้าจ่ายได้โดยไม่โอนเงินจริง' : 'ปิดอยู่: จ่ายด้วย QR ต้องโอนจริงและแนบสลิป'}</p>
+				<p class="text-sm text-slate-500">
+					{#if testOn && c.flags?.payment_test_since}เปิดโดย {c.flags.payment_test_by ?? 'ทีมงาน'} · {dateTime(c.flags.payment_test_since)}{:else}ไว้ลองสั่งจริงกับเพื่อนโดยไม่ต้องโอนเงิน{/if}
+				</p>
+			</div>
+			{#if c.isAdmin}
+				<Toggle checked={testOn} label="โหมดทดสอบจ่าย QR" onchange={(v) => c.act(async () => { await c.api!.setPaymentTestMode(v); c.flags = await c.api!.appFlags(); }, v ? 'เปิดโหมดทดสอบจ่าย QR แล้ว' : 'ปิดโหมดทดสอบจ่าย QR แล้ว')} />
+			{/if}
+		</div>
+		<ul class="mt-4 space-y-1.5 text-sm text-slate-600">
+			<li>• หน้าจ่าย PromptPay ของลูกค้าจะมีปุ่ม "จ่ายแบบทดสอบ" ออเดอร์ไปหาคนหิ้วเหมือนจ่ายแล้ว</li>
+			<li>• ออเดอร์ที่จ่ายแบบนี้ขึ้นว่า "จ่ายแบบทดสอบ ไม่มีเงินจริง" ในรายละเอียดออเดอร์</li>
+			<li>• ระหว่างเปิด ลูกค้าทุกคนกดได้ <strong class="font-semibold text-slate-900">ทดสอบเสร็จแล้วปิดทันที</strong> ปิดแล้วปุ่มหายเลย</li>
+		</ul>
+		{#if !c.isAdmin}<p class="mt-3 text-xs text-slate-500">เฉพาะ ADMIN เปิด/ปิดได้</p>{/if}
 	</section>
 
 	{#if !isLive}

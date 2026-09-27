@@ -12,6 +12,7 @@ import type {
 	AdminRider,
 	AdminStore,
 	TrashStore,
+	AppFlags,
 	ApplicationStatus,
 	Badges,
 	ClientError,
@@ -87,6 +88,9 @@ export interface AdminApi {
 	trash(): Promise<TrashStore[]>;
 	restoreStore(storeId: string): Promise<void>;
 	purgeStore(storeId: string): Promise<void>;
+	/** QR test mode: buyers may pay without a transfer while it is on (ADMIN switches it) */
+	appFlags(): Promise<AppFlags>;
+	setPaymentTestMode(on: boolean): Promise<void>;
 	/** The full store (details, storefront, menu) for the editor; hidden stores included */
 	storeForEdit(storeId: string): Promise<Store>;
 	uploadStoreImage(storeId: string, file: File, kind: 'banner' | 'logo' | 'photo' | 'menu'): Promise<string>;
@@ -163,6 +167,8 @@ const liveApi: AdminApi = {
 	trash: () => call('admin_trash'),
 	restoreStore: (storeId) => call('admin_restore_store', { p_store_id: storeId }),
 	purgeStore: (storeId) => call('admin_purge_store', { p_store_id: storeId }),
+	appFlags: () => call('app_flags'),
+	setPaymentTestMode: (on) => call('admin_set_payment_test_mode', { p_on: on }),
 	storeForEdit: (storeId) => app.fetchStore(storeId),
 	uploadStoreImage: (storeId, file, kind) => app.uploadStoreImage(storeId, file, kind),
 	saveMenuItem: (storeId, m) =>

@@ -166,6 +166,16 @@
 		{/if}
 	</header>
 
+	{#if c.flags?.payment_test_mode}
+		<div class="border-b border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900 sm:px-6" role="status">
+			<div class="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-3 gap-y-1">
+				<span class="flex items-center gap-2 font-semibold"><Icon name="alert" class="h-4 w-4" />โหมดทดสอบจ่าย QR เปิดอยู่</span>
+				<span class="text-amber-800">ลูกค้ากดจ่ายได้โดยไม่ต้องโอนเงินจริง{c.flags.payment_test_by ? ` · เปิดโดย ${c.flags.payment_test_by}` : ''}</span>
+				<button type="button" onclick={() => c.go('settings')} class="font-medium underline underline-offset-2 sm:ml-auto">{c.isAdmin ? 'ปิดโหมดทดสอบ' : 'ดูรายละเอียด'}</button>
+			</div>
+		</div>
+	{/if}
+
 	<main class="mx-auto w-full max-w-[1440px] px-4 pt-5 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 md:pb-10 lg:pt-7">
 		<div class="mb-5 lg:mb-6">
 			<h1 class="hidden text-3xl font-bold tracking-tight text-slate-900 md:block">{current.title}</h1>

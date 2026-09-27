@@ -91,6 +91,7 @@ try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20261011000000_female_dorm_zone.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261012000000_cb1_zone.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261013000000_male_dorm_zone.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261014000000_payment_test_mode.sql`, 'utf8'));
 	ok('profile-at-first-order migration applies cleanly', true);
 } catch (e) {
 	ok('profile-at-first-order migration applies cleanly', false, e.message);
@@ -1098,6 +1099,44 @@ await db.exec(loongnoomSQL);
 const preserved = await one(`select price, is_available, (select hidden from stores where id = 'loongnoom-square') hidden from menu_items where id = 'loongnoom-square-latte-iced'`);
 ok('reimport preserves team price, availability and store visibility edits', preserved.price === 26 && !preserved.is_available && !preserved.hidden);
 await as(tina, () => db.exec(`select admin_set_store_hidden('loongnoom-square', true); select admin_set_store_open('loongnoom-square', false)`));
+
+// ---------- QR payment test mode: pay without a transfer while the team has it on ----------
+let testOrder, cashTest;
+await as(alice, async () => {
+	ok('test mode starts off', (await rpc(`app_flags()`)).payment_test_mode === false);
+	testOrder = (await placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-1', quantity: 1 }], null, 'PROMPTPAY')).id;
+	cashTest = (await placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-1', quantity: 1 }])).id;
+	await expectError('no test payment while test mode is off', `select pay_order_test('${testOrder}')`, 'TEST_MODE_OFF');
+});
+await db.exec(`set role anon;`);
+ok('anyone can read whether test mode is on', (await one(`select app_flags() as f`)).f.payment_test_mode === false);
+await expectError('but not flip it', `select admin_set_payment_test_mode(true)`, 'permission denied');
+await db.exec(`reset role;`);
+await as(sam, () => expectError('only ADMIN turns test mode on', `select admin_set_payment_test_mode(true)`, 'ADMIN_ONLY'));
+await as(tina, async () => {
+	await db.exec(`select admin_set_payment_test_mode(true)`);
+	const f = await rpc(`app_flags()`);
+	ok('ADMIN turns test mode on, with who and when', f.payment_test_mode === true && !!f.payment_test_since && !!f.payment_test_by, JSON.stringify(f));
+});
+await as(bob, () => expectError('nobody pays another buyer’s order', `select pay_order_test('${testOrder}')`, 'ORDER_NOT_FOUND'));
+await as(alice, async () => {
+	await expectError('a cash order has nothing to pay by QR', `select pay_order_test('${cashTest}')`, 'ORDER_NOT_PAYABLE');
+	await db.exec(`select pay_order_test('${testOrder}')`);
+	await expectError('a test payment cannot be made twice', `select pay_order_test('${testOrder}')`, 'ALREADY_PAID');
+});
+const paidTest = await one(`select paid_at, slip_ref, order_code from orders where id = '${testOrder}'`);
+ok('the order is paid and marked as a test', !!paidTest.paid_at && paidTest.slip_ref === `TEST:${paidTest.order_code}`);
+ok('the chat says no money moved', Number((await one(`select count(*) n from chat_messages where order_id = '${testOrder}' and body like 'โหมดทดสอบ%'`)).n) === 1);
+await as(tina, async () => {
+	await db.exec(`select admin_set_payment_test_mode(false)`);
+	const acts = new Set((await rpc(`admin_activity()`)).map((l) => l.action));
+	ok('switching test mode is in the log', acts.has('PAYMENT_TEST_ON') && acts.has('PAYMENT_TEST_OFF'));
+});
+await as(alice, async () => {
+	const again = (await placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-1', quantity: 1 }], null, 'PROMPTPAY')).id;
+	await expectError('once off, test payments stop at once', `select pay_order_test('${again}')`, 'TEST_MODE_OFF');
+	await db.exec(`select cancel_order('${again}'); select cancel_order('${cashTest}')`);
+});
 
 // Anonymous visitors can browse the catalogue
 await db.exec(`set role anon;`);

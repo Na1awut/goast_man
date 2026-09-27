@@ -719,6 +719,7 @@ stateDiagram-v2
 | 18 | `20261011000000_female_dorm_zone.sql` | โซนใหม่ `female-dorm` (โรงอาหารหอหญิง ข้าง S6) |
 | 19 | `20261012000000_cb1_zone.sql` | โซนอาคาร CB1; รันแยก transaction ก่อนนำเข้าร้าน |
 | 20 | `20261013000000_male_dorm_zone.sql` | โซนใหม่ `male-dorm` (โรงอาหารหอชาย ข้าง S5) |
+| 21 | `20261014000000_payment_test_mode.sql` | โหมดทดสอบจ่าย QR (`app_settings`, `app_flags()`, `admin_set_payment_test_mode`, `pay_order_test`) · ADMIN เปิด/ปิดที่หน้าตั้งค่า · ระหว่างเปิด หน้าจ่าย PromptPay มีปุ่ม "จ่ายแบบทดสอบ" และหน้าทีมงานขึ้นแถบเตือนทุกหน้า · ออเดอร์ที่จ่ายแบบนี้อ้างอิง `TEST:<รหัส>` |
 | 21 | `seed.sql` | ร้านและเมนู (mockup จากเอกสารร้าน) |
 | ข้อมูลจริง | `data/male_dorm_stores.sql` | ร้านจริงโรงอาหารหอชาย 3 ร้าน / 111 เมนู จาก PDF ของร้าน (รันซ้ำได้) รูปร้านอยู่ `static/stores/male-dorm-NN.webp` |
 | ข้อมูลจริง | `data/female_dorm_stores.sql` | ร้านจริงโรงอาหารหอหญิง 6 ร้าน จาก PDF ของร้าน (รันซ้ำได้ ไม่ทับของเดิม) รูปร้านอยู่ `static/stores/female-dorm-NN.webp` |

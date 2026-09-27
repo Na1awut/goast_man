@@ -19,6 +19,31 @@
 	let checking = $state(false);
 	let slipInput = $state<HTMLInputElement>();
 
+	// QR test mode (switched on by the team for trials): pay without a transfer
+	let testMode = $state(false);
+	$effect(() => {
+		api.fetchAppFlags().then(
+			(f) => (testMode = f.payment_test_mode),
+			() => (testMode = false)
+		);
+	});
+
+	async function payTest() {
+		if (!order || checking) return;
+		checking = true;
+		try {
+			await api.payOrderTest(order.id);
+			await orders.reload(order.id);
+			toast.show('ชำระแบบทดสอบแล้ว กำลังหาเพื่อนรับหิ้ว', 'success');
+			nav.reset('TRACKING', ['HOME', 'ORDERS']);
+		} catch (err) {
+			toast.show(friendlyError(err), 'error', { duration: 6000 });
+			if (String(err).includes('TEST_MODE_OFF')) testMode = false;
+		} finally {
+			checking = false;
+		}
+	}
+
 	async function onSlip(e: Event) {
 		const input = e.currentTarget as HTMLInputElement;
 		const file = input.files?.[0];
@@ -56,6 +81,16 @@
 		</div>
 	{:else}
 		<div class="flex-1 space-y-4 px-4 pt-4 pb-6">
+			{#if testMode}
+				<section class="rounded-2xl border border-amber-200 bg-amber-50 p-4" aria-label="โหมดทดสอบ">
+					<p class="flex items-center gap-2 text-sm font-semibold text-amber-900"><Icon name="alert" class="h-4 w-4" />โหมดทดสอบเปิดอยู่</p>
+					<p class="mt-1 text-sm text-amber-900">ทีมเปิดให้ลองสั่งโดยไม่ต้องโอนเงินจริง กด "จ่ายแบบทดสอบ" ออเดอร์จะไปหาเพื่อนรับหิ้วเหมือนจ่ายแล้ว</p>
+					<button type="button" onclick={payTest} disabled={checking} class="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-amber-300 bg-white text-sm font-semibold text-amber-900 active:bg-amber-100 disabled:opacity-60">
+						{#if checking}<span class="h-4 w-4 animate-spin rounded-full border-2 border-amber-300 border-t-amber-900"></span>{/if}
+						จ่ายแบบทดสอบ ({order.totalPrice} ฿ ไม่โอนจริง)
+					</button>
+				</section>
+			{/if}
 			<section class="rounded-2xl border border-slate-100 bg-white px-5 py-6 text-center">
 				<span class="inline-flex items-center gap-1.5 rounded-md bg-promptpay px-3 py-1.5 text-xs font-semibold text-white">
 					<span class="flex -space-x-1"><span class="h-2.5 w-2.5 rounded-full bg-sky-400"></span><span class="h-2.5 w-2.5 rounded-full bg-amber-400"></span></span>

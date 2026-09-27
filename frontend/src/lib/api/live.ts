@@ -210,6 +210,21 @@ export async function verifySlip(orderId: string, slip: File): Promise<void> {
 	if (!res.ok || !out.ok) throw new Error(out.error ?? 'SLIPOK_UNAVAILABLE');
 }
 
+/** Switches the team sets from the console (QR test mode) */
+export interface AppFlags {
+	payment_test_mode: boolean;
+	payment_test_since: string | null;
+	payment_test_by: string | null;
+}
+export async function fetchAppFlags(): Promise<AppFlags> {
+	return check(await db().rpc('app_flags')) as AppFlags;
+}
+
+/** QR test mode only: marks the buyer's own unpaid PromptPay order paid, no transfer */
+export async function payOrderTest(orderId: string): Promise<void> {
+	check(await db().rpc('pay_order_test', { p_order_id: orderId }));
+}
+
 export async function signOut(): Promise<void> {
 	await db().auth.signOut();
 }

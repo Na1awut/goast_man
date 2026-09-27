@@ -252,6 +252,7 @@ export function createDemoApi(): DemoApi {
 	const BIN_DAYS = 60;
 	const trash: { row: (typeof stores)[number]; live: Store | undefined; deleted_at: string; deleted_by: string }[] = [];
 	const purgedIds: string[] = [];
+	let flags = { payment_test_mode: false, payment_test_since: null as string | null, payment_test_by: null as string | null };
 	const team: TeamMember[] = [
 		{ email: DEMO_ADMIN.email, role: 'ADMIN', note: 'แอดมินคนแรก', added_at: new Date(now() - 30 * 86_400_000).toISOString(), added_by: null, name: DEMO_ADMIN.nickname, full_name: DEMO_ADMIN.full_name, has_account: true, is_me: true },
 		{ email: 'staff.demo@mail.kmutt.ac.th', role: 'STAFF', note: 'กะเที่ยง', added_at: new Date(now() - 7 * 86_400_000).toISOString(), added_by: DEMO_ADMIN.nickname, name: 'ทีมงานทดลอง', full_name: 'ทีมงาน ทดลอง', has_account: true, is_me: false }
@@ -748,6 +749,13 @@ export function createDemoApi(): DemoApi {
 			const [{ row, live }] = trash.splice(i, 1);
 			purgedIds.push(storeId);
 			record('STORE_PURGED', 'store', storeId, live?.name ?? row.name, { why: 'admin' });
+			return wait(undefined);
+		},
+		appFlags: () => wait(flags),
+		async setPaymentTestMode(on) {
+			if (me.role !== 'ADMIN') return fail('ADMIN_ONLY');
+			flags = on ? { payment_test_mode: true, payment_test_since: new Date().toISOString(), payment_test_by: me.nickname } : { payment_test_mode: false, payment_test_since: null, payment_test_by: null };
+			record(on ? 'PAYMENT_TEST_ON' : 'PAYMENT_TEST_OFF', 'setting', 'payment_test_mode', 'โหมดทดสอบจ่าย QR');
 			return wait(undefined);
 		},
 		async storeForEdit(storeId) {

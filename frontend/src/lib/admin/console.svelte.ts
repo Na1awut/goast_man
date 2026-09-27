@@ -7,7 +7,7 @@ import { chime as beep, unlockChime } from '$lib/chime';
 import { adminApi, adminError, demoSetRole, type AdminApi } from './api';
 import { DEMO_ADMIN } from './demo';
 import { bangkokToday } from './format';
-import type { Overview, TeamMe, TeamRole } from './types';
+import type { AppFlags, Overview, TeamMe, TeamRole } from './types';
 
 export type Page = 'overview' | 'orders' | 'finance' | 'stores' | 'riders' | 'partners' | 'errors' | 'team' | 'activity' | 'settings';
 export type SessionState = 'loading' | 'signed-out' | 'no-access' | 'ready';
@@ -54,6 +54,8 @@ class Console {
 	search = $state('');
 	/** Bumps every refresh; pages reload their data when it changes */
 	tick = $state(0);
+	/** Switches set from the console (QR test mode) */
+	flags = $state<AppFlags | null>(null);
 	lastUpdated = $state<Date | null>(null);
 	online = $state(true);
 	overview = $state<Overview | null>(null);
@@ -179,6 +181,8 @@ class Console {
 	/** Reloads the overview (badges, sound) and tells open pages to reload */
 	async refresh() {
 		if (!this.api || this.session !== 'ready') return;
+		// QR test mode banner; before its migration the call fails and the banner stays off
+		void this.api.appFlags().then((f) => (this.flags = f), () => {});
 		// The badge is a nice-to-have: a failure here must not hide the overview
 		void this.api.badges().then(
 			(b) => {

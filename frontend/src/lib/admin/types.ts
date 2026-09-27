@@ -200,6 +200,13 @@ export interface AdminStore {
 	items_off: number;
 }
 
+/** Switches set from the console (QR test mode) */
+export interface AppFlags {
+	payment_test_mode: boolean;
+	payment_test_since: string | null;
+	payment_test_by: string | null;
+}
+
 /** A deleted store waiting in the recycle bin (ADMIN) */
 export interface TrashStore {
 	id: string;
