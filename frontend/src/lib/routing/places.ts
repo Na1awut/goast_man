@@ -29,6 +29,8 @@ export const PLACES: Record<string, Place> = Object.fromEntries(
 	[
 		// Pickup hubs (PICKUP_HUBS in data/locations.ts)
 		place('kfc-main', 13.6503, 100.49178), // S14, at its food-centre icon
+		// โรงอาหารหอหญิง: taken at the S6 (female dorm) building point until someone surveys the canteen door
+		place('female-dorm', 13.64874, 100.4949),
 		// NOT PLACED YET: which building is โรงชาย is unknown, so it sits on KFC (S14) until someone says
 		place('canteen-male', 13.6503, 100.49178),
 		// S14 is the King Mongkut's 190th Anniversary building, so Green Canteen 190 ปี is taken to share it with KFC
@@ -53,6 +55,7 @@ export const PLACES: Record<string, Place> = Object.fromEntries(
 /** Pickup place for a store, by the zone it trades in */
 export const STORE_ZONE_PLACE: Record<StoreZone, string> = {
 	'kfc-main': 'kfc-main',
+	'female-dorm': 'female-dorm',
 	'canteen-male': 'canteen-male',
 	'green-canteen': 'green-canteen',
 	dorm: 'dorm-food'

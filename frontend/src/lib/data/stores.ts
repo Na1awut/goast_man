@@ -12,6 +12,7 @@ import { mockMenuPhoto } from './menuPhotos.ts';
 export const STORE_ZONES: { id: StoreZone | 'all'; label: string }[] = [
 	{ id: 'all', label: 'ทั้งหมด' },
 	{ id: 'kfc-main', label: 'KFC (หลัก)' },
+	{ id: 'female-dorm', label: 'หอหญิง' },
 	{ id: 'canteen-male', label: 'โรงชาย' },
 	{ id: 'green-canteen', label: 'Green Canteen 190 ปี' },
 	{ id: 'dorm', label: 'หอพัก' }
@@ -19,6 +20,7 @@ export const STORE_ZONES: { id: StoreZone | 'all'; label: string }[] = [
 
 export const ZONE_NAMES: Record<StoreZone, string> = {
 	'kfc-main': 'โรงอาหาร KFC (หลัก)',
+	'female-dorm': 'โรงอาหารหอหญิง',
 	'canteen-male': 'โรงอาหารพระจอมเกล้า (โรงชาย)',
 	'green-canteen': 'Green Canteen 190 ปี',
 	dorm: 'โซนหอพักนักศึกษา'

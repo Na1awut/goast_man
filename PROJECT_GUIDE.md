@@ -716,7 +716,9 @@ stateDiagram-v2
 | 15 | `20261008000000_store_discount.sql` | ส่วนลดใครออก: `orders.store_discount`, `rider_owed`, dashboard ร้าน, บอร์ดคนหิ้ว (จ่ายร้าน X ฿) · **เลิกโปรร่วม** (`STORE_DEALS_ONLY`) |
 | 16 | `20261009000000_team_store_editing.sql` | ทีมสร้าง/แก้/ซ่อนร้าน (`stores.hidden`, `admin_create_store`, `admin_save_menu_item`, `admin_update_*`, `admin_clear_menu`, `admin_set_store_hidden`) · ร้านกับทีมใช้ฟังก์ชัน `store_*` ชุดเดียวกัน · ทีมอัปโหลดรูปเข้าโฟลเดอร์ร้านไหนก็ได้ |
 | 17 | `20261010000000_store_recycle_bin.sql` | ถังขยะร้าน (`stores.deleted_at`, `admin_delete_store`, `admin_trash`, `admin_restore_store`, `admin_purge_store`) · ร้านในถังขยะไม่มีใครเห็น แก้ไม่ได้ เจ้าของเข้าไม่ได้ · ลบถาวรเมื่อครบ 60 วัน ด้วย `purge_expired_stores()` ทุกคืนตี 3 (pg_cron) และทุกครั้งที่เปิดถังขยะ · `order_items` ไม่ผูก FK กับ `menu_items` แล้ว (ออเดอร์เก่าเก็บชื่อและราคาเมนูไว้เอง) · ร้านใหม่ไม่ใช้ id ของร้านที่ลบถาวรแล้ว · เจ้าของร้านเห็นร้านตัวเองแม้ร้านถูกซ่อน |
-| 18 | `seed.sql` | ร้านและเมนู (mockup จากเอกสารร้าน) |
+| 18 | `20261011000000_female_dorm_zone.sql` | โซนใหม่ `female-dorm` (โรงอาหารหอหญิง ข้าง S6) |
+| 19 | `seed.sql` | ร้านและเมนู (mockup จากเอกสารร้าน) |
+| ข้อมูลจริง | `data/female_dorm_stores.sql` | ร้านจริงโรงอาหารหอหญิง 6 ร้าน จาก PDF ของร้าน (รันซ้ำได้ ไม่ทับของเดิม) รูปร้านอยู่ `static/stores/female-dorm-NN.webp` |
 
 > **ถ้าจะแก้ฐานข้อมูล ให้สร้าง migration ใหม่เสมอ** (ตั้งชื่อด้วยวันที่ถัดไป) ห้ามแก้ไฟล์ที่รันไปแล้ว และเพิ่มชื่อไฟล์ใน `frontend/tests/sql.mjs`, ตารางนี้ และ `supabase/README.md`
 

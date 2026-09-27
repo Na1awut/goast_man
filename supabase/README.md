@@ -23,6 +23,8 @@
 | `migrations/20261005000000_team_personal_email.sql` | ทีมงานสมัคร/login ด้วยอีเมลส่วนตัวได้ ถ้า ADMIN เพิ่มอีเมลไว้ |
 | `migrations/20261006000000_partner_menu.sql` | ร้านเพิ่ม/แก้/ลบเมนู ใส่รูป และแก้ข้อมูลร้านเอง |
 | `migrations/20261007000000_free_delivery_team_only.sql` | ร้านตั้งโปรฟรีค่าหิ้วเองไม่ได้ |
+| `migrations/20261011000000_female_dorm_zone.sql` | โซนโรงอาหารหอหญิง |
+| `data/female_dorm_stores.sql` | ร้านจริงโรงอาหารหอหญิง 6 ร้าน (รันหลัง migration ครบ ซ่อนไว้ก่อน รันซ้ำได้) |
 | `migrations/20261010000000_store_recycle_bin.sql` | ถังขยะร้าน: ลบ, กู้คืนใน 60 วัน, ลบถาวรเอง (pg_cron ทุกคืน) |
 | `migrations/20261009000000_team_store_editing.sql` | ทีมสร้างร้าน แก้ทุกร้าน ซ่อนร้าน และล้างเมนู |
 | `migrations/20261008000000_store_discount.sql` | ส่วนลดใครออก (`store_discount`) และเลิกโปรร่วม |
@@ -52,13 +54,14 @@
    15. `migrations/20261008000000_store_discount.sql`
    16. `migrations/20261009000000_team_store_editing.sql`
    17. `migrations/20261010000000_store_recycle_bin.sql`
-   18. `seed.sql`
+   18. `migrations/20261011000000_female_dorm_zone.sql`
+   19. `seed.sql`
 3. เพิ่ม ADMIN คนแรกของหน้าทีมงาน (คนต่อไป ADMIN เพิ่มเองในหน้าทีมงาน):
    ```sql
    insert into team_members (email, role, note) values ('<อีเมล มจธ.>', 'ADMIN', 'first admin');
    ```
 
-**โปรเจกต์ที่ใช้อยู่ (`pguhzjtdwgualqeqzleu`):** รันครบถึง `20261010000000_store_recycle_bin.sql` แล้ว (เปิด pg_cron แล้ว งาน `purge-deleted-stores` ทุกคืนตี 3) (รันด้วย `npx supabase db query --linked --project-ref pguhzjtdwgualqeqzleu -f <ไฟล์>` ได้ หลัง `npx supabase login`) ADMIN คนแรกคือ `natthawut.napa@mail.kmutt.ac.th`
+**โปรเจกต์ที่ใช้อยู่ (`pguhzjtdwgualqeqzleu`):** รันครบถึง `20261011000000_female_dorm_zone.sql` และใส่ `data/female_dorm_stores.sql` แล้ว (เปิด pg_cron แล้ว งาน `purge-deleted-stores` ทุกคืนตี 3) (รันด้วย `npx supabase db query --linked --project-ref pguhzjtdwgualqeqzleu -f <ไฟล์>` ได้ หลัง `npx supabase login`) ADMIN คนแรกคือ `natthawut.napa@mail.kmutt.ac.th`
 
 **บันทึก deploy 27 กันยายน 2569:** รัน `client_errors_deploy.sql` แล้วต่อด้วย `rider_tools_deploy.sql` ผ่าน Supabase CLI ไปยังโปรเจกต์ `goose-man` แต่ละไฟล์ครอบด้วย `begin;` … `commit;` และสำเร็จแล้ว ตรวจหลัง deploy พบตาราง `client_errors`, `rider_presence`, `rider_applications` เปิด RLS, คอลัมน์ `orders.tip_in_total` และฟังก์ชันครบ ตรวจสิทธิ์การเรียกฟังก์ชันและสูตรทิปผ่าน ส่วน API `riders_online` ตอบ HTTP 200 และค่า `0` ณ เวลาตรวจ ก่อน deploy ชุดทดสอบ SQL ในเครื่องผ่าน 233 รายการ ไม่ได้สร้างออเดอร์หรือใบสมัครทดสอบบนฐานข้อมูลจริง **ไม่ต้องรันสองไฟล์นี้ซ้ำ** เพราะคำสั่งสร้างตาราง/เพิ่มคอลัมน์ไม่ได้รองรับการรันซ้ำ
 

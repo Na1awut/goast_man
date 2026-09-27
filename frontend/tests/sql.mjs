@@ -88,6 +88,7 @@ try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20261008000000_store_discount.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261009000000_team_store_editing.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261010000000_store_recycle_bin.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261011000000_female_dorm_zone.sql`, 'utf8'));
 	ok('profile-at-first-order migration applies cleanly', true);
 } catch (e) {
 	ok('profile-at-first-order migration applies cleanly', false, e.message);
@@ -1047,6 +1048,24 @@ await as(tina, async () => {
 	const acts = new Set((await rpc(`admin_activity()`)).map((l) => l.action));
 	ok('the log shows delete, restore and erase', ['STORE_DELETED', 'STORE_RESTORED', 'STORE_PURGED'].every((a) => acts.has(a)));
 });
+
+// ---------- Real stores: โรงอาหารหอหญิง, imported from the stalls' PDF ----------
+await db.exec(readFileSync(`${ROOT}/data/female_dorm_stores.sql`, 'utf8'));
+await db.exec(readFileSync(`${ROOT}/data/female_dorm_stores.sql`, 'utf8'));
+const fd = await one(`select count(*) filter (where zone = 'female-dorm' and hidden and not is_open) n, (select count(*) from menu_items where store_id like 'female-dorm-%') items from stores where id like 'female-dorm-%'`);
+ok('the female dorm stalls load hidden and closed, and loading twice changes nothing', Number(fd.n) === 6 && Number(fd.items) === 86, JSON.stringify(fd));
+await as(tina, async () => {
+	await db.exec(`select admin_set_store_hidden('female-dorm-06', false); select admin_set_store_open('female-dorm-06', true)`);
+	const next = (await one(`select admin_create_store('ร้านใหม่หอหญิง', 'ทดลอง', 'female-dorm', '', '', 5) as id`)).id;
+	ok('a new store in the canteen continues its numbering', next === 'female-dorm-07', next);
+	await db.exec(`select admin_delete_store('${next}'); select admin_purge_store('${next}')`);
+});
+await as(alice, async () => {
+	const o = await orderRow((await placeOrder('female-dorm-06', [{ menu_item_id: 'female-dorm-06-1', quantity: 1 }, { menu_item_id: 'female-dorm-06-2', quantity: 1, special: true }])).id);
+	ok('a shown stall takes orders, with the 22 oz. price as พิเศษ', o.food_total === 35, String(o.food_total));
+	await db.exec(`select cancel_order('${o.id}')`);
+});
+await as(tina, () => db.exec(`select admin_set_store_hidden('female-dorm-06', true)`));
 
 // Anonymous visitors can browse the catalogue
 await db.exec(`set role anon;`);
