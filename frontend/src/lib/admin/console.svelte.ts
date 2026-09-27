@@ -8,7 +8,7 @@ import { DEMO_ADMIN } from './demo';
 import { bangkokToday } from './format';
 import type { Overview, TeamMe, TeamRole } from './types';
 
-export type Page = 'overview' | 'orders' | 'finance' | 'stores' | 'riders' | 'partners' | 'team' | 'activity' | 'settings';
+export type Page = 'overview' | 'orders' | 'finance' | 'stores' | 'riders' | 'partners' | 'errors' | 'team' | 'activity' | 'settings';
 export type SessionState = 'loading' | 'signed-out' | 'no-access' | 'ready';
 
 export const PAGES: { id: Page; label: string; title: string; subtitle: string; icon: import('$lib/components/Icon.svelte').IconName; admin?: boolean }[] = [
@@ -18,6 +18,7 @@ export const PAGES: { id: Page; label: string; title: string; subtitle: string; 
 	{ id: 'stores', label: 'ร้านค้า', title: 'ร้านค้า', subtitle: 'เปิด/ปิดรับออเดอร์ และเมนูที่หมดวันนี้', icon: 'store' },
 	{ id: 'riders', label: 'คนหิ้ว', title: 'คนหิ้ว', subtitle: 'คนหิ้วที่ผ่านการ verify และงานที่ถืออยู่ตอนนี้', icon: 'bike' },
 	{ id: 'partners', label: 'Partner และโปร', title: 'Partner และโปร', subtitle: 'อนุมัติโปรร่วม และเชิญร้านเข้าร่วม', icon: 'tag' },
+	{ id: 'errors', label: 'ข้อผิดพลาด', title: 'ข้อผิดพลาด', subtitle: 'error ที่ผู้ใช้เจอในแอปและหน้านี้ รวมเป็นกลุ่มตามจุดที่พัง', icon: 'alert' },
 	{ id: 'team', label: 'ทีมงาน', title: 'ทีมงาน', subtitle: 'ใครเข้าหน้านี้ได้ และทำอะไรได้บ้าง', icon: 'users', admin: true },
 	{ id: 'activity', label: 'บันทึกการทำงาน', title: 'บันทึกการทำงาน', subtitle: 'ทุกอย่างที่ทีมงานเปลี่ยนในระบบ ใครทำ เมื่อไร', icon: 'clipboard-list', admin: true },
 	{ id: 'settings', label: 'ตั้งค่า', title: 'ตั้งค่า', subtitle: 'การแจ้งเตือนของเครื่องนี้ และบัญชีที่เข้าใช้งาน', icon: 'settings' }
@@ -52,6 +53,8 @@ class Console {
 	lastUpdated = $state<Date | null>(null);
 	online = $state(true);
 	overview = $state<Overview | null>(null);
+	/** Open errors seen in the last 24 hours (menu badge) */
+	errorCount = $state(0);
 	overviewError = $state('');
 	sound = $state(false);
 
@@ -59,7 +62,8 @@ class Console {
 	badges = $derived<Partial<Record<Page, number>>>({
 		orders: this.overview?.problems ?? 0,
 		finance: (this.overview?.refunds_due ?? 0) + (this.overview?.payouts_due_riders ?? 0),
-		partners: this.isAdmin ? (this.overview?.pending_promos ?? 0) : 0
+		partners: this.isAdmin ? (this.overview?.pending_promos ?? 0) : 0,
+		errors: this.errorCount
 	});
 
 	api: AdminApi | null = null;
@@ -169,6 +173,11 @@ class Console {
 	/** Reloads the overview (badges, sound) and tells open pages to reload */
 	async refresh() {
 		if (!this.api || this.session !== 'ready') return;
+		// The badge is a nice-to-have: a failure here must not hide the overview
+		void this.api.errorCount().then(
+			(n) => (this.errorCount = n),
+			() => {}
+		);
 		try {
 			this.overview = await this.api.overview(this.day);
 			this.overviewError = '';

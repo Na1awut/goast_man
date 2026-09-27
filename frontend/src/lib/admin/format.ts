@@ -54,3 +54,37 @@ export function phone(value: string | null | undefined): string {
 	const d = (value ?? '').replace(/\D/g, '');
 	return d.length === 10 ? `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}` : (value ?? '');
 }
+
+/** "iPhone · Safari" from a user-agent string, for reading an error at a glance */
+export function deviceOf(ua: string): string {
+	if (!ua) return '';
+	const device = /iPhone/.test(ua)
+		? 'iPhone'
+		: /iPad/.test(ua)
+			? 'iPad'
+			: /Android/.test(ua)
+				? 'Android'
+				: /Windows/.test(ua)
+					? 'Windows'
+					: /Mac OS X|Macintosh/.test(ua)
+						? 'Mac'
+						: /Linux/.test(ua)
+							? 'Linux'
+							: '';
+	const browser = /Line\//.test(ua)
+		? 'LINE'
+		: /FBAN|FBAV/.test(ua)
+			? 'Facebook'
+			: /Edg\//.test(ua)
+				? 'Edge'
+				: /SamsungBrowser/.test(ua)
+					? 'Samsung Internet'
+					: /Firefox|FxiOS/.test(ua)
+						? 'Firefox'
+						: /Chrome|CriOS/.test(ua)
+							? 'Chrome'
+							: /Safari/.test(ua)
+								? 'Safari'
+								: '';
+	return [device, browser].filter(Boolean).join(' · ');
+}

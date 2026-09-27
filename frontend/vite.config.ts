@@ -5,6 +5,10 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+	define: {
+		// Which deploy an error came from (Vercel sets the commit at build time)
+		__RELEASE__: JSON.stringify((process.env.VERCEL_GIT_COMMIT_SHA ?? '').slice(0, 7) || 'local')
+	},
 	plugins: [
 		tailwindcss(),
 		sveltekit({

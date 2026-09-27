@@ -8,6 +8,8 @@ import type {
 	AdminPromo,
 	AdminRider,
 	AdminStore,
+	ClientError,
+	ErrorStatus,
 	LogEntry,
 	MoneyEntry,
 	OrderDetail,
@@ -64,6 +66,9 @@ export interface AdminApi {
 	setMember(email: string, role: TeamRole, note?: string): Promise<void>;
 	removeMember(email: string): Promise<void>;
 	activity(limit?: number, before?: string): Promise<LogEntry[]>;
+	errors(status: ErrorStatus): Promise<ClientError[]>;
+	errorCount(): Promise<number>;
+	resolveError(id: number): Promise<void>;
 }
 
 /** A database error code or message, in the team's words */
@@ -118,7 +123,10 @@ const liveApi: AdminApi = {
 	team: () => call('admin_team'),
 	setMember: (email, role, note) => call('admin_set_member', { p_email: email, p_role: role, p_note: note ?? null }),
 	removeMember: (email) => call('admin_remove_member', { p_email: email }),
-	activity: (limit, before) => call('admin_activity', { p_limit: limit ?? 100, p_before: before ?? null })
+	activity: (limit, before) => call('admin_activity', { p_limit: limit ?? 100, p_before: before ?? null }),
+	errors: (status) => call('admin_errors', { p_status: status }),
+	errorCount: () => call('admin_error_count'),
+	resolveError: (id) => call('admin_resolve_error', { p_id: id })
 };
 
 let demo: import('./demo').DemoApi | null = null;

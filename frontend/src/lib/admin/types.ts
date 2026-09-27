@@ -269,3 +269,25 @@ export interface LogEntry {
 	target: string;
 	detail: Record<string, unknown>;
 }
+
+export type ErrorStatus = 'open' | 'resolved';
+
+/** One error from the web app, grouped: the same error seen again adds to count */
+export interface ClientError {
+	id: number;
+	app: 'buyer' | 'console';
+	kind: 'error' | 'rejection' | 'svelte';
+	message: string;
+	stack: string;
+	source: string;
+	url: string;
+	user_agent: string;
+	release: string;
+	/** Last signed-in user who hit it */
+	user: string | null;
+	first_at: string;
+	last_at: string;
+	count: number;
+	resolved_at: string | null;
+	resolved_by: string | null;
+}

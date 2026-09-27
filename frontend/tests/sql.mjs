@@ -79,6 +79,7 @@ try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20260929000000_profile_at_first_order.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20260930000000_promptpay_slips.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261001000000_team_console.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261002000000_client_errors.sql`, 'utf8'));
 	ok('profile-at-first-order migration applies cleanly', true);
 } catch (e) {
 	ok('profile-at-first-order migration applies cleanly', false, e.message);
@@ -633,6 +634,48 @@ await as(tina, async () => {
 	const expected = ['PAYMENT_CONFIRMED', 'OTP_UNLOCKED', 'ORDER_REQUEUED', 'ORDER_CANCELLED', 'REFUNDED', 'PAYOUT_PAID', 'STORE_CLOSED', 'ITEM_OFF', 'RIDER_ADDED', 'PROMO_APPROVED', 'PARTNER_INVITED', 'MEMBER_ADDED'];
 	ok('activity log records the team actions', expected.every((a) => actions.has(a)), [...actions].join(','));
 	ok('activity log names who acted', log.find((l) => l.action === 'MEMBER_ADDED')?.by === 'ทีน่า');
+});
+
+// ---------- Error log: the app reports, the team reads and closes ----------
+const report = (msg, source = 'app.js:1:1', app = 'buyer') =>
+	db.exec(`select log_client_error('${app}', 'error', '${msg}', 'Error: ${msg}
+  at f (${source})', '${source}', 'https://goose-man.tech/', 'Mozilla/5.0 (iPhone)', 'abc1234')`);
+await db.exec(`set role anon;`);
+await report('boom before sign-in');
+await report('boom before sign-in');
+await expectError('anonymous cannot read the error log', `select admin_errors()`, 'permission denied');
+ok('anonymous cannot read the table directly', Number((await one(`select count(*) n from client_errors`)).n) === 0);
+await db.exec(`reset role;`);
+await as(alice, async () => {
+	await report('boom before sign-in');
+	await report('different place', 'other.js:9:9');
+	await report(`it's quoted`.replace("'", "''"), 'q.js:1:1', 'console');
+	await expectError('a buyer cannot read the error log', `select admin_errors()`, 'TEAM_ONLY');
+});
+ok('the same error is one row with a count', (await one(`select count from client_errors where message = 'boom before sign-in'`)).count === 3);
+ok('the last signed-in user is kept', (await one(`select user_id from client_errors where message = 'boom before sign-in'`)).user_id === alice);
+await as(bob, () => db.exec(`select log_client_error('buyer', 'error', repeat('x', 5000), repeat('y', 9000), '', repeat('u', 900), repeat('a', 900), repeat('r', 90))`));
+const long = await one(`select length(message) m, length(stack) s, length(url) u, length(user_agent) a, length(release) r from client_errors where message like 'xxx%'`);
+ok('long reports are trimmed', long.m === 500 && long.s === 4000 && long.u === 500 && long.a === 300 && long.r === 40, JSON.stringify(long));
+await as(bob, async () => {
+	for (let i = 0; i < 40; i++) await report(`flood ${i}`, `flood.js:${i}:1`);
+});
+ok('a flood of new errors is capped', Number((await one(`select count(*) n from client_errors`)).n) === 30);
+await db.exec(`delete from client_errors where message like 'flood%'`);
+await as(sam, async () => {
+	const open = await rpc(`admin_errors()`);
+	const boom = open.find((e) => e.message === 'boom before sign-in');
+	ok('staff sees open errors with who and where', open.length === 4 && boom?.count === 3 && boom.user === 'Alice' && boom.release === 'abc1234', JSON.stringify(boom));
+	ok('console errors are told apart', open.some((e) => e.app === 'console' && e.message === "it's quoted"));
+	ok('error badge counts open errors', (await rpc(`admin_error_count()`)) === 4);
+	await db.exec(`select admin_resolve_error(${boom.id})`);
+	await expectError('an error cannot be closed twice', `select admin_resolve_error(${boom.id})`, 'BAD_STATE');
+	ok('closed errors move to the fixed list', (await rpc(`admin_errors('resolved')`))[0]?.resolved_by === 'แซม' && (await rpc(`admin_error_count()`)) === 3);
+});
+await as(alice, () => report('boom before sign-in'));
+ok('a fixed error that comes back opens a new row', Number((await one(`select count(*) n from client_errors where message = 'boom before sign-in'`)).n) === 2);
+await as(tina, async () => {
+	ok('closing an error is in the activity log', (await rpc(`admin_activity()`)).some((l) => l.action === 'ERROR_RESOLVED' && l.by === 'แซม'));
 });
 
 // Anonymous visitors can browse the catalogue

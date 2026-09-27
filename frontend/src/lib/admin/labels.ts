@@ -78,7 +78,8 @@ export const ACTION_LABEL: Record<string, string> = {
 	INVITE_CANCELLED: 'ยกเลิกคำเชิญ',
 	MEMBER_ADDED: 'เพิ่มทีมงาน',
 	MEMBER_ROLE_CHANGED: 'เปลี่ยนบทบาท',
-	MEMBER_REMOVED: 'นำทีมงานออก'
+	MEMBER_REMOVED: 'นำทีมงานออก',
+	ERROR_RESOLVED: 'ปิดข้อผิดพลาด (แก้แล้ว)'
 };
 
 /** One-line detail for a log row: reason, amount, reference, item */

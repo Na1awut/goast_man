@@ -10,6 +10,7 @@ import type {
 	AdminMenuItem,
 	AdminPromo,
 	AdminRider,
+	ClientError,
 	LogEntry,
 	MoneyEntry,
 	OrderDetail,
@@ -253,6 +254,18 @@ export function createDemoApi(): DemoApi {
 		log.unshift({ id: logId++, at: new Date().toISOString(), by: me.nickname, action, target_type, target_id, target, detail });
 	};
 	record('STORE_OPENED', 'store', 'kfc-02', 'ครัวกรุงศรี (KRUA KRUNGSRI)');
+
+	// Sample errors, one of each kind the page shows
+	const minsAgo = (m: number) => new Date(now() - m * 60_000).toISOString();
+	const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1';
+	const ANDROID = 'Mozilla/5.0 (Linux; Android 14; SM-A546E) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile Safari/537.36';
+	const WINDOWS = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36';
+	const errors: ClientError[] = [
+		{ id: 4, app: 'buyer', kind: 'error', message: "TypeError: Cannot read properties of undefined (reading 'menuItems')", stack: "TypeError: Cannot read properties of undefined (reading 'menuItems')\n    at StoreScreen (https://goose-man.tech/_app/immutable/nodes/2.CkT0aY1e.js:14:2210)\n    at update (https://goose-man.tech/_app/immutable/chunks/runtime.BwS4q2cN.js:1:8812)", source: 'https://goose-man.tech/_app/immutable/nodes/2.CkT0aY1e.js:14:2210', url: 'https://goose-man.tech/#/store/kfc-04', user_agent: IPHONE, release: 'fec6620', user: 'มายด์', first_at: minsAgo(48), last_at: minsAgo(6), count: 7, resolved_at: null, resolved_by: null },
+		{ id: 3, app: 'buyer', kind: 'rejection', message: 'TypeError: Failed to fetch dynamically imported module: https://goose-man.tech/_app/immutable/nodes/3.D9sLw0pQ.js', stack: '', source: '', url: 'https://goose-man.tech/', user_agent: ANDROID, release: '99a1fbc', user: null, first_at: minsAgo(95), last_at: minsAgo(31), count: 3, resolved_at: null, resolved_by: null },
+		{ id: 2, app: 'console', kind: 'svelte', message: "TypeError: can't access property \"slots\", o is null", stack: "SlotChart@https://goastman.dev/_app/immutable/chunks/SlotChart.Bq1xY7tA.js:1:902", source: 'https://goastman.dev/_app/immutable/chunks/SlotChart.Bq1xY7tA.js:1:902', url: 'https://goastman.dev/#/overview', user_agent: WINDOWS, release: 'fec6620', user: DEMO_ADMIN.nickname, first_at: minsAgo(140), last_at: minsAgo(140), count: 1, resolved_at: null, resolved_by: null },
+		{ id: 1, app: 'buyer', kind: 'error', message: 'ReferenceError: structuredClone is not defined', stack: 'ReferenceError: structuredClone is not defined\n    at cart (https://goose-man.tech/_app/immutable/chunks/cart.C1v8ZtqD.js:1:377)', source: 'https://goose-man.tech/_app/immutable/chunks/cart.C1v8ZtqD.js:1:377', url: 'https://goose-man.tech/#/cart', user_agent: IPHONE, release: 'a8ffdef', user: 'ต้นกล้า', first_at: minsAgo(3 * 1440), last_at: minsAgo(2 * 1440 + 90), count: 12, resolved_at: minsAgo(2 * 1440), resolved_by: DEMO_ADMIN.nickname }
+	];
 
 	const ruleView = (o: DemoOrder) => ({ status: o.status, payment: o.payment, created_at: o.created_at, paid_at: o.paid_at, refunded_at: o.refunded_at, total: o.total, otp_failed: o.otp_failed });
 	const row = (o: DemoOrder): OrderRow => ({
@@ -616,6 +629,22 @@ export function createDemoApi(): DemoApi {
 		async activity(limit = 100) {
 			if (me.role !== 'ADMIN') return fail('ADMIN_ONLY');
 			return wait(log.slice(0, limit));
+		},
+
+		async errors(status) {
+			const rows = errors.filter((e) => (status === 'resolved') === (e.resolved_at !== null));
+			return wait(rows.sort((a, b) => (b.resolved_at ?? b.last_at).localeCompare(a.resolved_at ?? a.last_at)));
+		},
+		async errorCount() {
+			return wait(errors.filter((e) => !e.resolved_at && now() - Date.parse(e.last_at) < 86_400_000).length);
+		},
+		async resolveError(id) {
+			const e = errors.find((x) => x.id === id && !x.resolved_at);
+			if (!e) return fail('BAD_STATE');
+			e.resolved_at = new Date().toISOString();
+			e.resolved_by = me.nickname;
+			record('ERROR_RESOLVED', 'error', String(id), e.message.slice(0, 80));
+			return wait(undefined);
 		},
 
 		/** Demo only: look at the console the way STAFF sees it */

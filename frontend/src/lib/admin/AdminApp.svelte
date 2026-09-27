@@ -16,6 +16,7 @@
 	import TeamPage from './pages/Team.svelte';
 	import ActivityPage from './pages/Activity.svelte';
 	import SettingsPage from './pages/Settings.svelte';
+	import ErrorsPage from './pages/Errors.svelte';
 
 	const PAGES = {
 		overview: OverviewPage,
@@ -25,6 +26,7 @@
 		riders: RidersPage,
 		partners: PartnersPage,
 		team: TeamPage,
+		errors: ErrorsPage,
 		activity: ActivityPage,
 		settings: SettingsPage
 	};
