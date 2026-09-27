@@ -396,11 +396,49 @@ export async function updateStorefront(a: StorefrontArgs): Promise<void> {
 }
 
 /** Uploads a banner, logo or store photo to store-banners/<storeId>/… and returns the public URL */
-export async function uploadStoreImage(storeId: string, file: File, kind: 'banner' | 'logo' | 'photo'): Promise<string> {
+export async function uploadStoreImage(storeId: string, file: File, kind: 'banner' | 'logo' | 'photo' | 'menu'): Promise<string> {
 	const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
 	const path = `${storeId}/${kind}-${Date.now()}.${ext}`;
 	check(await db().storage.from('store-banners').upload(path, file, { contentType: file.type, upsert: true }));
 	return db().storage.from('store-banners').getPublicUrl(path).data.publicUrl;
+}
+
+export interface MenuItemArgs {
+	/** Missing = a new dish */
+	id?: string;
+	name: string;
+	category: string;
+	price: number;
+	specialPrice?: number;
+	description: string;
+	/** URL from uploadStoreImage(), or the dish's current photo */
+	imageUrl: string;
+	isAvailable: boolean;
+}
+
+/** Add or change a dish of the partner's own store; returns its id */
+export async function saveMenuItem(a: MenuItemArgs): Promise<string> {
+	return check(
+		await db().rpc('partner_save_menu_item', {
+			p_id: a.id ?? null,
+			p_name: a.name,
+			p_category: a.category,
+			p_price: a.price,
+			p_special_price: a.specialPrice ?? null,
+			p_description: a.description,
+			p_image_url: a.imageUrl,
+			p_available: a.isAvailable
+		})
+	) as string;
+}
+
+/** Take a dish off the menu (kept for old orders, hidden everywhere else) */
+export async function removeMenuItem(id: string): Promise<void> {
+	check(await db().rpc('partner_remove_menu_item', { p_id: id }));
+}
+
+export async function updateStoreInfo(a: { name: string; category: string; description: string; queueMinutes: number }): Promise<void> {
+	check(await db().rpc('partner_update_store_info', { p_name: a.name, p_category: a.category, p_description: a.description, p_queue_minutes: a.queueMinutes }));
 }
 
 export type PromotionDraft = Omit<Promotion, 'id' | 'approved'> & { id?: string };

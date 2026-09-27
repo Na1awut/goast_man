@@ -83,6 +83,7 @@ try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20261003000000_rider_tools.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261004000000_partner_dashboard.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261005000000_team_personal_email.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261006000000_partner_menu.sql`, 'utf8'));
 	ok('profile-at-first-order migration applies cleanly', true);
 } catch (e) {
 	ok('profile-at-first-order migration applies cleanly', false, e.message);
@@ -836,6 +837,63 @@ await as(kai, async () => {
 });
 await as(tina, () => db.exec(`select admin_remove_member('kai.team@gmail.com')`));
 await as(kai, async () => ok('taken off the team, the console closes', (await rpc(`team_me()`)) === null));
+
+// ---------- Partners run their own menu and store details ----------
+const PHOTO = 'https://proj.supabase.co/storage/v1/object/public/store-banners/kfc-05/menu-1.jpg';
+const save = (id, name, cat, price, special, desc, img) =>
+	`select partner_save_menu_item(${id ? `'${id}'` : 'null'}, '${name}', '${cat}', ${price}, ${special ?? 'null'}, '${desc}', '${img}') as id`;
+await as(alice, () => expectError('a buyer cannot touch a menu', save(null, 'x', 'y', 30, null, '', ''), 'PARTNER_ONLY'));
+let newDish;
+await as(panee, async () => {
+	await expectError('a photo from elsewhere is refused', save(null, 'ข้าวไก่ทอดกระเทียม', 'ข้าว', 45, 55, '', 'https://evil.example/x.jpg'), 'BAD_IMAGE');
+	await expectError('another store’s folder is refused too', save(null, 'ข้าวไก่ทอดกระเทียม', 'ข้าว', 45, 55, '', PHOTO.replace('kfc-05', 'kfc-10')), 'BAD_IMAGE');
+	await expectError('price must be 1-2000', save(null, 'ข้าว', 'ข้าว', 0, null, '', ''), 'BAD_PRICE');
+	await expectError('พิเศษ must cost more', save(null, 'ข้าว', 'ข้าว', 40, 40, '', ''), 'BAD_SPECIAL_PRICE');
+	await expectError('a dish needs a name', save(null, '  ', 'ข้าว', 40, null, '', ''), 'BAD_ITEM_NAME');
+	await expectError('and a category', save(null, 'ข้าว', '', 40, null, '', ''), 'BAD_CATEGORY');
+	newDish = (await one(save(null, 'ข้าวไก่ทอดกระเทียม', 'ข้าวและไก่', 45, 55, 'กรอบนอกนุ่มใน', PHOTO))).id;
+	ok('the partner adds a dish with their own photo', /^kfc-05-/.test(newDish));
+	await expectError('another store’s dish cannot be edited', save('kfc-10-1', 'x', 'y', 30, null, '', ''), 'ITEM_NOT_FOUND');
+	// Changing a mock-up dish keeps its mock-up photo: only a new photo must be the store's own
+	const mock = await one(`select image_url from menu_items where id = 'kfc-05-2'`);
+	await db.exec(save('kfc-05-2', 'ข้าวคั่วกลิ้งไก่', 'ข้าวและไก่', 35, 45, '', mock.image_url));
+	ok('the partner changes a price, the old photo stays', (await one(`select price, image_url from menu_items where id = 'kfc-05-2'`)).price === 35);
+});
+await db.exec(`set role anon;`);
+const shown = await one(`select name, price, special_price, image_url, category from menu_items where id = '${newDish}'`);
+ok('buyers see the new dish at once', shown?.price === 45 && shown.special_price === 55 && shown.image_url === PHOTO && shown.category === 'ข้าวและไก่');
+await db.exec(`reset role;`);
+await as(alice, async () => {
+	const o = await orderRow((await placeOrder('kfc-05', [{ menu_item_id: newDish, quantity: 1, special: true }])).id);
+	ok('the new dish can be ordered at the partner’s price', o.food_total === 55, JSON.stringify(o));
+	await db.exec(`select cancel_order('${o.id}')`);
+});
+// Removing a dish that is in old orders: archived, history kept
+const historyBefore = Number((await one(`select count(*) n from order_items where menu_item_id = 'kfc-05-4'`)).n);
+await as(panee, () => db.exec(`select partner_remove_menu_item('kfc-05-4')`));
+await db.exec(`set role anon;`);
+ok('a removed dish disappears from the menu', (await one(`select count(*) n from menu_items where id = 'kfc-05-4'`)).n == 0);
+await db.exec(`reset role;`);
+ok('old orders still show the removed dish', historyBefore > 0 && Number((await one(`select count(*) n from order_items where menu_item_id = 'kfc-05-4'`)).n) === historyBefore);
+await as(alice, () => expectError('a removed dish cannot be ordered', `select place_order('kfc-05', '[{"menu_item_id":"kfc-05-4","quantity":1}]'::jsonb, 'x', null, 'CASH', null)`, 'ITEM_UNAVAILABLE'));
+await as(tina, async () => {
+	await db.exec(`select admin_set_item_available('kfc-05-4', true)`);
+	ok('the console menu hides removed dishes', !(await rpc(`admin_store_menu('kfc-05')`)).some((m) => m.id === 'kfc-05-4'));
+});
+ok('not even the console can put a removed dish back on sale', (await one(`select is_available from menu_items where id = 'kfc-05-4'`)).is_available === false);
+await as(panee, () => expectError('a removed dish cannot be removed again', `select partner_remove_menu_item('kfc-05-4')`, 'ITEM_NOT_FOUND'));
+// Store details
+await as(panee, async () => {
+	await expectError('queue time is 0-120 minutes', `select partner_update_store_info('ร้านป้าณี', 'ข้าวมันไก่', '', 200)`, 'BAD_QUEUE');
+	await expectError('a store needs a name', `select partner_update_store_info(' ', 'ข้าวมันไก่', '', 5)`, 'BAD_STORE_NAME');
+	await db.exec(`select partner_update_store_info('ร้านป้าณี ข้าวมันไก่', 'ข้าวมันไก่ ฮาลาล', 'สูตรเด็ดตั้งแต่ปี 2540', 7)`);
+	const st = await one(`select name, category, description, queue_minutes from stores where id = 'kfc-05'`);
+	ok('the partner edits the store name, category, description and queue', st.name === 'ร้านป้าณี ข้าวมันไก่' && st.queue_minutes === 7 && st.description === 'สูตรเด็ดตั้งแต่ปี 2540');
+});
+await as(tina, async () => {
+	const acts = new Set((await rpc(`admin_activity()`)).filter((l) => l.detail?.by === 'partner').map((l) => l.action));
+	ok('the team sees every menu and store change', ['ITEM_ADDED', 'ITEM_EDITED', 'ITEM_REMOVED', 'STORE_EDITED'].every((a) => acts.has(a)), [...acts].join(','));
+});
 
 // Anonymous visitors can browse the catalogue
 await db.exec(`set role anon;`);

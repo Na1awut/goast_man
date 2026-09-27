@@ -1,6 +1,6 @@
 // The store catalogue every screen reads (Svelte 5 runes).
 // Demo mode: the in-memory STORE_CATALOGUE. Live mode: Supabase, reloaded on demand.
-import type { Promotion, Store } from '$lib/types';
+import type { MenuItem, Promotion, Store } from '$lib/types';
 import { findStore, livePromotions, STORE_CATALOGUE, sortForBrowsing } from '$lib/data/stores';
 import * as api from '$lib/api/live';
 import { friendlyError, isLive } from '$lib/supabase';
@@ -107,6 +107,53 @@ class CatalogStore {
 			if (draft.logoFile) store.logoUrl = URL.createObjectURL(draft.logoFile);
 			if (draft.logoFile === null) store.logoUrl = undefined;
 			if (draft.photoFile) store.imageUrl = URL.createObjectURL(draft.photoFile);
+		});
+	}
+
+	/**
+	 * Add (no id) or change a dish. photoFile: File = upload and use, null = no
+	 * photo, undefined = keep the current one.
+	 */
+	async saveMenuItem(storeId: string, draft: Omit<api.MenuItemArgs, 'imageUrl'> & { imageUrl: string; photoFile?: File | null }) {
+		if (isLive) {
+			const imageUrl = draft.photoFile ? await api.uploadStoreImage(storeId, draft.photoFile, 'menu') : draft.photoFile === null ? '' : draft.imageUrl;
+			await api.saveMenuItem({ ...draft, imageUrl });
+			await this.#reloadStore(storeId);
+			return;
+		}
+		this.#patch(storeId, (store) => {
+			const imageUrl = draft.photoFile ? URL.createObjectURL(draft.photoFile) : draft.photoFile === null ? '' : draft.imageUrl;
+			const fields = {
+				name: draft.name.trim(),
+				category: draft.category.trim(),
+				price: draft.price,
+				specialPrice: draft.specialPrice,
+				description: draft.description.trim(),
+				imageUrl,
+				isAvailable: draft.isAvailable
+			};
+			const existing = draft.id ? store.menuItems.find((m) => m.id === draft.id) : undefined;
+			if (existing) Object.assign(existing, fields);
+			else store.menuItems.push({ id: uid(storeId), storeId, isPopular: false, ...fields } as MenuItem);
+		});
+	}
+
+	async removeMenuItem(storeId: string, itemId: string) {
+		if (isLive) await api.removeMenuItem(itemId);
+		this.#patch(storeId, (store) => (store.menuItems = store.menuItems.filter((m) => m.id !== itemId)));
+	}
+
+	async updateStoreInfo(storeId: string, info: { name: string; category: string; description: string; queueMinutes: number }) {
+		if (isLive) {
+			await api.updateStoreInfo(info);
+			await this.#reloadStore(storeId);
+			return;
+		}
+		this.#patch(storeId, (store) => {
+			store.name = info.name.trim();
+			store.category = info.category.trim();
+			store.description = info.description.trim();
+			store.queueMinutes = info.queueMinutes;
 		});
 	}
 

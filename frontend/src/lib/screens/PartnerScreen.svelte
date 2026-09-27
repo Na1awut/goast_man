@@ -4,6 +4,7 @@
 	import PartnerBadge from '$lib/components/PartnerBadge.svelte';
 	import PartnerMenu from '$lib/components/partner/PartnerMenu.svelte';
 	import PartnerOverview from '$lib/components/partner/PartnerOverview.svelte';
+	import StoreInfoForm from '$lib/components/partner/StoreInfoForm.svelte';
 	import Sheet from '$lib/components/Sheet.svelte';
 	import SmartImage from '$lib/components/SmartImage.svelte';
 	import type { PromoKind, Promotion } from '$lib/types';
@@ -205,6 +206,8 @@
 			{:else if tab === 'menu'}
 				<PartnerMenu {store} />
 			{:else}
+			<StoreInfoForm {store} />
+
 			<!-- Storefront -->
 			<section class="space-y-4 rounded-2xl border border-slate-100 bg-white p-4" aria-labelledby="front-title">
 				<div>
