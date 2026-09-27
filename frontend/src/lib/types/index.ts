@@ -22,7 +22,8 @@ export type Screen =
 	| 'EDIT_PROFILE'
 	| 'RIDER'
 	| 'RIDER_EARNINGS'
-	| 'RIDER_APPLY';
+	| 'RIDER_APPLY'
+	| 'RIDER_CHAT';
 
 export type TabId = 'HOME' | 'ORDERS' | 'STORES' | 'CHAT' | 'PROFILE';
 

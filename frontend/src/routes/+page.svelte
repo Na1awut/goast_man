@@ -22,6 +22,7 @@
 	import RiderScreen from '$lib/screens/RiderScreen.svelte';
 	import RiderEarningsScreen from '$lib/screens/RiderEarningsScreen.svelte';
 	import RiderApplyScreen from '$lib/screens/RiderApplyScreen.svelte';
+	import RiderChatScreen from '$lib/screens/RiderChatScreen.svelte';
 	import StoreDetailScreen from '$lib/screens/StoreDetailScreen.svelte';
 	import StoresScreen from '$lib/screens/StoresScreen.svelte';
 	import SuccessScreen from '$lib/screens/SuccessScreen.svelte';
@@ -56,7 +57,8 @@
 		EDIT_PROFILE: EditProfileScreen,
 		RIDER: RiderScreen,
 		RIDER_EARNINGS: RiderEarningsScreen,
-		RIDER_APPLY: RiderApplyScreen
+		RIDER_APPLY: RiderApplyScreen,
+		RIDER_CHAT: RiderChatScreen
 	};
 
 	let ready = $state(false);

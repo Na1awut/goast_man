@@ -99,7 +99,8 @@
 						<p class="mx-auto w-fit max-w-[90%] rounded-full bg-slate-200/70 px-3 py-1 text-center text-xs text-slate-600">{msg.text} ({msg.time})</p>
 					{:else if msg.sender === 'RIDER'}
 						<div class="max-w-[78%]">
-							<p class="rounded-2xl rounded-tl-md border border-slate-100 bg-white px-3.5 py-2.5 text-sm text-slate-800">{msg.text}</p>
+							{#if msg.imageUrl}<img src={msg.imageUrl} alt="รูปจากคนหิ้ว" class="max-h-56 rounded-2xl rounded-tl-md object-cover" />{/if}
+							{#if msg.text}<p class="rounded-2xl rounded-tl-md border border-slate-100 bg-white px-3.5 py-2.5 text-sm text-slate-800">{msg.text}</p>{/if}
 							<p class="mt-1 text-[11px] text-slate-400">{msg.time}</p>
 						</div>
 					{:else}

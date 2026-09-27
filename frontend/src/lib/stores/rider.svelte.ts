@@ -4,13 +4,14 @@
 // the roster, capacity and state on the server.
 // Demo mode: a few open jobs from made-up classmates, same rules in memory.
 // The OTP for demo jobs is DEMO_OTP.
-import type { RiderEarning, RiderJob } from '$lib/types';
+import type { ChatMessage, RiderEarning, RiderJob } from '$lib/types';
 import { owedToRider } from '$lib/admin/rules';
 import * as api from '$lib/api/live';
 import { STORE_CATALOGUE, findStore } from '$lib/data/stores';
 import { PLACES, planRound, START_OPTIONS, suggestAddOns, toRouteOrder, travelFn, type Route, type RouteOrder } from '$lib/routing';
 import { chime, unlockChime } from '$lib/chime';
 import { friendlyError, isLive } from '$lib/supabase';
+import { nowTime, uid } from '$lib/utils';
 import { auth } from './auth.svelte';
 import { catalog } from './catalog.svelte';
 import { toast } from './toast.svelte';
@@ -108,6 +109,81 @@ class RiderStore {
 	#clock: ReturnType<typeof setInterval> | null = null;
 	#refreshTimer: ReturnType<typeof setTimeout> | null = null;
 	#demoSeeded = false;
+
+	// ---------- Chat with the buyer of each job in hand ----------
+	chats = $state<Record<string, ChatMessage[]>>({});
+	/** Buyer messages not seen yet, per job */
+	unread = $state<Record<string, number>>({});
+	chatJobId = $state<string | null>(null);
+	chatJob = $derived(this.mine.find((j) => j.id === this.chatJobId) ?? null);
+	#chatSubs = new Map<string, () => void>();
+
+	openChat(jobId: string) {
+		this.chatJobId = jobId;
+		this.unread[jobId] = 0;
+		if (isLive && !this.chats[jobId]) void this.#loadChat(jobId);
+	}
+
+	closeChat() {
+		this.chatJobId = null;
+	}
+
+	async #loadChat(jobId: string) {
+		try {
+			const list = await api.fetchChat(jobId);
+			// Keep anything Realtime delivered while this was loading
+			const extra = (this.chats[jobId] ?? []).filter((m) => !list.some((l) => l.id === m.id));
+			this.chats[jobId] = [...list, ...extra];
+		} catch (err) {
+			toast.show(friendlyError(err), 'error');
+		}
+	}
+
+	#appendChat(jobId: string, message: ChatMessage) {
+		// Create the list through the state first: `??=` would hand back the plain array, and a push to it would not show
+		if (!this.chats[jobId]) this.chats[jobId] = [];
+		const list = this.chats[jobId];
+		if (list.some((m) => m.id === message.id)) return;
+		list.push(message);
+		if (message.sender !== 'CUSTOMER' || this.chatJobId === jobId) return;
+		this.unread[jobId] = (this.unread[jobId] ?? 0) + 1;
+		const job = this.mine.find((j) => j.id === jobId);
+		toast.show(`ข้อความจาก ${job?.customer?.nickname ?? 'ลูกค้า'} (${job?.orderCode ?? ''}): ${message.text || 'ส่งรูป'}`, 'info', { notify: true });
+	}
+
+	/** Live: listen to the chat of every job in hand, and stop for jobs that are done */
+	#syncChats() {
+		if (!isLive) return;
+		const ids = new Set(this.mine.map((j) => j.id));
+		for (const [id, stop] of this.#chatSubs) {
+			if (ids.has(id)) continue;
+			stop();
+			this.#chatSubs.delete(id);
+		}
+		for (const id of ids) {
+			if (this.#chatSubs.has(id)) continue;
+			this.#chatSubs.set(id, api.subscribeChat(id, (m) => this.#appendChat(id, m)));
+			if (!this.chats[id]) void this.#loadChat(id);
+		}
+	}
+
+	async sendChat(jobId: string, text: string, file?: File) {
+		const message = text.trim();
+		if (!message && !file) return;
+		if (isLive) {
+			const me = auth.user?.id;
+			if (!me) return;
+			try {
+				this.#appendChat(jobId, await api.sendChat(jobId, me, message, file, 'RIDER'));
+			} catch (err) {
+				toast.show(friendlyError(err), 'error');
+			}
+			return;
+		}
+		this.#appendChat(jobId, { id: uid('msg'), sender: 'RIDER', text: message, time: nowTime(), imageUrl: file ? URL.createObjectURL(file) : undefined });
+		// Demo: the buyer answers
+		setTimeout(() => this.#appendChat(jobId, { id: uid('msg'), sender: 'CUSTOMER', text: 'โอเคครับ ขอบคุณครับ', time: nowTime() }), 1500);
+	}
 	#heartbeat: ReturnType<typeof setInterval> | null = null;
 	#demoArrival: ReturnType<typeof setTimeout> | null = null;
 	/** Open jobs already seen, so only new ones ring */
@@ -148,6 +224,7 @@ class RiderStore {
 			const board = await api.fetchRiderBoard();
 			this.open = board?.open ?? [];
 			this.mine = board?.mine ?? [];
+			this.#syncChats();
 			this.capacity = board?.capacity ?? DEFAULT_CAPACITY;
 			this.online = board?.online ?? false;
 			if (this.online) this.#startHeartbeat();
@@ -339,6 +416,11 @@ class RiderStore {
 		this.#refreshTimer = null;
 		this.open = [];
 		this.mine = [];
+		for (const stop of this.#chatSubs.values()) stop();
+		this.#chatSubs.clear();
+		this.chats = {};
+		this.unread = {};
+		this.chatJobId = null;
 		this.earnings = [];
 		this.earningsLoaded = false;
 		this.loaded = false;

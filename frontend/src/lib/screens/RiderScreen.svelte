@@ -40,6 +40,11 @@
 	let otpError = $state('');
 	let releaseTarget = $state<RiderJob | null>(null);
 
+	function openChat(jobId: string) {
+		rider.openChat(jobId);
+		nav.go('RIDER_CHAT');
+	}
+
 	function openOtp(job: RiderJob) {
 		otpJob = job;
 		otp = '';
@@ -188,6 +193,10 @@
 												รับของแล้ว
 											</button>
 											<button type="button" onclick={() => (releaseTarget = job)} disabled={rider.busyId !== null} class="text-sm text-slate-500 underline-offset-2 hover:underline">คืนงาน</button>
+											<button type="button" onclick={() => openChat(job.id)} class="relative flex items-center gap-1 text-sm font-medium text-brand" aria-label="แชทกับ {job.customer?.nickname ?? 'ลูกค้า'}{rider.unread[job.id] ? ` (ข้อความใหม่ ${rider.unread[job.id]})` : ''}">
+												<Icon name="message" class="h-4 w-4" />แชท
+												{#if rider.unread[job.id]}<span class="ml-0.5 rounded-full bg-red-600 px-1.5 text-[11px] leading-5 font-semibold text-white tabular-nums">{rider.unread[job.id]}</span>{/if}
+											</button>
 										</div>
 									{:else}
 										<p class="text-xs text-slate-500">{job.orderCode} · {job.customer?.nickname ?? 'ลูกค้า'} · {money(job)}</p>
@@ -199,6 +208,10 @@
 											{:else}
 												<span class="text-xs text-slate-400">กด "รับของแล้ว" ก่อน ถึงจะส่งได้</span>
 											{/if}
+											<button type="button" onclick={() => openChat(job.id)} class="relative flex items-center gap-1 text-sm font-medium text-brand" aria-label="แชทกับ {job.customer?.nickname ?? 'ลูกค้า'}{rider.unread[job.id] ? ` (ข้อความใหม่ ${rider.unread[job.id]})` : ''}">
+												<Icon name="message" class="h-4 w-4" />แชท
+												{#if rider.unread[job.id]}<span class="ml-0.5 rounded-full bg-red-600 px-1.5 text-[11px] leading-5 font-semibold text-white tabular-nums">{rider.unread[job.id]}</span>{/if}
+											</button>
 											{#if job.customer?.phone}
 												<a href="tel:{job.customer.phone}" class="flex items-center gap-1 text-sm font-medium text-brand"><Icon name="phone" class="h-4 w-4" />โทร</a>
 											{/if}

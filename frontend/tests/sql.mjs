@@ -240,6 +240,9 @@ await as(carl, async () => {
 });
 await as(bob, async () => {
 	await db.exec(`select mark_delivering('${orderId}')`);
+	await db.exec(`insert into chat_messages (order_id, sender_id, sender_role, body) values ('${orderId}', '${bob}', 'RIDER', 'ถึงจุดส่งแล้วครับ')`);
+	ok('the rider answers in the chat', Number((await one(`select count(*) n from chat_messages where order_id = '${orderId}' and sender_role = 'RIDER'`)).n) === 1);
+	await expectError('the rider cannot post as the buyer', `insert into chat_messages (order_id, sender_id, sender_role, body) values ('${orderId}', '${bob}', 'CUSTOMER', 'fake')`);
 	const wrong = otp === '0000' ? '1111' : '0000';
 	ok('wrong OTP rejected', (await one(`select confirm_delivery('${orderId}', '${wrong}') as r`)).r === false);
 	ok('right OTP completes', (await one(`select confirm_delivery('${orderId}', '${otp}') as r`)).r === true);

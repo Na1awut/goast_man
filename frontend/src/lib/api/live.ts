@@ -358,7 +358,7 @@ export async function fetchChat(orderId: string): Promise<ChatMessage[]> {
 	return rows.map((r) => mapChat(r, r.image_path ? urls.get(r.image_path) : undefined));
 }
 
-export async function sendChat(orderId: string, senderId: string, text: string, file?: File): Promise<ChatMessage> {
+export async function sendChat(orderId: string, senderId: string, text: string, file?: File, role: 'CUSTOMER' | 'RIDER' = 'CUSTOMER'): Promise<ChatMessage> {
 	let imagePath: string | null = null;
 	if (file) {
 		const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
@@ -368,7 +368,7 @@ export async function sendChat(orderId: string, senderId: string, text: string, 
 	const row = check(
 		await db()
 			.from('chat_messages')
-			.insert({ order_id: orderId, sender_id: senderId, sender_role: 'CUSTOMER', body: text, image_path: imagePath })
+			.insert({ order_id: orderId, sender_id: senderId, sender_role: role, body: text, image_path: imagePath })
 			.select()
 			.single()
 	) as Row;
