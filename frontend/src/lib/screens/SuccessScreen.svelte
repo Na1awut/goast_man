@@ -1,6 +1,6 @@
 <script lang="ts">
 	import BottomBar from '$lib/components/BottomBar.svelte';
-	import Goose from '$lib/components/Goose.svelte';
+	import gooseDelivered from '$lib/assets/goose-delivered.webp';
 	import Icon from '$lib/components/Icon.svelte';
 	import { nav } from '$lib/stores/nav.svelte';
 	import { orders } from '$lib/stores/orders.svelte';
@@ -29,9 +29,10 @@
 <div class="flex min-h-dvh flex-1 flex-col bg-canvas">
 	<div class="flex-1 space-y-4 px-4 pt-[calc(2.5rem+env(safe-area-inset-top))] pb-6">
 		<div class="text-center">
-			<div class="relative mx-auto w-44">
-				<Goose pose="hop" class="w-44" />
-				<span class="absolute -right-1 bottom-2 flex h-11 w-11 items-center justify-center rounded-full bg-fresh text-white ring-4 ring-canvas">
+			<!-- The strong goose with the delivered bag: the order made it -->
+			<div class="relative mx-auto w-52">
+				<img src={gooseDelivered} alt="" width="540" height="575" class="goose-hop block h-auto w-full select-none" draggable="false" />
+				<span class="absolute bottom-3 left-2 flex h-11 w-11 items-center justify-center rounded-full bg-fresh text-white ring-4 ring-canvas">
 					<Icon name="check" class="check-draw h-6 w-6" strokeWidth={3} />
 				</span>
 			</div>
