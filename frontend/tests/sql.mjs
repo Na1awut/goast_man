@@ -87,6 +87,7 @@ try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20261007000000_free_delivery_team_only.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261008000000_store_discount.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261009000000_team_store_editing.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261010000000_store_recycle_bin.sql`, 'utf8'));
 	ok('profile-at-first-order migration applies cleanly', true);
 } catch (e) {
 	ok('profile-at-first-order migration applies cleanly', false, e.message);
@@ -975,6 +976,76 @@ await as(red, async () => {
 await as(sam, async () => {
 	await db.exec(`select admin_update_store_info('${newStore}', 'ร้านป้าแดง (KFC ล็อก 13)', 'ข้าวราดแกง', 'เปิด 7:00-14:00', 6)`);
 	ok('and the team can still edit it', (await one(`select name from stores where id = '${newStore}'`)).name === 'ร้านป้าแดง (KFC ล็อก 13)');
+});
+
+// ---------- Recycle bin: ADMIN deletes a store, restores it, or it is erased after 60 days ----------
+let binDish, liveOrder;
+await as(sam, async () => {
+	await db.exec(`select admin_set_store_hidden('${newStore}', false); select admin_set_store_open('${newStore}', true)`);
+	binDish = (await one(`select admin_save_menu_item('${newStore}', null, 'ข้าวผัดกะเพรา', 'ข้าว', 40, null, '', '') as id`)).id;
+	await expectError('only ADMIN deletes a store', `select admin_delete_store('${newStore}')`, 'ADMIN_ONLY');
+	await expectError('only ADMIN opens the recycle bin', `select admin_trash()`, 'ADMIN_ONLY');
+});
+await as(alice, async () => {
+	liveOrder = (await placeOrder(newStore, [{ menu_item_id: binDish, quantity: 1 }])).id;
+});
+await as(tina, () => expectError('a store with an order in progress cannot be deleted', `select admin_delete_store('${newStore}')`, 'STORE_HAS_ACTIVE_ORDERS'));
+await db.exec(`update orders set status = 'COMPLETED', completed_at = now() where id = '${liveOrder}'`);
+await as(tina, async () => {
+	await db.exec(`select admin_delete_store('${newStore}')`);
+	ok('a deleted store leaves the team’s store list', !(await rpc(`admin_stores()`)).some((s) => s.id === newStore));
+	const bin = (await rpc(`admin_trash()`)).find((s) => s.id === newStore);
+	const days = bin ? (Date.parse(bin.purge_at) - Date.parse(bin.deleted_at)) / 86_400_000 : 0;
+	ok('it waits in the bin for 60 days, with who deleted it', days === 60 && !!bin.deleted_by && bin.orders_total >= 1, JSON.stringify(bin));
+	await expectError('a store in the bin cannot be deleted twice', `select admin_delete_store('${newStore}')`, 'STORE_NOT_FOUND');
+	await expectError('the nightly clean-up is not callable from the app', `select purge_expired_stores()`, 'permission denied');
+});
+const deleted = await one(`select hidden, is_open from stores where id = '${newStore}'`);
+ok('deleting hides and closes the store', deleted.hidden === true && deleted.is_open === false);
+await db.exec(`set role anon;`);
+ok('buyers no longer see a deleted store', (await one(`select count(*) n from stores where id = '${newStore}'`)).n == 0);
+await db.exec(`reset role;`);
+await as(sam, async () => {
+	ok('nor does the team in the app', Number((await one(`select count(*) n from stores where id = '${newStore}'`)).n) === 0);
+	await expectError('a deleted store cannot be edited', `select admin_update_store_info('${newStore}', 'x', 'y', '', 5)`, 'STORE_DELETED');
+	await expectError('nor reopened', `select admin_set_store_open('${newStore}', true)`, 'STORE_DELETED');
+	await expectError('nor given dishes', `select admin_save_menu_item('${newStore}', null, 'x', 'y', 30, null, '', '')`, 'STORE_DELETED');
+});
+await as(red, () => expectError('its owner no longer runs it', `select partner_update_store_info('x', 'y', '', 5)`, 'PARTNER_ONLY'));
+await as(alice, () =>
+	expectError('and it takes no orders', `select place_order('${newStore}', '[{"menu_item_id":"${binDish}","quantity":1}]'::jsonb, 'อาคาร SIT', '', 'CASH', null)`, 'STORE_UNAVAILABLE')
+);
+await as(tina, async () => {
+	await db.exec(`select admin_restore_store('${newStore}')`);
+	const back = (await rpc(`admin_stores()`)).find((s) => s.id === newStore);
+	ok('ADMIN restores it, hidden and closed until shown', back?.hidden === true && back.is_open === false && back.items_total === 1 && back.owner_email === 'owner.red@example.com', JSON.stringify(back));
+	ok('the bin is empty again', !(await rpc(`admin_trash()`)).some((s) => s.id === newStore));
+});
+await as(red, async () => {
+	await db.exec(`select partner_update_store_info('ร้านป้าแดง', 'ข้าวราดแกง', 'เปิด 7:00-14:00', 6)`);
+	ok('the owner runs it again after a restore', (await one(`select name from stores where id = '${newStore}'`)).name === 'ร้านป้าแดง');
+});
+// 61 days in the bin: the next look at the bin erases it
+await as(tina, () => db.exec(`select admin_delete_store('${newStore}')`));
+await expectError('the bin date cannot be changed either', `update stores set deleted_at = now() - interval '61 days' where id = '${newStore}'`, 'STORE_DELETED');
+await db.exec(`alter table stores disable trigger stores_keep_deleted_shut; update stores set deleted_at = now() - interval '61 days' where id = '${newStore}'; alter table stores enable trigger stores_keep_deleted_shut;`);
+await as(tina, async () => {
+	await expectError('past 60 days a store cannot be restored', `select admin_restore_store('${newStore}')`, 'STORE_NOT_FOUND');
+	ok('and it is no longer in the bin', !(await rpc(`admin_trash()`)).some((s) => s.id === newStore));
+});
+ok('after 60 days the store is erased with its menu', Number((await one(`select count(*) n from stores where id = '${newStore}'`)).n) === 0 && Number((await one(`select count(*) n from menu_items where store_id = '${newStore}'`)).n) === 0);
+const kept = await one(`select store_id, pickup_name, (select count(*) from order_items where order_id = o.id) as lines from orders o where id = '${liveOrder}'`);
+ok('its past orders stay, with the store name and the dishes', kept.store_id === null && kept.pickup_name.startsWith('ร้านป้าแดง') && Number(kept.lines) === 1, JSON.stringify(kept));
+ok('the erase is in the log', (await one(`select detail from admin_log where action = 'STORE_PURGED' and target_id = '${newStore}'`)).detail.why === 'expired');
+ok('the owner is left without a store', (await one(`select partner_store_id from profiles where id = '${red}'`)).partner_store_id === null);
+await as(tina, async () => {
+	const next = (await one(`select admin_create_store('ร้านทดลองลบ', 'ทดลอง', 'kfc-main', '', '', 5) as id`)).id;
+	ok('a new store never reuses an erased store’s id', Number(next.split('-')[1]) > Number(newStore.split('-')[1]), `${next} vs ${newStore}`);
+	await expectError('only a store in the bin can be erased', `select admin_purge_store('${next}')`, 'STORE_NOT_FOUND');
+	await db.exec(`select admin_delete_store('${next}'); select admin_purge_store('${next}')`);
+	ok('ADMIN can erase a store in the bin straight away', Number((await one(`select count(*) n from stores where id = '${next}'`)).n) === 0);
+	const acts = new Set((await rpc(`admin_activity()`)).map((l) => l.action));
+	ok('the log shows delete, restore and erase', ['STORE_DELETED', 'STORE_RESTORED', 'STORE_PURGED'].every((a) => acts.has(a)));
 });
 
 // Anonymous visitors can browse the catalogue

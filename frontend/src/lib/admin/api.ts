@@ -11,6 +11,7 @@ import type {
 	AdminPromo,
 	AdminRider,
 	AdminStore,
+	TrashStore,
 	ApplicationStatus,
 	Badges,
 	ClientError,
@@ -81,6 +82,11 @@ export interface AdminApi {
 	createStore(s: NewStore): Promise<string>;
 	setStoreHidden(storeId: string, hidden: boolean): Promise<void>;
 	clearMenu(storeId: string): Promise<number>;
+	/** Recycle bin (ADMIN): a deleted store leaves the app at once and is erased after 60 days */
+	deleteStore(storeId: string): Promise<void>;
+	trash(): Promise<TrashStore[]>;
+	restoreStore(storeId: string): Promise<void>;
+	purgeStore(storeId: string): Promise<void>;
 	/** The full store (details, storefront, menu) for the editor; hidden stores included */
 	storeForEdit(storeId: string): Promise<Store>;
 	uploadStoreImage(storeId: string, file: File, kind: 'banner' | 'logo' | 'photo' | 'menu'): Promise<string>;
@@ -153,6 +159,10 @@ const liveApi: AdminApi = {
 		call('admin_create_store', { p_name: s.name, p_category: s.category, p_zone: s.zone, p_lock: s.lock, p_description: s.description, p_queue_minutes: s.queueMinutes }),
 	setStoreHidden: (storeId, hidden) => call('admin_set_store_hidden', { p_store_id: storeId, p_hidden: hidden }),
 	clearMenu: (storeId) => call('admin_clear_menu', { p_store_id: storeId }),
+	deleteStore: (storeId) => call('admin_delete_store', { p_store_id: storeId }),
+	trash: () => call('admin_trash'),
+	restoreStore: (storeId) => call('admin_restore_store', { p_store_id: storeId }),
+	purgeStore: (storeId) => call('admin_purge_store', { p_store_id: storeId }),
 	storeForEdit: (storeId) => app.fetchStore(storeId),
 	uploadStoreImage: (storeId, file, kind) => app.uploadStoreImage(storeId, file, kind),
 	saveMenuItem: (storeId, m) =>

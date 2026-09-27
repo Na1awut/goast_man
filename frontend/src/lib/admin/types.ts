@@ -200,6 +200,23 @@ export interface AdminStore {
 	items_off: number;
 }
 
+/** A deleted store waiting in the recycle bin (ADMIN) */
+export interface TrashStore {
+	id: string;
+	name: string;
+	category: string;
+	lock: string;
+	image_url: string;
+	logo_url: string | null;
+	deleted_at: string;
+	deleted_by: string | null;
+	/** When it is erased for good (60 days after deleting) */
+	purge_at: string;
+	owner_email: string | null;
+	items_total: number;
+	orders_total: number;
+}
+
 export interface NewStore {
 	name: string;
 	category: string;

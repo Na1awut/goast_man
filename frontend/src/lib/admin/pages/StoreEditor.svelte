@@ -42,6 +42,24 @@
 	let busy = $state(false);
 	let dialogError = $state('');
 	let confirmClear = $state(false);
+	let confirmDelete = $state(false);
+
+	// Into the recycle bin, then back to the list (the store is gone from it)
+	async function deleteStore() {
+		busy = true;
+		dialogError = '';
+		try {
+			const name = store?.name ?? 'ร้าน';
+			await c.api!.deleteStore(storeId);
+			confirmDelete = false;
+			c.done(`ย้าย ${name} ไปถังขยะแล้ว · กู้คืนได้ภายใน 60 วัน`);
+			c.go('stores');
+		} catch (err) {
+			dialogError = adminError(err);
+		} finally {
+			busy = false;
+		}
+	}
 	let inviting = $state(false);
 	let inviteEmail = $state('');
 
@@ -127,12 +145,30 @@
 				{/if}
 			{/if}
 		</div>
+
+		{#if c.isAdmin}
+			<section class="mx-auto flex max-w-2xl flex-wrap items-center gap-3 border-t border-slate-200 pt-5">
+				<div class="min-w-0 flex-1">
+					<p class="text-sm font-medium text-slate-900">ลบร้านนี้</p>
+					<p class="text-xs text-slate-500">ร้านหายจากแอปทันที และรออยู่ในถังขยะ 60 วัน กู้คืนได้ก่อนนั้น</p>
+				</div>
+				<button type="button" onclick={() => { confirmDelete = true; dialogError = ''; }} class="inline-flex h-10 items-center gap-2 rounded-xl border border-red-200 px-4 text-sm font-medium text-red-600 hover:bg-red-50">
+					<Icon name="trash" class="h-4 w-4" />ลบร้าน
+				</button>
+			</section>
+		{/if}
 	{/if}
 </div>
 
 <Modal open={confirmClear} title="ล้างเมนูทั้งร้าน {store?.name ?? ''}?" onclose={() => (confirmClear = false)} confirmLabel="ล้างเมนู" danger {busy} error={dialogError}
 	onconfirm={() => run(() => c.api!.clearMenu(storeId), `ล้างเมนู ${store?.name ?? ''} แล้ว`)}>
 	<p>ทั้ง {store?.menuItems.length ?? 0} เมนูจะหายจากร้าน (ออเดอร์เก่ายังอยู่ครบ) ใช้ตอนเอาเมนู mockup ออกเพื่อใส่ของจริง ย้อนกลับไม่ได้</p>
+</Modal>
+
+<Modal open={confirmDelete} title="ลบร้าน {store?.name ?? ''}?" onclose={() => (confirmDelete = false)} confirmLabel="ย้ายไปถังขยะ" danger {busy} error={dialogError}
+	onconfirm={() => deleteStore()}>
+	<p>ร้านจะหายจากแอปทันที ทั้งฝั่งลูกค้าและรายชื่อร้านของทีม{meta?.owner_email ? ' และเจ้าของร้านจะเข้าจัดการร้านไม่ได้จนกว่าจะกู้คืน' : ''}</p>
+	<p class="mt-2">ร้านจะรออยู่ใน <strong>ร้านค้า → ถังขยะ</strong> 60 วัน กู้คืนได้ก่อนนั้น พอครบ 60 วันร้านและเมนูจะถูกลบถาวร ส่วนออเดอร์เก่ายังเก็บไว้ครบ</p>
 </Modal>
 
 <Modal open={inviting} title="เชิญร้าน {store?.name ?? ''}" onclose={() => (inviting = false)} confirmLabel="ส่งคำเชิญ" {busy} disabled={!inviteEmail.trim()} error={dialogError}

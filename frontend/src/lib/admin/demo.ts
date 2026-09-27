@@ -248,6 +248,10 @@ export function createDemoApi(): DemoApi {
 		{ id: 'demo-promo-2', store_id: 'kfc-05', store: 'ร้านข้าวมันไก่ & ข้าวหมกไก่ (HALAL FOODS)', store_image: 'stores/kfc-05.webp', kind: 'DEAL', title: 'สั่ง 3 กล่อง ลด 15 บาท', description: '', min_qty: 3, discount: 15, free_delivery: false, ends_at: null, active: true, approved: true, created_at: new Date(now() - 5 * 86_400_000).toISOString(), review_note: null, state: 'LIVE', uses: 6 }
 	];
 	const invites: { email: string; store_id: string; store: string; invited_at: string }[] = [];
+	// Recycle bin: the deleted row, its catalogue entry (to restore it whole), and when
+	const BIN_DAYS = 60;
+	const trash: { row: (typeof stores)[number]; live: Store | undefined; deleted_at: string; deleted_by: string }[] = [];
+	const purgedIds: string[] = [];
 	const team: TeamMember[] = [
 		{ email: DEMO_ADMIN.email, role: 'ADMIN', note: 'แอดมินคนแรก', added_at: new Date(now() - 30 * 86_400_000).toISOString(), added_by: null, name: DEMO_ADMIN.nickname, full_name: DEMO_ADMIN.full_name, has_account: true, is_me: true },
 		{ email: 'staff.demo@mail.kmutt.ac.th', role: 'STAFF', note: 'กะเที่ยง', added_at: new Date(now() - 7 * 86_400_000).toISOString(), added_by: DEMO_ADMIN.nickname, name: 'ทีมงานทดลอง', full_name: 'ทีมงาน ทดลอง', has_account: true, is_me: false }
@@ -667,7 +671,8 @@ export function createDemoApi(): DemoApi {
 		},
 		async createStore(n) {
 			const prefix = n.zone === 'kfc-main' ? 'kfc' : n.zone;
-			const next = Math.max(0, ...stores.map((s) => Number(s.id.match(new RegExp(`^${prefix}-(\\d+)$`))?.[1] ?? 0))) + 1;
+			const taken = [...stores.map((s) => s.id), ...trash.map((t) => t.row.id), ...purgedIds];
+			const next = Math.max(0, ...taken.map((id) => Number(id.match(new RegExp(`^${prefix}-(\\d+)$`))?.[1] ?? 0))) + 1;
 			const id = `${prefix}-${String(next).padStart(2, '0')}`;
 			stores.push({ id, name: n.name.trim(), category: n.category.trim(), lock: n.lock.trim(), image_url: '', logo_url: null, is_open: false, is_partner: false, zone: n.zone, hidden: true, owner_email: null, invite_email: null });
 			catalog.stores.push({ id, zone: n.zone as Store['zone'], name: n.name.trim(), category: n.category.trim(), description: n.description.trim(), imageUrl: '', isOpen: false, rating: 0, reviewsCount: '0', queueMinutes: n.queueMinutes, lock: n.lock.trim(), isPartner: false, promotions: [], menuItems: [] });
@@ -690,6 +695,60 @@ export function createDemoApi(): DemoApi {
 			live.menuItems = [];
 			record('MENU_CLEARED', 'store', storeId, live.name, { items: n });
 			return wait(n);
+		},
+		async deleteStore(storeId) {
+			if (me.role !== 'ADMIN') return fail('ADMIN_ONLY');
+			const i = stores.findIndex((x) => x.id === storeId);
+			if (i < 0) return fail('STORE_NOT_FOUND');
+			if (orders.some((o) => o.store_id === storeId && ['PENDING', 'ACCEPTED', 'DELIVERING'].includes(o.status))) return fail('STORE_HAS_ACTIVE_ORDERS');
+			const [row] = stores.splice(i, 1);
+			Object.assign(row, { hidden: true, is_open: false });
+			const live = catalog.byId(storeId);
+			if (live) {
+				live.isOpen = false;
+				catalog.stores = catalog.stores.filter((st) => st.id !== storeId);
+			}
+			trash.unshift({ row, live, deleted_at: new Date().toISOString(), deleted_by: me.nickname });
+			record('STORE_DELETED', 'store', storeId, row.name);
+			return wait(undefined);
+		},
+		async trash() {
+			if (me.role !== 'ADMIN') return fail('ADMIN_ONLY');
+			return wait(
+				trash.map(({ row, live, deleted_at, deleted_by }) => ({
+					id: row.id,
+					name: live?.name ?? row.name,
+					category: live?.category ?? row.category,
+					lock: row.lock,
+					image_url: live?.imageUrl ?? row.image_url,
+					logo_url: live?.logoUrl ?? row.logo_url,
+					deleted_at,
+					deleted_by,
+					purge_at: new Date(Date.parse(deleted_at) + BIN_DAYS * 86_400_000).toISOString(),
+					owner_email: row.owner_email,
+					items_total: live?.menuItems.length ?? 0,
+					orders_total: orders.filter((o) => o.store_id === row.id).length
+				}))
+			);
+		},
+		async restoreStore(storeId) {
+			if (me.role !== 'ADMIN') return fail('ADMIN_ONLY');
+			const i = trash.findIndex((t) => t.row.id === storeId);
+			if (i < 0) return fail('STORE_NOT_FOUND');
+			const [{ row, live }] = trash.splice(i, 1);
+			stores.push(row);
+			if (live) catalog.stores = [...catalog.stores, live];
+			record('STORE_RESTORED', 'store', storeId, live?.name ?? row.name);
+			return wait(undefined);
+		},
+		async purgeStore(storeId) {
+			if (me.role !== 'ADMIN') return fail('ADMIN_ONLY');
+			const i = trash.findIndex((t) => t.row.id === storeId);
+			if (i < 0) return fail('STORE_NOT_FOUND');
+			const [{ row, live }] = trash.splice(i, 1);
+			purgedIds.push(storeId);
+			record('STORE_PURGED', 'store', storeId, live?.name ?? row.name, { why: 'admin' });
+			return wait(undefined);
 		},
 		async storeForEdit(storeId) {
 			const live = catalog.byId(storeId);

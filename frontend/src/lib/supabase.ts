@@ -47,6 +47,7 @@ export function friendlyError(error: unknown): string {
 		'saving new user': 'ใช้ได้เฉพาะอีเมล @kmutt.ac.th / @mail.kmutt.ac.th กรุณาเลือกบัญชี มจธ.',
 		AUTH_REQUIRED: 'กรุณาเข้าสู่ระบบก่อน',
 		STORE_UNAVAILABLE: 'ร้านนี้ปิดรับออเดอร์อยู่ตอนนี้',
+		STORE_DELETED: 'ร้านนี้ถูกลบแล้ว ติดต่อทีม Goose Man',
 		ITEM_UNAVAILABLE: 'มีเมนูในตะกร้าที่หมดแล้ว ลองเอาออกแล้วสั่งใหม่',
 		EMPTY_CART: 'ตะกร้ายังว่างอยู่',
 		PROMO_INVALID: 'โค้ดนี้ใช้ไม่ได้',

@@ -4,7 +4,8 @@
 	import { ZONE_NAMES } from '$lib/data/stores';
 	import { adminError } from '../api';
 	import { consoleState as c } from '../console.svelte';
-	import type { AdminStore, NewStore } from '../types';
+	import { thaiDate } from '../format';
+	import type { AdminStore, NewStore, TrashStore } from '../types';
 	import Empty from '../ui/Empty.svelte';
 	import Modal from '../ui/Modal.svelte';
 	import Tabs from '../ui/Tabs.svelte';
@@ -14,7 +15,8 @@
 	let stores = $state<AdminStore[] | null>(null);
 	let error = $state('');
 	let query = $state('');
-	let filter = $state<'all' | 'open' | 'closed' | 'hidden'>('all');
+	let filter = $state<'all' | 'open' | 'closed' | 'hidden' | 'trash'>('all');
+	let trash = $state<TrashStore[] | null>(null);
 
 	$effect(() => {
 		void c.tick;
@@ -26,6 +28,8 @@
 				error = '';
 			})
 			.catch((err) => (error = adminError(err)));
+		// The recycle bin is ADMIN's (opening it also erases stores past their 60 days)
+		if (c.isAdmin) c.api?.trash().then((t) => (trash = t)).catch(() => (trash = []));
 	});
 
 	const matches = (s: AdminStore) => {
@@ -84,6 +88,26 @@
 		}
 	}
 
+	// Recycle bin
+	const shownTrash = $derived((trash ?? []).filter((t) => !query.trim() || t.name.toLowerCase().includes(query.trim().toLowerCase())));
+	const daysLeft = (t: TrashStore) => Math.max(0, Math.ceil((Date.parse(t.purge_at) - Date.now()) / 86_400_000));
+	let purging = $state<TrashStore | null>(null);
+
+	async function purge() {
+		if (!purging) return;
+		busy = true;
+		dialogError = '';
+		try {
+			await c.api!.purgeStore(purging.id);
+			c.done(`ลบ ${purging.name} ถาวรแล้ว`);
+			purging = null;
+		} catch (err) {
+			dialogError = adminError(err);
+		} finally {
+			busy = false;
+		}
+	}
+
 	const field = 'h-11 w-full rounded-xl bg-slate-100 px-3.5 outline-none focus:ring-2 focus:ring-brand';
 </script>
 
@@ -104,16 +128,54 @@
 					{ id: 'all', label: 'ทั้งหมด', count: stores?.length },
 					{ id: 'open', label: 'เปิดอยู่', count: stores?.filter((s) => !s.hidden && s.is_open).length },
 					{ id: 'closed', label: 'ปิดอยู่', count: stores?.filter((s) => !s.hidden && !s.is_open).length },
-					{ id: 'hidden', label: 'ซ่อนจากแอป', count: stores?.filter((s) => s.hidden).length }
+					{ id: 'hidden', label: 'ซ่อนจากแอป', count: stores?.filter((s) => s.hidden).length },
+					...(c.isAdmin ? [{ id: 'trash' as const, label: 'ถังขยะ', count: trash?.length }] : [])
 				]}
 			/>
 			<button type="button" onclick={() => { creating = true; dialogError = ''; draft = { name: '', category: '', zone: 'kfc-main', lock: '', description: '', queueMinutes: 10 }; }} class="ml-auto inline-flex h-11 items-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-600">
 				<Icon name="plus" class="h-4 w-4" />เพิ่มร้าน
 			</button>
 		</div>
-		<p class="text-xs text-slate-500">แตะร้านเพื่อแก้ข้อมูล รูป และเมนู · ทีมแก้ได้ทุกร้าน ทั้งร้านที่ยังไม่มีเมลเจ้าของ และร้านที่ดูแลเองแล้ว</p>
+		{#if filter === 'trash'}
+			<p class="text-xs text-slate-500">ร้านที่ลบจะรออยู่ที่นี่ 60 วัน กู้คืนได้ก่อนนั้น (กลับมาแบบซ่อนจากแอปและปิดรับออเดอร์) · ครบ 60 วันร้านและเมนูจะถูกลบถาวร ออเดอร์เก่ายังเก็บไว้ครบ</p>
+		{:else}
+			<p class="text-xs text-slate-500">แตะร้านเพื่อแก้ข้อมูล รูป และเมนู · ทีมแก้ได้ทุกร้าน ทั้งร้านที่ยังไม่มีเมลเจ้าของ และร้านที่ดูแลเองแล้ว</p>
+		{/if}
 
-		{#if error && !stores}
+		{#if filter === 'trash'}
+			{#if !trash}
+				<div class="h-28 animate-pulse rounded-2xl bg-white"></div>
+			{:else if shownTrash.length === 0}
+				<div class="rounded-2xl border border-slate-100 bg-white"><Empty title={query.trim() ? 'ไม่พบร้านในถังขยะ' : 'ถังขยะว่าง'} body={query.trim() ? '' : 'ร้านที่ลบจากหน้าแก้ร้านจะมาอยู่ที่นี่'} goose={false} /></div>
+			{:else}
+				<div class="grid gap-3 sm:gap-4 md:grid-cols-2 2xl:grid-cols-3">
+					{#each shownTrash as t (t.id)}
+						{@const left = daysLeft(t)}
+						<article class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
+							<div class="flex items-center gap-3">
+								{#if t.logo_url || t.image_url}
+									<img src={img(t.logo_url || t.image_url)} alt="" class="h-14 w-14 shrink-0 rounded-xl object-cover opacity-60 grayscale" loading="lazy" />
+								{:else}
+									<span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-400"><Icon name="store" class="h-6 w-6" /></span>
+								{/if}
+								<div class="min-w-0 flex-1">
+									<p class="truncate font-semibold">{t.name}</p>
+									<p class="truncate text-xs text-slate-500">{t.lock ? `ล็อก ${t.lock} · ` : ''}{t.items_total} เมนู · ออเดอร์เก่า {t.orders_total}</p>
+									<p class="mt-1 text-xs text-slate-500">ลบเมื่อ {thaiDate(t.deleted_at)}{t.deleted_by ? ` โดย ${t.deleted_by}` : ''}</p>
+								</div>
+							</div>
+							<div class="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+								<p class="mr-auto text-xs font-medium {left <= 7 ? 'text-red-600' : 'text-slate-600'}">{left > 0 ? `ลบถาวรใน ${left} วัน` : 'จะถูกลบถาวรวันนี้'}</p>
+								<button type="button" onclick={() => (purging = t, dialogError = '')} class="h-9 rounded-lg px-3 text-sm font-medium text-red-600 hover:bg-red-50">ลบถาวร</button>
+								<button type="button" onclick={() => c.act(() => c.api!.restoreStore(t.id), `กู้คืน ${t.name} แล้ว · ยังซ่อนจากแอป เปิดแสดงได้ที่หน้าแก้ร้าน`)} class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-800 hover:bg-slate-50">
+									<Icon name="undo" class="h-4 w-4" />กู้คืน
+								</button>
+							</div>
+						</article>
+					{/each}
+				</div>
+			{/if}
+		{:else if error && !stores}
 			<div class="rounded-2xl border border-slate-100 bg-white"><Empty title="โหลดร้านไม่สำเร็จ" body={error} /></div>
 		{:else if !stores}
 			<div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">{#each Array(6) as _, i (i)}<div class="h-28 animate-pulse rounded-2xl bg-white"></div>{/each}</div>
@@ -155,6 +217,10 @@
 
 <Modal open={!!closing} title="ปิดรับออเดอร์ร้าน {closing?.name ?? ''}?" onclose={() => (closing = null)} confirmLabel="ปิดร้าน" danger {busy} error={dialogError} onconfirm={confirmClose}>
 	<p>ผู้ซื้อจะสั่งร้านนี้ไม่ได้จนกว่าจะเปิดอีกครั้ง ออเดอร์ที่สั่งไปแล้วยังดำเนินต่อตามปกติ</p>
+</Modal>
+
+<Modal open={!!purging} title="ลบ {purging?.name ?? ''} ถาวร?" onclose={() => (purging = null)} confirmLabel="ลบถาวร" danger {busy} error={dialogError} onconfirm={purge}>
+	<p>ร้าน เมนู โปร และคำเชิญของร้านนี้จะหายหมด ย้อนกลับไม่ได้ ส่วนออเดอร์เก่ายังเก็บไว้ครบ</p>
 </Modal>
 
 <Modal open={creating} title="เพิ่มร้าน" onclose={() => (creating = false)} confirmLabel="สร้างร้าน" {busy} disabled={!draftOk} error={dialogError} onconfirm={create}>
