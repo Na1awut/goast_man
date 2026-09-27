@@ -91,6 +91,8 @@ export interface AdminApi {
 	/** QR test mode: buyers may pay without a transfer while it is on (ADMIN switches it) */
 	appFlags(): Promise<AppFlags>;
 	setPaymentTestMode(on: boolean): Promise<void>;
+	/** Rain fee +5 on every delivery (STAFF or ADMIN) */
+	setRainSurcharge(on: boolean): Promise<void>;
 	/** The full store (details, storefront, menu) for the editor; hidden stores included */
 	storeForEdit(storeId: string): Promise<Store>;
 	uploadStoreImage(storeId: string, file: File, kind: 'banner' | 'logo' | 'photo' | 'menu'): Promise<string>;
@@ -169,6 +171,7 @@ const liveApi: AdminApi = {
 	purgeStore: (storeId) => call('admin_purge_store', { p_store_id: storeId }),
 	appFlags: () => call('app_flags'),
 	setPaymentTestMode: (on) => call('admin_set_payment_test_mode', { p_on: on }),
+	setRainSurcharge: (on) => call('admin_set_rain_surcharge', { p_on: on }),
 	storeForEdit: (storeId) => app.fetchStore(storeId),
 	uploadStoreImage: (storeId, file, kind) => app.uploadStoreImage(storeId, file, kind),
 	saveMenuItem: (storeId, m) =>

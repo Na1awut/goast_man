@@ -25,7 +25,7 @@ export function pickupPlace(job: RiderJob, findStore: (id: string) => Store | un
 }
 
 export function dropoffPlace(job: RiderJob): Place | undefined {
-	const point = DROPOFF_POINTS.find((p) => p.name === job.dropoffName);
+	const point = DROPOFF_POINTS.find((p) => job.dropoffName === p.name || job.dropoffName.startsWith(`${p.name} ชั้น`));
 	return point ? PLACES[point.id] : undefined;
 }
 

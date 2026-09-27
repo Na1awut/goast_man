@@ -92,6 +92,7 @@ try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20261012000000_cb1_zone.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261013000000_male_dorm_zone.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261014000000_payment_test_mode.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261015000000_delivery_fees.sql`, 'utf8'));
 	ok('profile-at-first-order migration applies cleanly', true);
 } catch (e) {
 	ok('profile-at-first-order migration applies cleanly', false, e.message);
@@ -140,7 +141,7 @@ const as = async (uid, fn) => {
 };
 // Cash by default: an unpaid PromptPay order is not a job yet (see the PromptPay section)
 const placeOrder = (store, items, code = null, pay = 'CASH') =>
-	one(`select place_order('${store}', '${JSON.stringify(items)}'::jsonb, 'อาคาร SIT ชั้น 1', 'โต๊ะหน้าลิฟต์', '${pay}', ${code ? `'${code}'` : 'null'}) as id`);
+	one(`select place_order_at('${store}', '${JSON.stringify(items)}'::jsonb, 'sit', 1, 'โต๊ะหน้าลิฟต์', '${pay}', ${code ? `'${code}'` : 'null'}) as id`);
 const orderRow = (id) => one(`select * from orders where id = '${id}'`);
 
 // ---------- Profile is asked for at the first order, not at sign-in ----------
@@ -148,8 +149,8 @@ const cp = (args) => `select complete_profile(${args.map((v) => (v === null ? 'n
 /** Fill in a student's profile, as the app does before their first order */
 const ready = (uid, nickname, phone, studentId) => as(uid, () => db.exec(cp([nickname, phone, null, studentId, 'คณะวิทยาศาสตร์', '2', '2026-09'])));
 await as(alice, async () => {
-	await expectError('no order before the profile is filled in', `select place_order('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":1}]', 'อาคาร SIT ชั้น 1', '', 'CASH', null)`, 'PROFILE_REQUIRED');
-	await expectError('no ฝากซื้อ before the profile is filled in', `select place_custom_order('เซเว่นหน้าหอใน มจธ.', 'นมจืด 2 กล่อง', 30, 'อาคาร SIT ชั้น 1', null)`, 'PROFILE_REQUIRED');
+	await expectError('no order before the profile is filled in', `select place_order_at('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":1}]', 'sit', 1, '', 'CASH', null)`, 'PROFILE_REQUIRED');
+	await expectError('no ฝากซื้อ before the profile is filled in', `select place_custom_order_at('เซเว่นหน้าหอใน มจธ.', 'นมจืด 2 กล่อง', 30, 'sit', 1, null)`, 'PROFILE_REQUIRED');
 });
 await ready(alice, 'Alice', '0811111111', '66070500101');
 
@@ -162,7 +163,7 @@ await as(alice, async () => {
 
 	await expectError(
 		'KMUTTFIRST refused on 2nd order',
-		`select place_order('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":1}]', 'x', '', 'CASH', 'KMUTTFIRST')`,
+		`select place_order_at('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":1}]', 'sit', 1, '', 'CASH', 'KMUTTFIRST')`,
 		'PROMO_NOT_ELIGIBLE'
 	);
 
@@ -180,21 +181,21 @@ await as(alice, async () => {
 	const lines = (await db.query(`select name, price, quantity, special from order_items where order_id = '${o4.id}' order by special`)).rows;
 	ok('พิเศษ line named and priced as พิเศษ', lines.length === 2 && lines[1].special === true && lines[1].price === 50 && lines[1].name === 'ข้าวมันไก่ทอด (พิเศษ)' && lines[0].name === 'ข้าวมันไก่ทอด');
 	ok('order text says พิเศษ', o4.item_details.includes('ข้าวมันไก่ทอด (พิเศษ) ×2'));
-	await expectError('พิเศษ refused for a one-size item', `select place_order('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":1,"special":true}]', 'x', '', 'CASH', null)`, 'ITEM_UNAVAILABLE');
-	await expectError('duplicate พิเศษ lines refused', `select place_order('kfc-05', '[{"menu_item_id":"kfc-05-4","quantity":1,"special":true},{"menu_item_id":"kfc-05-4","quantity":1,"special":true}]', 'x', '', 'CASH', null)`, 'ITEM_UNAVAILABLE');
+	await expectError('พิเศษ refused for a one-size item', `select place_order_at('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":1,"special":true}]', 'sit', 1, '', 'CASH', null)`, 'ITEM_UNAVAILABLE');
+	await expectError('duplicate พิเศษ lines refused', `select place_order_at('kfc-05', '[{"menu_item_id":"kfc-05-4","quantity":1,"special":true},{"menu_item_id":"kfc-05-4","quantity":1,"special":true}]', 'sit', 1, '', 'CASH', null)`, 'ITEM_UNAVAILABLE');
 	const mine = (await one(`select my_orders('${o4.id}') as j`)).j[0];
 	ok('my_orders reports the size', mine.items.some((i) => i.special === true) && mine.items.some((i) => i.special === false));
 
 	// Prices come from the database, whatever the client believes
-	await expectError('sold-out item refused', `select place_order('kfc-04', '[{"menu_item_id":"kfc-04-8","quantity":1}]', 'x', '', 'CASH', null)`, 'ITEM_UNAVAILABLE');
-	await expectError('item from another store refused', `select place_order('kfc-10', '[{"menu_item_id":"kfc-05-4","quantity":1}]', 'x', '', 'CASH', null)`, 'ITEM_UNAVAILABLE');
-	await expectError('duplicate lines refused', `select place_order('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":1},{"menu_item_id":"kfc-10-1","quantity":1}]', 'x', '', 'CASH', null)`, 'ITEM_UNAVAILABLE');
-	await expectError('quantity 0 refused', `select place_order('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":0}]', 'x', '', 'CASH', null)`, 'BAD_QUANTITY');
-	await expectError('unknown promo code refused', `select place_order('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":1}]', 'x', '', 'CASH', 'FREEMONEY')`, 'PROMO_INVALID');
+	await expectError('sold-out item refused', `select place_order_at('kfc-04', '[{"menu_item_id":"kfc-04-8","quantity":1}]', 'sit', 1, '', 'CASH', null)`, 'ITEM_UNAVAILABLE');
+	await expectError('item from another store refused', `select place_order_at('kfc-10', '[{"menu_item_id":"kfc-05-4","quantity":1}]', 'sit', 1, '', 'CASH', null)`, 'ITEM_UNAVAILABLE');
+	await expectError('duplicate lines refused', `select place_order_at('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":1},{"menu_item_id":"kfc-10-1","quantity":1}]', 'sit', 1, '', 'CASH', null)`, 'ITEM_UNAVAILABLE');
+	await expectError('quantity 0 refused', `select place_order_at('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":0}]', 'sit', 1, '', 'CASH', null)`, 'BAD_QUANTITY');
+	await expectError('unknown promo code refused', `select place_order_at('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":1}]', 'sit', 1, '', 'CASH', 'FREEMONEY')`, 'PROMO_INVALID');
 
-	const c = await orderRow((await one(`select place_custom_order('เซเว่นหน้าหอใน', 'นมจืด 2 กล่อง', 45, 'หอ S6', '') as id`)).id);
+	const c = await orderRow((await one(`select place_custom_order_at('เซเว่นหน้าหอใน', 'นมจืด 2 กล่อง', 45, 'sit', 1, '') as id`)).id);
 	ok('custom order total = estimate + 20', c.total_price === 65 && c.kind === 'CUSTOM');
-	await expectError('custom over 1000 refused', `select place_custom_order('x', 'ของเยอะ', 1500, 'y', '')`, 'BAD_PRICE');
+	await expectError('custom over 1000 refused', `select place_custom_order_at('x', 'ของเยอะ', 1500, 'sit', 1, '')`, 'BAD_PRICE');
 
 	// Clients cannot write orders directly
 	await expectError('direct insert into orders blocked by RLS', `insert into orders (order_code, kind, customer_id, pickup_name, dropoff_name, item_details, food_total, delivery_fee, total_price, payment_method) values ('#KM-0000', 'CUSTOM', '${alice}', 'a', 'b', 'c', 0, 0, 0, 'CASH')`);
@@ -592,8 +593,8 @@ await as(sam, async () => {
 	ok('store menu lists sizes and availability', (await rpc(`admin_store_menu('kfc-05')`)).some((m) => m.id === 'kfc-05-4' && m.special_price === 50));
 });
 await as(alice, async () => {
-	await expectError('a closed store takes no orders', `select place_order('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":1}]', 'x', '', 'CASH', null)`, 'STORE_UNAVAILABLE');
-	await expectError('a sold-out item cannot be ordered', `select place_order('kfc-05', '[{"menu_item_id":"kfc-05-3","quantity":1}]', 'x', '', 'CASH', null)`, 'ITEM_UNAVAILABLE');
+	await expectError('a closed store takes no orders', `select place_order_at('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":1}]', 'sit', 1, '', 'CASH', null)`, 'STORE_UNAVAILABLE');
+	await expectError('a sold-out item cannot be ordered', `select place_order_at('kfc-05', '[{"menu_item_id":"kfc-05-3","quantity":1}]', 'sit', 1, '', 'CASH', null)`, 'ITEM_UNAVAILABLE');
 });
 await as(sam, async () => {
 	await db.exec(`select admin_set_store_open('kfc-10', true)`);
@@ -757,7 +758,7 @@ await as(hana, async () => ok('an approved student is a rider', (await one(`sele
 // Round-up tip
 ok('round-up tip goes to the next 5 baht', (await rpc(`jsonb_build_array(round_up_tip(52), round_up_tip(58), round_up_tip(55))`)).join() === '3,2,0');
 const tipped = (cart, pay, tip) =>
-	one(`select place_order_tipped('kfc-10', '${JSON.stringify(cart)}'::jsonb, 'อาคาร SIT ชั้น 1', null, '${pay}', null, ${tip}) as id`);
+	one(`select place_order_at('kfc-10', '${JSON.stringify(cart)}'::jsonb, 'sit', 1, null, '${pay}', null, ${tip}) as id`);
 let cashTipped, ppTipped;
 await as(alice, async () => {
 	// A cart whose total is not already a multiple of 5
@@ -771,7 +772,7 @@ await as(alice, async () => {
 		if (base % 5) break;
 	}
 	const tip = (5 - (base % 5)) % 5;
-	await expectError('only the round-up is accepted as a tip', `select place_order_tipped('kfc-10', '${JSON.stringify(cart)}'::jsonb, 'x', null, 'CASH', null, ${tip + 1})`, 'BAD_TIP');
+	await expectError('only the round-up is accepted as a tip', `select place_order_at('kfc-10', '${JSON.stringify(cart)}'::jsonb, 'sit', 1, null, 'CASH', null, ${tip + 1})`, 'BAD_TIP');
 	cashTipped = await orderRow((await tipped(cart, 'CASH', tip)).id);
 	ok('the tip is added to the order total', tip > 0 && cashTipped.total_price === base + tip && cashTipped.tip === tip && cashTipped.tip_in_total === true, JSON.stringify({ base, tip, total: cashTipped.total_price }));
 	ok('the rounded total ends in 0 or 5', cashTipped.total_price % 5 === 0);
@@ -821,7 +822,7 @@ await as(panee, async () => {
 	await db.exec(`select partner_set_item_available('kfc-05-1', false)`);
 	ok('the partner can mark a dish sold out', (await one(`select is_available from menu_items where id = 'kfc-05-1'`)).is_available === false);
 });
-await as(alice, () => expectError('a closed store takes no orders', `select place_order('kfc-05', '[{"menu_item_id":"kfc-05-4","quantity":1}]'::jsonb, 'x', null, 'CASH', null)`, 'STORE_UNAVAILABLE'));
+await as(alice, () => expectError('a closed store takes no orders', `select place_order_at('kfc-05', '[{"menu_item_id":"kfc-05-4","quantity":1}]'::jsonb, 'sit', 1, null, 'CASH', null)`, 'STORE_UNAVAILABLE'));
 await as(panee, async () => {
 	await db.exec(`select partner_set_store_open(true); select partner_set_item_available('kfc-05-1', true)`);
 	ok('and open it again', (await one(`select is_open from stores where id = 'kfc-05'`)).is_open === true);
@@ -882,7 +883,7 @@ await db.exec(`set role anon;`);
 ok('a removed dish disappears from the menu', (await one(`select count(*) n from menu_items where id = 'kfc-05-4'`)).n == 0);
 await db.exec(`reset role;`);
 ok('old orders still show the removed dish', historyBefore > 0 && Number((await one(`select count(*) n from order_items where menu_item_id = 'kfc-05-4'`)).n) === historyBefore);
-await as(alice, () => expectError('a removed dish cannot be ordered', `select place_order('kfc-05', '[{"menu_item_id":"kfc-05-4","quantity":1}]'::jsonb, 'x', null, 'CASH', null)`, 'ITEM_UNAVAILABLE'));
+await as(alice, () => expectError('a removed dish cannot be ordered', `select place_order_at('kfc-05', '[{"menu_item_id":"kfc-05-4","quantity":1}]'::jsonb, 'sit', 1, null, 'CASH', null)`, 'ITEM_UNAVAILABLE'));
 await as(tina, async () => {
 	await db.exec(`select admin_set_item_available('kfc-05-4', true)`);
 	ok('the console menu hides removed dishes', !(await rpc(`admin_store_menu('kfc-05')`)).some((m) => m.id === 'kfc-05-4'));
@@ -1020,7 +1021,7 @@ await as(sam, async () => {
 });
 await as(red, () => expectError('its owner no longer runs it', `select partner_update_store_info('x', 'y', '', 5)`, 'PARTNER_ONLY'));
 await as(alice, () =>
-	expectError('and it takes no orders', `select place_order('${newStore}', '[{"menu_item_id":"${binDish}","quantity":1}]'::jsonb, 'อาคาร SIT', '', 'CASH', null)`, 'STORE_UNAVAILABLE')
+	expectError('and it takes no orders', `select place_order_at('${newStore}', '[{"menu_item_id":"${binDish}","quantity":1}]'::jsonb, 'sit', 1, '', 'CASH', null)`, 'STORE_UNAVAILABLE')
 );
 await as(tina, async () => {
 	await db.exec(`select admin_restore_store('${newStore}')`);
@@ -1140,6 +1141,49 @@ await as(alice, async () => {
 	await expectError('once off, test payments stop at once', `select pay_order_test('${again}')`, 'TEST_MODE_OFF');
 	await db.exec(`select cancel_order('${again}'); select cancel_order('${cashTest}')`);
 });
+
+// ---------- Delivery fee: distance, floor, rain; at most 5 items ----------
+const quote = async (store, drop, floor) => (await one(`select delivery_quote(${store ? `'${store}'` : 'null'}, '${drop}', ${floor}) as q`)).q;
+await db.exec(`set role anon;`);
+const qNear = await quote('kfc-10', 'sit', 1);
+ok('near the canteen (KFC → SIT) the fee is 15', qNear.base === 15 && qNear.fee === 15 && qNear.near === true, JSON.stringify(qNear));
+const qFar = await quote('kfc-10', 'dorm-s6', 1);
+ok('far from it (KFC → หอ S6) the fee is 20', qFar.base === 20 && qFar.fee === 20 && qFar.near === false, JSON.stringify(qFar));
+ok('1 baht a floor above the first', (await quote('kfc-10', 'sit', 5)).fee === 19);
+ok('never above 25 in normal times (near, floor 20)', (await quote('kfc-10', 'sit', 20)).fee === 25);
+ok('never above 25 in normal times (far, floor 8)', (await quote('kfc-10', 'dorm-s6', 8)).fee === 25);
+ok('ฝากซื้อ starts at 20, plus floors', (await quote(null, 'sit', 3)).fee === 22);
+await expectError('an unknown drop-off is refused', `select delivery_quote('kfc-10', 'moon', 1)`, 'BAD_DROPOFF');
+await expectError('floor 0 is refused', `select delivery_quote('kfc-10', 'sit', 0)`, 'BAD_FLOOR');
+await expectError('floor 21 is refused', `select delivery_quote('kfc-10', 'sit', 21)`, 'BAD_FLOOR');
+await db.exec(`reset role;`);
+
+await as(alice, async () => {
+	await expectError('the app cannot use the old flat-fee order call', `select place_order('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":1}]'::jsonb, 'x', '', 'CASH', null)`, 'permission denied');
+	await expectError('6 items is more than a rider can carry', `select place_order_at('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":4},{"menu_item_id":"kfc-10-8","quantity":2}]'::jsonb, 'sit', 1, '', 'CASH', null)`, 'TOO_MANY_ITEMS');
+	const five = await orderRow((await one(`select place_order_at('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":5}]'::jsonb, 'sit', 5, '', 'CASH', null) as id`)).id);
+	ok('5 items from one store go, with the floor fee', five.delivery_fee === 19 && five.dropoff_floor === 5 && five.dropoff_id === 'sit' && five.dropoff_name === 'อาคาร SIT ชั้น 5', JSON.stringify({ fee: five.delivery_fee, name: five.dropoff_name }));
+	await db.exec(`select cancel_order('${five.id}')`);
+});
+await as(alice, () => expectError('a buyer cannot switch the rain fee on', `select admin_set_rain_surcharge(true)`, 'TEAM_ONLY'));
+await as(sam, async () => {
+	await db.exec(`select admin_set_rain_surcharge(true)`);
+	ok('STAFF switches the rain fee on', (await rpc(`app_flags()`)).rain_surcharge === true);
+});
+ok('rain adds 5, even above 25', (await quote('kfc-10', 'sit', 1)).fee === 20 && (await quote('kfc-10', 'dorm-s6', 8)).fee === 30);
+await as(alice, async () => {
+	const wet = await orderRow((await one(`select place_order_at('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":1}]'::jsonb, 'sit', 1, '', 'CASH', null) as id`)).id);
+	ok('an order placed in the rain carries the rain fee', wet.delivery_fee === 20 && wet.fee_rain === 5);
+	const errand = await orderRow((await one(`select place_custom_order_at('เซเว่นหน้าหอใน', 'นมจืด 2 กล่อง', 30, 'dorm-s6', 2, '') as id`)).id);
+	ok('ฝากซื้อ in the rain: 20 + 1 floor + 5', errand.delivery_fee === 26 && errand.dropoff_name === 'หอพักหญิง S6 ชั้น 2');
+	await db.exec(`select cancel_order('${wet.id}'); select cancel_order('${errand.id}')`);
+});
+await as(sam, () => db.exec(`select admin_set_rain_surcharge(false)`));
+await as(tina, async () => {
+	const acts = new Set((await rpc(`admin_activity()`)).map((l) => l.action));
+	ok('the rain switch is in the log', acts.has('RAIN_ON') && acts.has('RAIN_OFF'));
+});
+ok('rain off: back to the normal fee', (await quote('kfc-10', 'sit', 1)).fee === 15);
 
 // Anonymous visitors can browse the catalogue
 await db.exec(`set role anon;`);

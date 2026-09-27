@@ -166,6 +166,15 @@
 		{/if}
 	</header>
 
+	{#if c.flags?.rain_surcharge}
+		<div class="border-b border-sky-200 bg-sky-50 px-4 py-2.5 text-sm text-sky-900 sm:px-6" role="status">
+			<div class="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-3 gap-y-1">
+				<span class="font-semibold">ค่าหิ้วช่วงฝนตก +{c.flags.rain_fee ?? 5} บาท เปิดอยู่</span>
+				<span class="text-sky-800">ทุกออเดอร์ใหม่จ่ายเพิ่ม เงินส่วนนี้เข้าคนหิ้ว{c.flags.rain_by ? ` · เปิดโดย ${c.flags.rain_by}` : ''}</span>
+				<button type="button" onclick={() => c.act(async () => { await c.api!.setRainSurcharge(false); c.flags = await c.api!.appFlags(); }, 'ปิดค่าหิ้วช่วงฝนตกแล้ว')} class="font-medium underline underline-offset-2 sm:ml-auto">ฝนหยุดแล้ว ปิดเลย</button>
+			</div>
+		</div>
+	{/if}
 	{#if c.flags?.payment_test_mode}
 		<div class="border-b border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900 sm:px-6" role="status">
 			<div class="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-3 gap-y-1">

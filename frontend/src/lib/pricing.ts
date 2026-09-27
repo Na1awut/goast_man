@@ -5,6 +5,42 @@ import { livePromotions } from '$lib/data/stores';
 
 export const STORE_DELIVERY_FEE = 15;
 export const CUSTOM_DELIVERY_FEE = 20;
+
+// Delivery fee (mirrors delivery_quote() in the database, which decides):
+// 15 ฿ within FEE_NEAR_M of the store's canteen, 20 ฿ beyond (ฝากซื้อ: 20),
+// +1 ฿ per floor above the first, base + floors never above FEE_CAP,
+// +RAIN_FEE while the team has the rain fee on.
+export const FEE_NEAR_M = 300;
+export const FEE_CAP = 25;
+export const RAIN_FEE = 5;
+export const MAX_FLOOR = 20;
+/** What one rider can carry: items per order, quantities added up */
+export const MAX_ORDER_ITEMS = 5;
+
+export interface DeliveryQuote {
+	base: number;
+	floorFee: number;
+	rain: number;
+	fee: number;
+	near: boolean;
+}
+
+/** distanceM null = ฝากซื้อ (no store): the 20 ฿ base */
+export function quoteDelivery(a: { distanceM: number | null; floor: number; raining: boolean }): DeliveryQuote {
+	const near = a.distanceM !== null && a.distanceM <= FEE_NEAR_M;
+	const base = near ? STORE_DELIVERY_FEE : CUSTOM_DELIVERY_FEE;
+	const floorFee = Math.max(0, Math.min(Math.floor(a.floor) - 1, FEE_CAP - base));
+	const rain = a.raining ? RAIN_FEE : 0;
+	return { base, floorFee, rain, fee: base + floorFee + rain, near };
+}
+
+/** "15 ฿ ใกล้โรงอาหาร · ชั้น 5 +4 ฿ · ฝนตก +5 ฿" */
+export function describeQuote(q: DeliveryQuote, floor: number, custom = false): string {
+	const parts = [custom ? `ฝากซื้อ ${q.base} ฿` : `${q.base} ฿ ${q.near ? 'ใกล้โรงอาหาร' : 'ไกลจากโรงอาหาร'}`];
+	if (q.floorFee) parts.push(`ชั้น ${floor} +${q.floorFee} ฿`);
+	if (q.rain) parts.push(`ฝนตก +${q.rain} ฿`);
+	return parts.join(' · ');
+}
 /** Upper bound for a custom order: the runner fronts this money in cash */
 export const CUSTOM_MAX_PRICE = 1000;
 

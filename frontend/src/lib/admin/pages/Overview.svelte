@@ -9,6 +9,7 @@
 	import Empty from '../ui/Empty.svelte';
 	import KpiTile from '../ui/KpiTile.svelte';
 	import SlotChart from '../ui/SlotChart.svelte';
+	import Toggle from '../ui/Toggle.svelte';
 	import StagePill from '../ui/StagePill.svelte';
 	import StatusDonut from '../ui/StatusDonut.svelte';
 
@@ -35,6 +36,15 @@
 		<div class="mt-4 h-80 animate-pulse rounded-2xl bg-white"></div>
 	{/if}
 {:else}
+	<!-- Rain fee: STAFF on shift flip it when it starts raining -->
+	<section class="mb-3 flex items-center gap-4 rounded-2xl border bg-white px-4 py-3 sm:mb-4 {c.flags?.rain_surcharge ? 'border-sky-300' : 'border-slate-100'}">
+		<div class="min-w-0 flex-1">
+			<p class="text-sm font-semibold text-slate-900">ค่าหิ้วช่วงฝนตก +{c.flags?.rain_fee ?? 5} บาท</p>
+			<p class="text-xs text-slate-500">{c.flags?.rain_surcharge ? `เปิดอยู่ ทุกออเดอร์ใหม่จ่ายเพิ่ม${c.flags.rain_by ? ` · เปิดโดย ${c.flags.rain_by}` : ''}` : 'ปิดอยู่ · เปิดเมื่อฝนตก เงินส่วนนี้เข้าคนหิ้ว'}</p>
+		</div>
+		<Toggle checked={!!c.flags?.rain_surcharge} label="ค่าหิ้วช่วงฝนตก" onchange={(v) => c.act(async () => { await c.api!.setRainSurcharge(v); c.flags = await c.api!.appFlags(); }, v ? 'เปิดค่าหิ้วช่วงฝนตกแล้ว' : 'ปิดค่าหิ้วช่วงฝนตกแล้ว')} />
+	</section>
+
 	<div class="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3 min-[1600px]:grid-cols-6">
 		<KpiTile label={o.is_today ? 'ออเดอร์วันนี้' : 'ออเดอร์'} value={count(o.orders)} icon="cart" trend={o.slots.map((s) => s.orders)} onclick={() => c.go('orders')}>
 			{#snippet footer()}สำเร็จ {o.status_counts.COMPLETED} · ยกเลิก {o.status_counts.CANCELLED}{/snippet}

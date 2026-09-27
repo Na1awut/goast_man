@@ -1,6 +1,9 @@
 // Cart global store (Svelte 5 runes)
 import type { CartItem, MenuItem, Store } from '$lib/types';
-import { bestPromotion, STORE_DELIVERY_FEE, unitPrice, type PromoCode } from '$lib/pricing';
+import { bestPromotion, MAX_ORDER_ITEMS, quoteDelivery, unitPrice, type PromoCode } from '$lib/pricing';
+import { distanceMeters, PLACES, STORE_ZONE_PLACE } from '$lib/routing';
+import { campus } from './campus.svelte';
+import { flags } from './flags.svelte';
 import { catalog } from './catalog.svelte';
 import { toast } from './toast.svelte';
 
@@ -23,8 +26,17 @@ class CartStore {
 
 	totalItems = $derived(this.items.reduce((sum, i) => sum + i.quantity, 0));
 	subtotal = $derived(this.items.reduce((sum, i) => sum + unitPrice(i) * i.quantity, 0));
+	/** Delivery fee for this store's canteen to the chosen building and floor (the database decides the same way) */
+	deliveryQuote = $derived.by(() => {
+		const from = this.store ? PLACES[STORE_ZONE_PLACE[this.store.zone]] : undefined;
+		const to = PLACES[campus.dropoff.id];
+		return quoteDelivery({ distanceM: from && to ? distanceMeters(from, to) : null, floor: campus.floor, raining: flags.raining });
+	});
+	/** A rider carries at most MAX_ORDER_ITEMS */
+	full = $derived(this.totalItems >= MAX_ORDER_ITEMS);
+	overLimit = $derived(this.totalItems > MAX_ORDER_ITEMS);
 	/** Best partner promotion for this cart (food discount and/or free delivery) */
-	appliedPromotion = $derived(bestPromotion(this.store, this.items, STORE_DELIVERY_FEE));
+	appliedPromotion = $derived(bestPromotion(this.store, this.items, this.deliveryQuote.fee));
 	partnerDiscount = $derived(this.appliedPromotion?.saving ?? 0);
 	isEmpty = $derived(this.items.length === 0);
 
@@ -64,8 +76,14 @@ class CartStore {
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 	}
 
-	add(menuItem: MenuItem, store: Store, special = false) {
-		if (!menuItem.isAvailable || (special && !menuItem.specialPrice)) return;
+	/** Returns false when nothing was added (sold out, or the cart is full) */
+	add(menuItem: MenuItem, store: Store, special = false): boolean {
+		if (!menuItem.isAvailable || (special && !menuItem.specialPrice)) return false;
+		const switching = !!this.store && this.store.id !== store.id && this.items.length > 0;
+		if (!switching && this.totalItems >= MAX_ORDER_ITEMS) {
+			toast.show(`สั่งได้สูงสุด ${MAX_ORDER_ITEMS} ชิ้นต่อออเดอร์ (คนหิ้วถือได้เท่านี้)`, 'info');
+			return false;
+		}
 		// One store per order: switching store clears the previous cart
 		if (this.store && this.store.id !== store.id && this.items.length > 0) {
 			const previous = this.store.name;
@@ -81,6 +99,7 @@ class CartStore {
 			this.items.push({ menuItem, quantity: 1, special });
 		}
 		this.#persist();
+		return true;
 	}
 
 	decrement(menuItemId: string, special = false) {
@@ -101,10 +120,14 @@ class CartStore {
 
 	/** Refill the cart from a past order; skips items that are sold out now. Returns items added. */
 	reorder(store: Store, lines: { menuItemId: string; quantity: number; special?: boolean }[]): number {
+		let room = MAX_ORDER_ITEMS;
 		const items = lines.flatMap(({ menuItemId, quantity, special }) => {
 			const menuItem = store.menuItems.find((m) => m.id === menuItemId && m.isAvailable);
-			if (!menuItem || quantity <= 0 || (special && !menuItem.specialPrice)) return [];
-			return [{ menuItem, quantity, special: !!special }];
+			if (!menuItem || quantity <= 0 || (special && !menuItem.specialPrice) || room <= 0) return [];
+			// An old order may hold more than a rider carries now
+			const take = Math.min(quantity, room);
+			room -= take;
+			return [{ menuItem, quantity: take, special: !!special }];
 		});
 		this.storeId = items.length ? store.id : null;
 		this.items = items;

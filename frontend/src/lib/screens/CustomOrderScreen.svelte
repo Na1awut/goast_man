@@ -1,10 +1,12 @@
 <script lang="ts">
 	import AppBar from '$lib/components/AppBar.svelte';
 	import BottomBar from '$lib/components/BottomBar.svelte';
+	import FloorPicker from '$lib/components/FloorPicker.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import { PICKUP_HUBS } from '$lib/data/locations';
-	import { CUSTOM_DELIVERY_FEE, CUSTOM_MAX_PRICE } from '$lib/pricing';
-	import { campus } from '$lib/stores/campus.svelte';
+	import { CUSTOM_MAX_PRICE, describeQuote, quoteDelivery } from '$lib/pricing';
+	import { campus, dropoffLabel } from '$lib/stores/campus.svelte';
+	import { flags } from '$lib/stores/flags.svelte';
 	import { nav } from '$lib/stores/nav.svelte';
 	import { profileGate } from '$lib/stores/profileGate.svelte';
 	import { customDraft, OrderError, orders } from '$lib/stores/orders.svelte';
@@ -16,7 +18,12 @@
 
 	const pickup = $derived(PICKUP_HUBS.find((h) => h.id === customDraft.pickupId) ?? PICKUP_HUBS[0]);
 	const food = $derived(typeof customDraft.price === 'number' && Number.isFinite(customDraft.price) ? Math.max(0, Math.round(customDraft.price)) : 0);
-	const total = $derived(food + CUSTOM_DELIVERY_FEE);
+	// ฝากซื้อ: 20 ฿ + floor + rain (the database works out the same)
+	const quote = $derived(quoteDelivery({ distanceM: null, floor: campus.floor, raining: flags.raining }));
+	const total = $derived(food + quote.fee);
+	$effect(() => {
+		void flags.load();
+	});
 
 	const errors = $derived({
 		items: customDraft.items.trim().length < 3 ? 'ระบุรายการที่ต้องการอย่างน้อย 3 ตัวอักษร' : '',
@@ -37,10 +44,12 @@
 			await orders.place({
 				kind: 'CUSTOM',
 				pickupName: pickup.name,
-				dropoffName: campus.dropoff.name,
+				dropoffName: dropoffLabel(campus.dropoff, campus.floor),
+				dropoffId: campus.dropoff.id,
+				floor: campus.floor,
 				itemDetails: customDraft.items.trim().replace(/\n+/g, ', '),
 				foodTotal: food,
-				deliveryFee: CUSTOM_DELIVERY_FEE,
+				deliveryFee: quote.fee,
 				codeDiscount: 0,
 				partnerDiscount: 0,
 				totalPrice: total,
@@ -126,10 +135,11 @@
 			<span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand"><Icon name="pin" /></span>
 			<span class="min-w-0 flex-1">
 				<span class="block text-xs text-slate-500">จุดส่งของ</span>
-				<span class="block truncate text-sm font-semibold text-slate-900">{campus.dropoff.name}</span>
+				<span class="block truncate text-sm font-semibold text-slate-900">{dropoffLabel(campus.dropoff, campus.floor)}</span>
 			</span>
 			<Icon name="chevron-right" class="h-5 w-5 text-slate-400" />
 		</button>
+		<FloorPicker class="rounded-2xl border border-slate-100 bg-white p-4" />
 
 		<input
 			type="text"
@@ -144,8 +154,8 @@
 		<div class="space-y-2 rounded-2xl border border-slate-100 bg-white p-4 text-sm">
 			<div class="flex justify-between text-slate-600"><span>ค่าอาหาร</span><span class="text-slate-900 tabular-nums">{food}</span></div>
 			<div class="flex items-center justify-between text-slate-600">
-				<span class="flex items-center gap-2">ค่าหิ้วน้ำใจ <span class="rounded bg-brand-50 px-1.5 py-0.5 text-[11px] text-brand-700">เริ่มต้นขั้นต่ำ</span></span>
-				<span class="font-medium text-brand tabular-nums">{CUSTOM_DELIVERY_FEE}</span>
+				<span class="min-w-0">ค่าหิ้วน้ำใจ <span class="block text-xs text-slate-500">{describeQuote(quote, campus.floor, true)}</span></span>
+				<span class="shrink-0 font-medium text-brand tabular-nums">{quote.fee}</span>
 			</div>
 			<div class="flex items-center justify-between border-t border-dashed border-slate-200 pt-3">
 				<span class="font-semibold text-slate-900">ยอดรวมทั้งหมด</span>

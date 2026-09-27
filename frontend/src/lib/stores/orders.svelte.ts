@@ -44,6 +44,9 @@ export interface NewOrderInput {
 	storeId?: string;
 	pickupName: string;
 	dropoffName: string;
+	/** Building and floor: the database prices the delivery from them */
+	dropoffId: string;
+	floor: number;
 	itemDetails: string;
 	items?: CartItem[];
 	foodTotal: number;
@@ -185,7 +188,8 @@ class OrdersStore {
 					? await api.placeStoreOrder({
 							storeId: input.storeId,
 							items: input.items.map((i) => ({ menuItemId: i.menuItem.id, quantity: i.quantity, special: !!i.special })),
-							dropoffName: input.dropoffName,
+							dropoffId: input.dropoffId,
+							floor: input.floor,
 							note: input.note,
 							paymentMethod: input.paymentMethod,
 							promoCode: input.promoCode,
@@ -195,7 +199,8 @@ class OrdersStore {
 							pickupName: input.pickupName,
 							itemDetails: input.itemDetails,
 							estimated: input.foodTotal,
-							dropoffName: input.dropoffName,
+							dropoffId: input.dropoffId,
+							floor: input.floor,
 							note: input.note
 						});
 		} catch (err) {

@@ -120,7 +120,7 @@
 			<button type="button" onclick={() => campus.openPicker()} class="min-w-0 flex-1 text-left" aria-label="เปลี่ยนจุดส่ง ตอนนี้ {campus.dropoff.name}">
 				<span class="block text-[11px] leading-tight text-slate-500">ส่งไปที่</span>
 				<span class="flex items-center gap-1 text-[15px] leading-tight font-semibold text-slate-900">
-					<span class="truncate">{campus.dropoff.shortName}</span>
+					<span class="truncate">{campus.label}</span>
 					<Icon name="chevron-down" class="h-4 w-4 text-brand" strokeWidth={2.5} />
 				</span>
 			</button>

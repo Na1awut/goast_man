@@ -76,6 +76,8 @@ export const ACTION_LABEL: Record<string, string> = {
 	STORE_PURGED: 'ลบร้านถาวร',
 	PAYMENT_TEST_ON: 'เปิดโหมดทดสอบจ่าย QR',
 	PAYMENT_TEST_OFF: 'ปิดโหมดทดสอบจ่าย QR',
+	RAIN_ON: 'เปิดค่าหิ้วช่วงฝนตก',
+	RAIN_OFF: 'ปิดค่าหิ้วช่วงฝนตก',
 	MENU_CLEARED: 'ล้างเมนูทั้งร้าน',
 	ITEM_ADDED: 'เพิ่มเมนู',
 	ITEM_EDITED: 'แก้เมนู',

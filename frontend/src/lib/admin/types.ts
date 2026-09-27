@@ -205,6 +205,11 @@ export interface AppFlags {
 	payment_test_mode: boolean;
 	payment_test_since: string | null;
 	payment_test_by: string | null;
+	/** Rain fee: every delivery costs rain_fee more while it is on (STAFF or ADMIN switch it) */
+	rain_surcharge?: boolean;
+	rain_fee?: number;
+	rain_since?: string | null;
+	rain_by?: string | null;
 }
 
 /** A deleted store waiting in the recycle bin (ADMIN) */

@@ -5,11 +5,13 @@
 	import Goose from '$lib/components/Goose.svelte';
 	import BottomBar from '$lib/components/BottomBar.svelte';
 	import Icon from '$lib/components/Icon.svelte';
+	import FloorPicker from '$lib/components/FloorPicker.svelte';
 	import QtyStepper from '$lib/components/QtyStepper.svelte';
 	import { DROPOFF_POINTS } from '$lib/data/locations';
 	import { promptPayEnabled } from '$lib/payments';
 	import { isLive } from '$lib/supabase';
-	import { lineName, normalizePromo, PROMO_CODES, unitPrice } from '$lib/pricing';
+	import { describeQuote, lineName, MAX_ORDER_ITEMS, normalizePromo, PROMO_CODES, unitPrice } from '$lib/pricing';
+	import { flags } from '$lib/stores/flags.svelte';
 	import { formatPhone } from '$lib/profile';
 	import { auth } from '$lib/stores/auth.svelte';
 	import { campus } from '$lib/stores/campus.svelte';
@@ -24,6 +26,11 @@
 	import { formatBaht } from '$lib/utils';
 
 	const saved = $derived(checkout.codeDiscount + cart.partnerDiscount);
+
+	// The rain fee may have been switched on since the app opened
+	$effect(() => {
+		void flags.load();
+	});
 
 	let promoInput = $state('');
 	let promoError = $state('');
@@ -121,6 +128,7 @@
 					</select>
 					<Icon name="chevron-down" class="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-slate-500" />
 				</label>
+				<FloorPicker />
 				<label class="block">
 					<span class="mb-1 block text-xs text-slate-500">หมายเหตุถึงคนหิ้ว</span>
 					<input
@@ -135,7 +143,12 @@
 
 			<!-- Items -->
 			<section class="rounded-2xl border border-slate-100 bg-white p-4">
-				<h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900"><Icon name="store" class="h-4 w-4 text-slate-500" /> {store.name}</h2>
+				<h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900"><Icon name="store" class="h-4 w-4 text-slate-500" /> <span class="min-w-0 flex-1 truncate">{store.name}</span> <span class="shrink-0 text-xs font-normal tabular-nums {cart.full ? 'text-brand-700' : 'text-slate-500'}">{cart.totalItems}/{MAX_ORDER_ITEMS} ชิ้น</span></h2>
+				{#if cart.overLimit}
+					<p class="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">คนหิ้วถือได้สูงสุด {MAX_ORDER_ITEMS} ชิ้น ลดให้เหลือ {MAX_ORDER_ITEMS} ชิ้นก่อนสั่ง</p>
+				{:else if cart.full}
+					<p class="mt-2 text-xs text-slate-500">ครบ {MAX_ORDER_ITEMS} ชิ้นแล้ว (คนหิ้วถือได้เท่านี้)</p>
+				{/if}
 				<ul class="mt-2 divide-y divide-slate-100">
 					{#each cart.items as item (item.menuItem.id + (item.special ? ':special' : ''))}
 						<li class="flex items-center gap-3 py-3" transition:slide={{ duration: 180 }}>
@@ -194,7 +207,16 @@
 			<!-- Totals -->
 			<section class="space-y-2 rounded-2xl border border-slate-100 bg-white p-4 text-sm">
 				<div class="flex justify-between text-slate-600"><span>ค่าอาหารรวม</span><span class="text-slate-900 tabular-nums">{formatBaht(cart.subtotal)}</span></div>
-				<div class="flex justify-between text-slate-600"><span>ค่าหิ้วน้ำใจ (เพื่อน นศ. ส่งให้)</span><span class="text-slate-900 tabular-nums">{formatBaht(checkout.deliveryFee)}</span></div>
+				<div class="flex justify-between gap-3 text-slate-600">
+					<span class="min-w-0">
+						ค่าหิ้วน้ำใจ (เพื่อน นศ. ส่งให้)
+						<span class="block text-xs text-slate-500">{describeQuote(cart.deliveryQuote, campus.floor)}</span>
+					</span>
+					<span class="shrink-0 text-slate-900 tabular-nums">{formatBaht(checkout.deliveryFee)}</span>
+				</div>
+				{#if cart.deliveryQuote.rain}
+					<p class="flex items-center gap-1.5 rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-800">ช่วงฝนตก ค่าหิ้วเพิ่ม {cart.deliveryQuote.rain} บาท ให้เพื่อนที่ฝ่าฝนมาส่ง</p>
+				{/if}
 				{#if checkout.codeDiscount > 0}
 					<div class="flex justify-between text-slate-600"><span>ส่วนลดจากโค้ด [{cart.promo}]</span><span class="font-medium text-fresh-700 tabular-nums">-{formatBaht(checkout.codeDiscount)}</span></div>
 				{/if}
@@ -262,7 +284,7 @@
 		</div>
 
 		<BottomBar>
-			<button type="button" onclick={placeOrder} disabled={checkout.placing} class="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand py-4 text-sm font-semibold text-white active:bg-brand-600 disabled:opacity-80">
+			<button type="button" onclick={placeOrder} disabled={checkout.placing || cart.overLimit} class="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand py-4 text-sm font-semibold text-white active:bg-brand-600 disabled:opacity-80">
 				{#if checkout.placing}<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span> กำลังส่งออเดอร์...{:else}สั่งอาหารและหาเพื่อนหิ้ว ({formatBaht(checkout.total)}){/if}
 			</button>
 		</BottomBar>

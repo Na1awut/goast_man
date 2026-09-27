@@ -215,6 +215,9 @@ export interface AppFlags {
 	payment_test_mode: boolean;
 	payment_test_since: string | null;
 	payment_test_by: string | null;
+	/** Rain fee (+rain_fee ฿) switched on by the team */
+	rain_surcharge?: boolean;
+	rain_fee?: number;
 }
 export async function fetchAppFlags(): Promise<AppFlags> {
 	return check(await db().rpc('app_flags')) as AppFlags;
@@ -284,7 +287,9 @@ export async function fetchStore(storeId: string): Promise<Store> {
 export interface StoreOrderArgs {
 	storeId: string;
 	items: { menuItemId: string; quantity: number; special?: boolean }[];
-	dropoffName: string;
+	/** Drop-off building and floor: the database works out the fee from them */
+	dropoffId: string;
+	floor: number;
 	note?: string;
 	paymentMethod: PaymentMethod;
 	promoCode?: string;
@@ -293,25 +298,28 @@ export interface StoreOrderArgs {
 }
 
 export async function placeStoreOrder(a: StoreOrderArgs): Promise<string> {
-	const args = {
-		p_store_id: a.storeId,
-		p_items: a.items.map((i) => ({ menu_item_id: i.menuItemId, quantity: i.quantity, special: !!i.special })),
-		p_dropoff: a.dropoffName,
-		p_note: a.note ?? '',
-		p_payment: a.paymentMethod,
-		p_promo_code: a.promoCode ?? null
-	};
-	// Without a tip, the plain function: ordering keeps working even before the tip migration runs
-	return check(a.tip ? await db().rpc('place_order_tipped', { ...args, p_tip: a.tip }) : await db().rpc('place_order', args)) as string;
+	return check(
+		await db().rpc('place_order_at', {
+			p_store_id: a.storeId,
+			p_items: a.items.map((i) => ({ menu_item_id: i.menuItemId, quantity: i.quantity, special: !!i.special })),
+			p_dropoff_id: a.dropoffId,
+			p_floor: a.floor,
+			p_note: a.note ?? '',
+			p_payment: a.paymentMethod,
+			p_promo_code: a.promoCode ?? null,
+			p_tip: a.tip ?? 0
+		})
+	) as string;
 }
 
-export async function placeCustomOrder(a: { pickupName: string; itemDetails: string; estimated: number; dropoffName: string; note?: string }): Promise<string> {
+export async function placeCustomOrder(a: { pickupName: string; itemDetails: string; estimated: number; dropoffId: string; floor: number; note?: string }): Promise<string> {
 	return check(
-		await db().rpc('place_custom_order', {
+		await db().rpc('place_custom_order_at', {
 			p_pickup: a.pickupName,
 			p_items: a.itemDetails,
 			p_estimated: a.estimated,
-			p_dropoff: a.dropoffName,
+			p_dropoff_id: a.dropoffId,
+			p_floor: a.floor,
 			p_note: a.note ?? ''
 		})
 	) as string;

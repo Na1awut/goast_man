@@ -187,7 +187,7 @@
 											qty={cartIsThisStore ? cart.qty(item.id, size.special) : 0}
 											label="{item.name} ({size.label})"
 											disabled={!item.isAvailable}
-											onadd={(el) => { cart.add(item, store, size.special); haptic(); flyToCart(el); }}
+											onadd={(el) => { if (cart.add(item, store, size.special)) { haptic(); flyToCart(el); } }}
 											onremove={() => { cart.decrement(item.id, size.special); haptic(6); }}
 										/>
 									</div>
@@ -196,7 +196,7 @@
 						{:else}
 							<div class="mt-auto flex items-end justify-between gap-2 pt-1.5">
 								<span class="text-base font-semibold text-slate-900 tabular-nums">{formatBaht(item.price)}</span>
-								<QtyStepper {qty} label={item.name} disabled={!item.isAvailable} onadd={(el) => { cart.add(item, store); haptic(); flyToCart(el); }} onremove={() => { cart.decrement(item.id); haptic(6); }} />
+								<QtyStepper {qty} label={item.name} disabled={!item.isAvailable} onadd={(el) => { if (cart.add(item, store)) { haptic(); flyToCart(el); } }} onremove={() => { cart.decrement(item.id); haptic(6); }} />
 							</div>
 						{/if}
 					</div>

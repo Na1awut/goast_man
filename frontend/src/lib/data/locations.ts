@@ -2,11 +2,12 @@
 import type { DropoffPoint, PickupHub } from '$lib/types';
 
 export const DROPOFF_POINTS: DropoffPoint[] = [
-	{ id: 'lx-1', name: 'อาคาร LX ชั้น 1 หน้าตู้เต่าบิน', shortName: 'ตึก LX ชั้น 1', note: 'อาคารการเรียนรู้พหุวิทยาการ', zone: 'ACADEMIC' },
-	{ id: 'cb2', name: 'อาคารเรียนรวม CB2', shortName: 'CB2 ม้าหินอ่อน', note: 'ม้าหินอ่อนใต้อาคาร', zone: 'ACADEMIC' },
-	{ id: 'cb3', name: 'อาคารเรียนรวม CB3', shortName: 'CB3 ใต้ถุน', note: 'ใต้ถุนตึกข้างลิฟต์', zone: 'ACADEMIC' },
-	{ id: 'sit', name: 'อาคาร SIT ชั้น 1', shortName: 'SIT ชั้น 1', note: 'คณะเทคโนโลยีสารสนเทศ', zone: 'ACADEMIC' },
-	{ id: 'eng12', name: 'ตึกวิศวะ 12 ชั้น', shortName: 'ตึก 12 ชั้น', note: 'ล็อบบี้ชั้น 1 หน้าลิฟต์', zone: 'ACADEMIC' },
+	// Names match campus_places in the database (orders say "<name> ชั้น <floor>")
+	{ id: 'lx-1', name: 'อาคาร LX', shortName: 'ตึก LX', note: 'ชั้น 1: หน้าตู้เต่าบิน', zone: 'ACADEMIC' },
+	{ id: 'cb2', name: 'อาคารเรียนรวม CB2', shortName: 'CB2', note: 'ชั้น 1: ม้าหินอ่อนใต้อาคาร', zone: 'ACADEMIC' },
+	{ id: 'cb3', name: 'อาคารเรียนรวม CB3', shortName: 'CB3', note: 'ชั้น 1: ใต้ถุนตึกข้างลิฟต์', zone: 'ACADEMIC' },
+	{ id: 'sit', name: 'อาคาร SIT', shortName: 'SIT', note: 'คณะเทคโนโลยีสารสนเทศ', zone: 'ACADEMIC' },
+	{ id: 'eng12', name: 'ตึกวิศวะ 12 ชั้น', shortName: 'ตึก 12 ชั้น', note: 'ชั้น 1: ล็อบบี้หน้าลิฟต์', zone: 'ACADEMIC' },
 	{ id: 'lib', name: 'หอสมุด มจธ. (KMUTT Library)', shortName: 'หอสมุด', note: 'ทางเข้าหน้าประตูกระจก', zone: 'OFFICE' },
 	{ id: 'dorm-s5', name: 'หอพักชาย S5', shortName: 'หอ S5', note: 'ล็อบบี้หน้าหอ', zone: 'DORM' },
 	{ id: 'dorm-s6', name: 'หอพักหญิง S6', shortName: 'หอ S6', note: 'ล็อบบี้หน้าหอ', zone: 'DORM' }

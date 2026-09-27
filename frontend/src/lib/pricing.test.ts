@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { roundUpTip } from './pricing';
+import { quoteDelivery, roundUpTip } from './pricing';
+import { distanceMeters, PLACES, STORE_ZONE_PLACE } from './routing';
 
 describe('round-up tip', () => {
 	it('rounds to the next 5 baht', () => {
@@ -11,5 +12,32 @@ describe('round-up tip', () => {
 		expect(roundUpTip(55)).toBe(0);
 		expect(roundUpTip(60)).toBe(0);
 		expect(roundUpTip(0)).toBe(0);
+	});
+});
+
+// Same cases as the delivery fee tests in tests/sql.mjs (delivery_quote() decides; this must agree)
+describe('delivery fee', () => {
+	const from = (zone: keyof typeof STORE_ZONE_PLACE, to: string) => distanceMeters(PLACES[STORE_ZONE_PLACE[zone]], PLACES[to]);
+	const q = (distanceM: number | null, floor = 1, raining = false) => quoteDelivery({ distanceM, floor, raining });
+
+	it('is 15 near the canteen and 20 beyond 300 m', () => {
+		expect(q(from('kfc-main', 'sit'))).toMatchObject({ base: 15, fee: 15, near: true });
+		expect(q(from('kfc-main', 'dorm-s6'))).toMatchObject({ base: 20, fee: 20, near: false });
+	});
+
+	it('adds 1 baht a floor and stays within 25', () => {
+		expect(q(from('kfc-main', 'sit'), 5).fee).toBe(19);
+		expect(q(from('kfc-main', 'sit'), 20).fee).toBe(25);
+		expect(q(from('kfc-main', 'dorm-s6'), 8).fee).toBe(25);
+	});
+
+	it('charges ฝากซื้อ from 20', () => {
+		expect(q(null, 3).fee).toBe(22);
+	});
+
+	it('adds 5 in the rain, above the 25 cap too', () => {
+		expect(q(from('kfc-main', 'sit'), 1, true).fee).toBe(20);
+		expect(q(from('kfc-main', 'dorm-s6'), 8, true).fee).toBe(30);
+		expect(q(null, 2, true).fee).toBe(26);
 	});
 });

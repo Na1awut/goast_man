@@ -1,8 +1,8 @@
 // Checkout draft shared by the summary and PromptPay screens (Svelte 5 runes)
 import type { Order, PaymentMethod } from '$lib/types';
 import { promptPayEnabled } from '$lib/payments';
-import { lineName, netTotal, promoDiscount, roundUpTip, STORE_DELIVERY_FEE } from '$lib/pricing';
-import { campus } from './campus.svelte';
+import { lineName, netTotal, promoDiscount, roundUpTip } from '$lib/pricing';
+import { campus, dropoffLabel } from './campus.svelte';
 import { cart } from './cart.svelte';
 import { orders } from './orders.svelte';
 
@@ -14,15 +14,16 @@ class CheckoutStore {
 	reference = $state('');
 	placing = $state(false);
 
-	readonly deliveryFee = STORE_DELIVERY_FEE;
+	/** Distance + floor + rain (see cart.deliveryQuote) */
+	deliveryFee = $derived(cart.deliveryQuote.fee);
 	/** Fee still payable after a partner free-delivery promotion, so GOOSEFREE can't waive it twice */
-	feeAfterPromotion = $derived(cart.appliedPromotion?.promotion.freeDelivery ? 0 : STORE_DELIVERY_FEE);
+	feeAfterPromotion = $derived(cart.appliedPromotion?.promotion.freeDelivery ? 0 : this.deliveryFee);
 	codeDiscount = $derived(promoDiscount(cart.promo, this.feeAfterPromotion));
 	/** Before the tip */
 	baseTotal = $derived(
 		netTotal({
 			foodTotal: cart.subtotal,
-			deliveryFee: STORE_DELIVERY_FEE,
+			deliveryFee: this.deliveryFee,
 			codeDiscount: this.codeDiscount,
 			partnerDiscount: cart.partnerDiscount
 		})
@@ -45,14 +46,16 @@ class CheckoutStore {
 	 */
 	async place(): Promise<Order | null> {
 		const store = cart.store;
-		if (!store || cart.isEmpty || this.placing) return null;
+		if (!store || cart.isEmpty || cart.overLimit || this.placing) return null;
 		this.placing = true;
 		try {
 			const order = await orders.place({
 				kind: 'STORE',
 				storeId: store.id,
 				pickupName: store.name,
-				dropoffName: campus.dropoff.name,
+				dropoffName: dropoffLabel(campus.dropoff, campus.floor),
+				dropoffId: campus.dropoff.id,
+				floor: campus.floor,
 				itemDetails: cart.items.map((i) => `${lineName(i)} ×${i.quantity}`).join(', '),
 				items: cart.items.map((i) => ({ menuItem: i.menuItem, quantity: i.quantity, special: i.special })),
 				foodTotal: cart.subtotal,
