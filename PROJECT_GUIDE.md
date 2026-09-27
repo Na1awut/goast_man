@@ -718,7 +718,9 @@ stateDiagram-v2
 | 17 | `20261010000000_store_recycle_bin.sql` | ถังขยะร้าน (`stores.deleted_at`, `admin_delete_store`, `admin_trash`, `admin_restore_store`, `admin_purge_store`) · ร้านในถังขยะไม่มีใครเห็น แก้ไม่ได้ เจ้าของเข้าไม่ได้ · ลบถาวรเมื่อครบ 60 วัน ด้วย `purge_expired_stores()` ทุกคืนตี 3 (pg_cron) และทุกครั้งที่เปิดถังขยะ · `order_items` ไม่ผูก FK กับ `menu_items` แล้ว (ออเดอร์เก่าเก็บชื่อและราคาเมนูไว้เอง) · ร้านใหม่ไม่ใช้ id ของร้านที่ลบถาวรแล้ว · เจ้าของร้านเห็นร้านตัวเองแม้ร้านถูกซ่อน |
 | 18 | `20261011000000_female_dorm_zone.sql` | โซนใหม่ `female-dorm` (โรงอาหารหอหญิง ข้าง S6) |
 | 19 | `20261012000000_cb1_zone.sql` | โซนอาคาร CB1; รันแยก transaction ก่อนนำเข้าร้าน |
-| 20 | `seed.sql` | ร้านและเมนู (mockup จากเอกสารร้าน) |
+| 20 | `20261013000000_male_dorm_zone.sql` | โซนใหม่ `male-dorm` (โรงอาหารหอชาย ข้าง S5) |
+| 21 | `seed.sql` | ร้านและเมนู (mockup จากเอกสารร้าน) |
+| ข้อมูลจริง | `data/male_dorm_stores.sql` | ร้านจริงโรงอาหารหอชาย 3 ร้าน / 111 เมนู จาก PDF ของร้าน (รันซ้ำได้) รูปร้านอยู่ `static/stores/male-dorm-NN.webp` |
 | ข้อมูลจริง | `data/female_dorm_stores.sql` | ร้านจริงโรงอาหารหอหญิง 6 ร้าน จาก PDF ของร้าน (รันซ้ำได้ ไม่ทับของเดิม) รูปร้านอยู่ `static/stores/female-dorm-NN.webp` |
 | ข้อมูลจริง | `data/loongnoom_square.sql` | ลุงหนุ่ม Square ที่ CB1: 87 เมนู / 10 หมวด เริ่มซ่อนและปิด; กาแฟแยกเย็น/ปั่นตามที่ผู้ใช้ยืนยัน รูปใน Storage; [บันทึกนำเข้าและรายการรอยืนยัน](supabase/data/loongnoom_square.md) |
 

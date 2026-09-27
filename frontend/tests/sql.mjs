@@ -90,6 +90,7 @@ try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20261010000000_store_recycle_bin.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261011000000_female_dorm_zone.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261012000000_cb1_zone.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261013000000_male_dorm_zone.sql`, 'utf8'));
 	ok('profile-at-first-order migration applies cleanly', true);
 } catch (e) {
 	ok('profile-at-first-order migration applies cleanly', false, e.message);
@@ -1067,6 +1068,10 @@ await as(alice, async () => {
 	await db.exec(`select cancel_order('${o.id}')`);
 });
 await as(tina, () => db.exec(`select admin_set_store_hidden('female-dorm-06', true)`));
+await db.exec(readFileSync(`${ROOT}/data/male_dorm_stores.sql`, 'utf8'));
+await db.exec(readFileSync(`${ROOT}/data/male_dorm_stores.sql`, 'utf8'));
+const md = await one(`select count(*) filter (where zone = 'male-dorm' and hidden and not is_open) n, (select count(*) from menu_items where store_id like 'male-dorm-%') items from stores where id like 'male-dorm-%'`);
+ok('the male dorm stalls load hidden and closed, and loading twice changes nothing', Number(md.n) === 3 && Number(md.items) === 111, JSON.stringify(md));
 
 // ---------- CB1: source prices, repeatable import and real ordering ----------
 const loongnoomSQL = readFileSync(`${ROOT}/data/loongnoom_square.sql`, 'utf8');

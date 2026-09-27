@@ -33,8 +33,8 @@
 	const activeOrder = $derived(orders.active[0]);
 
 	// --- Where to buy: canteens open the partner list, the rest become a free-form request
-	const PICKUP_ZONE: Partial<Record<string, StoreZone>> = { 'kfc-main': 'kfc-main', 'female-dorm': 'female-dorm', cb1: 'cb1', 'canteen-male': 'canteen-male', 'green-canteen': 'green-canteen' };
-	const PICKUP_ICON: Record<string, IconName> = { 'kfc-main': 'utensils', 'female-dorm': 'utensils', cb1: 'store', 'canteen-male': 'utensils', 'green-canteen': 'utensils', '7eleven-dorm': 'cart', soi45: 'store' };
+	const PICKUP_ZONE: Partial<Record<string, StoreZone>> = { 'kfc-main': 'kfc-main', 'female-dorm': 'female-dorm', 'male-dorm': 'male-dorm', cb1: 'cb1', 'canteen-male': 'canteen-male', 'green-canteen': 'green-canteen' };
+	const PICKUP_ICON: Record<string, IconName> = { 'kfc-main': 'utensils', 'female-dorm': 'utensils', 'male-dorm': 'utensils', cb1: 'store', 'canteen-male': 'utensils', 'green-canteen': 'utensils', '7eleven-dorm': 'cart', soi45: 'store' };
 	/** Stores listed in the app for this hub; 0 means it is served by free-form errands (ฝากซื้อ) */
 	const storesAt = (hub: PickupHub) => {
 		const zone = PICKUP_ZONE[hub.id];
@@ -244,7 +244,7 @@
 		<!-- Where to buy -->
 		<section class="space-y-3">
 			<h2 class="text-base font-semibold text-slate-900">สั่งจากที่ไหนดี</h2>
-			<div class="grid grid-cols-3 gap-1.5">
+			<div class="grid grid-cols-4 gap-1.5">
 				{#each PICKUP_HUBS as hub (hub.id)}
 					<button type="button" onclick={() => choosePickup(hub)} class="flex flex-col items-center gap-2 rounded-2xl bg-white px-1 pt-3 pb-2.5 text-center">
 						<span class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand"><Icon name={PICKUP_ICON[hub.id] ?? 'store'} /></span>

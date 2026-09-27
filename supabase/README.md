@@ -26,6 +26,8 @@
 | `migrations/20261011000000_female_dorm_zone.sql` | โซนโรงอาหารหอหญิง |
 | `data/female_dorm_stores.sql` | ร้านจริงโรงอาหารหอหญิง 6 ร้าน (รันหลัง migration ครบ ซ่อนไว้ก่อน รันซ้ำได้) |
 | `migrations/20261012000000_cb1_zone.sql` | โซนอาคาร CB1; ต้อง commit ก่อนนำเข้าร้าน |
+| `migrations/20261013000000_male_dorm_zone.sql` | โซนโรงอาหารหอชาย |
+| `data/male_dorm_stores.sql` | ร้านจริงโรงอาหารหอชาย 3 ร้าน / 111 เมนู (รันหลัง migration ครบ ซ่อนไว้ก่อน รันซ้ำได้) |
 | `data/loongnoom_square.sql` | ลุงหนุ่ม Square ที่ CB1: 87 เมนู / 10 หมวด พร้อมรูป; [รายละเอียดและรายการรอยืนยัน](data/loongnoom_square.md) |
 | `migrations/20261010000000_store_recycle_bin.sql` | ถังขยะร้าน: ลบ, กู้คืนใน 60 วัน, ลบถาวรเอง (pg_cron ทุกคืน) |
 | `migrations/20261009000000_team_store_editing.sql` | ทีมสร้างร้าน แก้ทุกร้าน ซ่อนร้าน และล้างเมนู |
@@ -58,13 +60,14 @@
    17. `migrations/20261010000000_store_recycle_bin.sql`
    18. `migrations/20261011000000_female_dorm_zone.sql`
    19. `migrations/20261012000000_cb1_zone.sql`
-   20. `seed.sql`
+   20. `migrations/20261013000000_male_dorm_zone.sql`
+   21. `seed.sql`
 3. เพิ่ม ADMIN คนแรกของหน้าทีมงาน (คนต่อไป ADMIN เพิ่มเองในหน้าทีมงาน):
    ```sql
    insert into team_members (email, role, note) values ('<อีเมล มจธ.>', 'ADMIN', 'first admin');
    ```
 
-**โปรเจกต์ที่ใช้อยู่ (`pguhzjtdwgualqeqzleu`):** รันครบถึง `20261012000000_cb1_zone.sql` และใส่ `data/female_dorm_stores.sql` กับ `data/loongnoom_square.sql` แล้ว รวม 19 ร้าน / 404 เมนู ณ 27 กันยายน 2569 ร้านนำเข้าเริ่มซ่อนและปิดรับออเดอร์ (เปิด pg_cron แล้ว งาน `purge-deleted-stores` ทุกคืนตี 3) (รันด้วย `npx supabase db query --linked --project-ref pguhzjtdwgualqeqzleu -f <ไฟล์>` ได้ หลัง `npx supabase login`) ADMIN คนแรกคือ `natthawut.napa@mail.kmutt.ac.th`
+**โปรเจกต์ที่ใช้อยู่ (`pguhzjtdwgualqeqzleu`):** รันครบถึง `20261013000000_male_dorm_zone.sql` และใส่ `data/female_dorm_stores.sql`, `data/loongnoom_square.sql` กับ `data/male_dorm_stores.sql` แล้ว ร้านที่ใช้งาน 10 ร้าน / 284 เมนู (ร้าน KFC mockup 12 ร้านอยู่ในถังขยะ) ณ 27 กันยายน 2569 ร้านนำเข้าเริ่มซ่อนและปิดรับออเดอร์ (เปิด pg_cron แล้ว งาน `purge-deleted-stores` ทุกคืนตี 3) (รันด้วย `npx supabase db query --linked --project-ref pguhzjtdwgualqeqzleu -f <ไฟล์>` ได้ หลัง `npx supabase login`) ADMIN คนแรกคือ `natthawut.napa@mail.kmutt.ac.th`
 
 **บันทึก deploy 27 กันยายน 2569:** รัน `client_errors_deploy.sql` แล้วต่อด้วย `rider_tools_deploy.sql` ผ่าน Supabase CLI ไปยังโปรเจกต์ `goose-man` แต่ละไฟล์ครอบด้วย `begin;` … `commit;` และสำเร็จแล้ว ตรวจหลัง deploy พบตาราง `client_errors`, `rider_presence`, `rider_applications` เปิด RLS, คอลัมน์ `orders.tip_in_total` และฟังก์ชันครบ ตรวจสิทธิ์การเรียกฟังก์ชันและสูตรทิปผ่าน ส่วน API `riders_online` ตอบ HTTP 200 และค่า `0` ณ เวลาตรวจ ก่อน deploy ชุดทดสอบ SQL ในเครื่องผ่าน 233 รายการ ไม่ได้สร้างออเดอร์หรือใบสมัครทดสอบบนฐานข้อมูลจริง **ไม่ต้องรันสองไฟล์นี้ซ้ำ** เพราะคำสั่งสร้างตาราง/เพิ่มคอลัมน์ไม่ได้รองรับการรันซ้ำ
 

@@ -31,6 +31,8 @@ export const PLACES: Record<string, Place> = Object.fromEntries(
 		place('kfc-main', 13.6503, 100.49178), // S14, at its food-centre icon
 		// โรงอาหารหอหญิง: taken at the S6 (female dorm) building point until someone surveys the canteen door
 		place('female-dorm', 13.64874, 100.4949),
+		// โรงอาหารหอชาย: taken at the S5 (male dorm) building point until someone surveys the canteen door
+		place('male-dorm', 13.6492, 100.49467),
 		place('cb1', 13.65115, 100.493), // N20 Classroom Building 1; building centre, not the shop entrance
 		// NOT PLACED YET: which building is โรงชาย is unknown, so it sits on KFC (S14) until someone says
 		place('canteen-male', 13.6503, 100.49178),
@@ -57,6 +59,7 @@ export const PLACES: Record<string, Place> = Object.fromEntries(
 export const STORE_ZONE_PLACE: Record<StoreZone, string> = {
 	'kfc-main': 'kfc-main',
 	'female-dorm': 'female-dorm',
+	'male-dorm': 'male-dorm',
 	cb1: 'cb1',
 	'canteen-male': 'canteen-male',
 	'green-canteen': 'green-canteen',
