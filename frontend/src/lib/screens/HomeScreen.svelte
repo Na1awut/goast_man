@@ -1,5 +1,5 @@
 <script lang="ts">
-	import banner from '$lib/assets/banner.webp';
+	import banner from '../../../../src/picture/web_banner_1.png';
 	import GooseMark from '$lib/components/GooseMark.svelte';
 	import StoreLogo from '$lib/components/StoreLogo.svelte';
 	import Icon, { type IconName } from '$lib/components/Icon.svelte';
