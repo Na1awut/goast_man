@@ -1,7 +1,9 @@
 // Cart global store (Svelte 5 runes)
 import type { CartItem, MenuItem, Store } from '$lib/types';
-import { bestPromotion, MAX_ORDER_ITEMS, quoteDelivery, unitPrice, type PromoCode } from '$lib/pricing';
+import { bestPromotion, MAX_ORDER_ITEMS, quoteDelivery, unitPrice, type AppliedCode } from '$lib/pricing';
 import { distanceMeters, PLACES, STORE_ZONE_PLACE } from '$lib/routing';
+import * as api from '$lib/api/live';
+import { isLive } from '$lib/supabase';
 import { campus } from './campus.svelte';
 import { flags } from './flags.svelte';
 import { catalog } from './catalog.svelte';
@@ -21,8 +23,8 @@ class CartStore {
 	items = $state<CartItem[]>([]);
 	storeId = $state<string | null>(null);
 	store = $derived(this.storeId ? (catalog.byId(this.storeId) ?? null) : null);
-	/** Promo code applied at checkout; kept here so it survives "add more items" round-trips */
-	promo = $state<PromoCode | null>(null);
+	/** Discount code applied at checkout; kept here so it survives "add more items" round-trips */
+	promo = $state<AppliedCode | null>(null);
 
 	totalItems = $derived(this.items.reduce((sum, i) => sum + i.quantity, 0));
 	subtotal = $derived(this.items.reduce((sum, i) => sum + unitPrice(i) * i.quantity, 0));
@@ -116,6 +118,19 @@ class CartStore {
 
 	qty(menuItemId: string, special = false): number {
 		return this.items.find((c) => sameLine(c, menuItemId, special))?.quantity ?? 0;
+	}
+
+	/**
+	 * Asks whether a discount code can be used right now (does not spend a use;
+	 * placing the order does that, for real, with the database as the only judge).
+	 * Throws with the database's reason (PROMO_INVALID, PROMO_NOT_STARTED, PROMO_USES_UP).
+	 */
+	async checkCode(input: string): Promise<AppliedCode> {
+		const code = input.trim().toUpperCase();
+		if (isLive) return api.checkPromoCode(code);
+		// Demo: one illustrative code, so the flow can be tried without a database
+		if (code === 'GOOSEFREE') return { code: 'GOOSEFREE', kind: 'FREE_DELIVERY', amount: null };
+		throw new Error('PROMO_INVALID');
 	}
 
 	/** Refill the cart from a past order; skips items that are sold out now. Returns items added. */

@@ -212,6 +212,32 @@ export interface AppFlags {
 	rain_by?: string | null;
 }
 
+/** An app discount code (ADMIN creates and switches it; STAFF can see the list) */
+export interface AdminPromoCode {
+	code: string;
+	kind: 'AMOUNT' | 'FREE_DELIVERY';
+	/** Baht off, for AMOUNT; null for FREE_DELIVERY */
+	amount: number | null;
+	/** When it starts working ("จะปล่อยโค้ดตอนไหน") */
+	starts_at: string;
+	max_uses: number;
+	/** Orders placed with this code so far (cancelled ones don't count) */
+	uses: number;
+	active: boolean;
+	created_at: string;
+	created_by: string;
+}
+
+/** A new discount code, as the create form collects it */
+export interface NewPromoCode {
+	code: string;
+	kind: 'AMOUNT' | 'FREE_DELIVERY';
+	amount: number | null;
+	/** ISO; null = starts now */
+	startsAt: string | null;
+	maxUses: number;
+}
+
 /** A deleted store waiting in the recycle bin (ADMIN) */
 export interface TrashStore {
 	id: string;

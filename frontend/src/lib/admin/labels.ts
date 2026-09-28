@@ -78,6 +78,9 @@ export const ACTION_LABEL: Record<string, string> = {
 	PAYMENT_TEST_OFF: 'ปิดโหมดทดสอบจ่าย QR',
 	RAIN_ON: 'เปิดค่าหิ้วช่วงฝนตก',
 	RAIN_OFF: 'ปิดค่าหิ้วช่วงฝนตก',
+	PROMO_CODE_CREATED: 'สร้างโค้ดส่วนลด',
+	PROMO_CODE_ON: 'เปิดโค้ดส่วนลด',
+	PROMO_CODE_OFF: 'ปิดโค้ดส่วนลด',
 	MENU_CLEARED: 'ล้างเมนูทั้งร้าน',
 	ITEM_ADDED: 'เพิ่มเมนู',
 	ITEM_EDITED: 'แก้เมนู',
@@ -138,5 +141,10 @@ export const ADMIN_ERRORS: Record<string, string> = {
 	BAD_ROLE: 'บทบาทไม่ถูกต้อง',
 	CANNOT_CHANGE_SELF: 'เปลี่ยนสิทธิ์ของตัวเองไม่ได้',
 	NOT_A_MEMBER: 'อีเมลนี้ไม่ได้อยู่ในทีมงาน',
-	LAST_ADMIN: 'ต้องเหลือ ADMIN อย่างน้อย 1 คน'
+	LAST_ADMIN: 'ต้องเหลือ ADMIN อย่างน้อย 1 คน',
+	BAD_CODE: 'โค้ดต้องมี 3-20 ตัวอักษร ใช้ได้เฉพาะ A-Z และ 0-9',
+	BAD_KIND: 'เลือกประเภทส่วนลดใหม่อีกครั้ง',
+	BAD_AMOUNT: 'ใส่ส่วนลด 1-500 บาท (ฟรีค่าหิ้วไม่ต้องใส่จำนวนเงิน)',
+	BAD_MAX_USES: 'จำนวนครั้งที่ใช้ได้ต้องอยู่ระหว่าง 1-100,000',
+	CODE_TAKEN: 'มีโค้ดนี้อยู่แล้ว ตั้งชื่ออื่น'
 };

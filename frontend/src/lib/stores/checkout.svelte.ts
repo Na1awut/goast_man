@@ -62,7 +62,7 @@ class CheckoutStore {
 				deliveryFee: this.deliveryFee,
 				codeDiscount: this.codeDiscount,
 				partnerDiscount: cart.partnerDiscount,
-				promoCode: cart.promo ?? undefined,
+				promoCode: cart.promo?.code ?? undefined,
 				totalPrice: this.total,
 				tip: this.tip,
 				paymentMethod: this.payment,

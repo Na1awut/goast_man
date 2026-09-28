@@ -10,7 +10,7 @@
 	import { DROPOFF_POINTS } from '$lib/data/locations';
 	import { promptPayEnabled } from '$lib/payments';
 	import { isLive } from '$lib/supabase';
-	import { describeQuote, lineName, MAX_ORDER_ITEMS, normalizePromo, PROMO_CODES, unitPrice } from '$lib/pricing';
+	import { describeQuote, lineName, MAX_ORDER_ITEMS, unitPrice } from '$lib/pricing';
 	import { flags } from '$lib/stores/flags.svelte';
 	import { formatPhone } from '$lib/profile';
 	import { auth } from '$lib/stores/auth.svelte';
@@ -34,26 +34,38 @@
 
 	let promoInput = $state('');
 	let promoError = $state('');
+	let checkingPromo = $state(false);
 
-	function applyPromo(input = promoInput) {
+	/** The database's reason, in the buyer's words; unknown reasons read as "code not found" */
+	function promoErrorText(err: unknown, input: string): string {
+		const msg = err instanceof Error ? err.message : String(err);
+		if (msg.includes('PROMO_NOT_STARTED')) return 'โค้ดนี้ยังไม่เริ่มใช้ได้';
+		if (msg.includes('PROMO_USES_UP')) return 'โค้ดนี้ถูกใช้ครบจำนวนแล้ว';
+		return `ไม่พบโค้ด ${input.trim().toUpperCase()}`;
+	}
+
+	async function applyPromo(input = promoInput) {
 		if (!input.trim()) {
 			promoError = 'กรอกโค้ดส่วนลดก่อน';
 			return;
 		}
-		const code = normalizePromo(input);
-		if (!code) {
-			promoError = `ไม่พบโค้ด ${input.trim().toUpperCase()}`;
-			return;
-		}
-		if (code === 'GOOSEFREE' && checkout.feeAfterPromotion === 0) {
-			promoError = 'ออเดอร์นี้ฟรีค่าหิ้วจากโปรของร้านอยู่แล้ว';
-			return;
-		}
-		cart.promo = code;
-		haptic([10, 40, 10]);
-		promoInput = '';
+		checkingPromo = true;
 		promoError = '';
-		toast.show(`ใช้โค้ด ${code} แล้ว (${PROMO_CODES[code].describe(checkout.feeAfterPromotion)})`, 'success');
+		try {
+			const applied = await cart.checkCode(input);
+			if (applied.kind === 'FREE_DELIVERY' && checkout.feeAfterPromotion === 0) {
+				promoError = 'ออเดอร์นี้ฟรีค่าหิ้วจากโปรของร้านอยู่แล้ว';
+				return;
+			}
+			cart.promo = applied;
+			haptic([10, 40, 10]);
+			promoInput = '';
+			toast.show(`ใช้โค้ด ${applied.code} แล้ว (${applied.kind === 'FREE_DELIVERY' ? `ฟรีค่าหิ้ว ${checkout.feeAfterPromotion} ฿` : `ลด ${applied.amount} ฿`})`, 'success');
+		} catch (err) {
+			promoError = promoErrorText(err, input);
+		} finally {
+			checkingPromo = false;
+		}
 	}
 
 	function selectDropoff(e: Event) {
@@ -170,8 +182,8 @@
 				<h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900"><Icon name="ticket" class="h-4 w-4 text-brand" /> โค้ดส่วนลด</h2>
 				{#if cart.promo}
 					<span class="inline-flex items-center gap-2 rounded-lg bg-fresh-50 px-3 py-1.5 text-sm font-medium text-fresh-700">
-						{cart.promo} ลด {checkout.codeDiscount} บาท
-						<button type="button" onclick={() => (cart.promo = null)} aria-label="ยกเลิกโค้ด {cart.promo}" class="text-fresh-700/70 hover:text-fresh-700"><Icon name="x-circle" class="h-4 w-4" /></button>
+						{cart.promo.code} ลด {checkout.codeDiscount} บาท
+						<button type="button" onclick={() => (cart.promo = null)} aria-label="ยกเลิกโค้ด {cart.promo.code}" class="text-fresh-700/70 hover:text-fresh-700"><Icon name="x-circle" class="h-4 w-4" /></button>
 					</span>
 				{:else}
 					<form
@@ -185,22 +197,16 @@
 							type="text"
 							bind:value={promoInput}
 							oninput={() => (promoError = '')}
-							placeholder="ใส่โค้ดส่วนลด (เช่น GOOSEFREE)"
+							placeholder="ใส่โค้ดส่วนลดจากทีม Goose Man"
 							aria-label="โค้ดส่วนลด"
 							aria-invalid={!!promoError}
 							autocapitalize="characters"
-							class="min-w-0 flex-1 rounded-xl bg-slate-100 px-3.5 py-3 text-sm uppercase outline-none placeholder:normal-case placeholder:text-slate-400 focus:ring-2 {promoError ? 'ring-2 ring-red-300' : 'focus:ring-brand'}"
+							disabled={checkingPromo}
+							class="min-w-0 flex-1 rounded-xl bg-slate-100 px-3.5 py-3 text-sm uppercase outline-none placeholder:normal-case placeholder:text-slate-400 focus:ring-2 disabled:opacity-60 {promoError ? 'ring-2 ring-red-300' : 'focus:ring-brand'}"
 						/>
-						<button type="submit" class="shrink-0 rounded-xl bg-brand px-4 text-sm font-semibold text-white">ใช้โค้ด</button>
+						<button type="submit" disabled={checkingPromo} class="shrink-0 rounded-xl bg-brand px-4 text-sm font-semibold text-white disabled:opacity-60">{checkingPromo ? 'กำลังตรวจสอบ...' : 'ใช้โค้ด'}</button>
 					</form>
 					{#if promoError}<p class="text-xs text-red-600">{promoError}</p>{/if}
-					<p class="text-xs text-slate-500">
-						โค้ดที่ใช้ได้:
-						{#each Object.keys(PROMO_CODES) as code, i (code)}
-							{#if i > 0},{/if}
-							<button type="button" onclick={() => applyPromo(code)} class="font-medium text-brand underline-offset-2 hover:underline">{code}</button>
-						{/each}
-					</p>
 				{/if}
 			</section>
 
@@ -218,7 +224,7 @@
 					<p class="flex items-center gap-1.5 rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-800">ช่วงฝนตก ค่าหิ้วเพิ่ม {cart.deliveryQuote.rain} บาท ให้เพื่อนที่ฝ่าฝนมาส่ง</p>
 				{/if}
 				{#if checkout.codeDiscount > 0}
-					<div class="flex justify-between text-slate-600"><span>ส่วนลดจากโค้ด [{cart.promo}]</span><span class="font-medium text-fresh-700 tabular-nums">-{formatBaht(checkout.codeDiscount)}</span></div>
+					<div class="flex justify-between text-slate-600"><span>ส่วนลดจากโค้ด [{cart.promo?.code}]</span><span class="font-medium text-fresh-700 tabular-nums">-{formatBaht(checkout.codeDiscount)}</span></div>
 				{/if}
 				{#if cart.partnerDiscount > 0 && cart.appliedPromotion}
 					<div class="flex justify-between gap-3 text-slate-600"><span class="min-w-0 truncate">{cart.appliedPromotion.promotion.kind === 'CO_PROMO' ? 'โปรร่วม' : 'โปรร้าน'}: {cart.appliedPromotion.promotion.title}</span><span class="font-medium text-fresh-700 tabular-nums">-{formatBaht(cart.partnerDiscount)}</span></div>

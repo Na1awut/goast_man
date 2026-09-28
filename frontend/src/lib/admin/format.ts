@@ -49,6 +49,26 @@ export function bangkokToday(now = new Date()): string {
 	return now.toLocaleDateString('en-CA', { timeZone: BKK });
 }
 
+/** A moment, as the value a `datetime-local` input needs, in Bangkok wall time */
+export function bangkokLocalInput(d = new Date()): string {
+	const parts = new Intl.DateTimeFormat('en-CA', {
+		timeZone: BKK,
+		year: 'numeric',
+		month: '2-digit',
+		day: '2-digit',
+		hour: '2-digit',
+		minute: '2-digit',
+		hour12: false
+	}).formatToParts(d);
+	const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '00';
+	return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
+}
+
+/** A `datetime-local` value ("2026-10-01T09:00"), read as Bangkok wall time, to ISO */
+export function bangkokInputToIso(local: string): string | null {
+	return local ? new Date(`${local}:00+07:00`).toISOString() : null;
+}
+
 /** 0812345678 → "081-234-5678"; 13-digit IDs and anything else stay as they are */
 export function phone(value: string | null | undefined): string {
 	const d = (value ?? '').replace(/\D/g, '');

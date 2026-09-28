@@ -228,6 +228,12 @@ export async function payOrderTest(orderId: string): Promise<void> {
 	check(await db().rpc('pay_order_test', { p_order_id: orderId }));
 }
 
+/** Previews a discount code's effect at checkout, without spending one of its uses (place_order_at does that for real) */
+export async function checkPromoCode(code: string): Promise<{ code: string; kind: 'AMOUNT' | 'FREE_DELIVERY'; amount: number | null }> {
+	const row = check(await db().rpc('check_promo_code', { p_code: code })) as Row;
+	return { code: row.code, kind: row.kind, amount: row.amount ?? null };
+}
+
 export async function signOut(): Promise<void> {
 	await db().auth.signOut();
 }

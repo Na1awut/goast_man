@@ -44,19 +44,19 @@ export function describeQuote(q: DeliveryQuote, floor: number, custom = false): 
 /** Upper bound for a custom order: the runner fronts this money in cash */
 export const CUSTOM_MAX_PRICE = 1000;
 
-export type PromoCode = 'KMUTTFIRST' | 'GOOSEFREE';
+// App discount codes: created by ADMIN from the console (หน้า "โค้ดส่วนลด"), not
+// hardcoded. A code is either a flat baht AMOUNT off, or FREE_DELIVERY (waives the
+// fee). The app only ever learns a code's effect by asking the database
+// (check_promo_code / place_order_at); this type is just the shape of that answer.
+export type CodeKind = 'AMOUNT' | 'FREE_DELIVERY';
 
-export const PROMO_CODES: Record<PromoCode, { label: string; describe: (fee: number) => string }> = {
-	KMUTTFIRST: { label: 'ลด 15 บาท สำหรับออเดอร์แรก', describe: () => 'ลด 15 ฿' },
-	GOOSEFREE: { label: 'ฟรีค่าหิ้ว', describe: (fee) => `ฟรีค่าหิ้ว ${fee} ฿` }
-};
-
-export function normalizePromo(input: string): PromoCode | null {
-	const code = input.trim().toUpperCase();
-	return code in PROMO_CODES ? (code as PromoCode) : null;
+export interface AppliedCode {
+	code: string;
+	kind: CodeKind;
+	/** Baht off, for AMOUNT; null for FREE_DELIVERY */
+	amount: number | null;
 }
 
-/** `deliveryFee` is the fee still payable after any partner free-delivery promotion */
 /** Price of one unit of a cart line: the พิเศษ size when chosen and offered */
 export function unitPrice(line: Pick<CartItem, 'menuItem' | 'special'>): number {
 	return line.special && line.menuItem.specialPrice ? line.menuItem.specialPrice : line.menuItem.price;
@@ -67,10 +67,10 @@ export function lineName(line: Pick<CartItem, 'menuItem' | 'special'>): string {
 	return line.special && line.menuItem.specialPrice ? `${line.menuItem.name} (พิเศษ)` : line.menuItem.name;
 }
 
-export function promoDiscount(code: PromoCode | null, deliveryFee: number): number {
-	if (code === 'KMUTTFIRST') return 15;
-	if (code === 'GOOSEFREE') return deliveryFee;
-	return 0;
+/** `deliveryFee` is the fee still payable after any partner free-delivery promotion */
+export function promoDiscount(applied: AppliedCode | null, deliveryFee: number): number {
+	if (!applied) return 0;
+	return applied.kind === 'FREE_DELIVERY' ? deliveryFee : (applied.amount ?? 0);
 }
 
 /** "ลด 10 ฿ + ฟรีค่าหิ้ว", plus the minimum when there is one */

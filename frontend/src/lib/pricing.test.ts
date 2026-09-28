@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { quoteDelivery, roundUpTip } from './pricing';
+import { promoDiscount, quoteDelivery, roundUpTip, type AppliedCode } from './pricing';
 import { distanceMeters, PLACES, STORE_ZONE_PLACE } from './routing';
 
 describe('round-up tip', () => {
@@ -39,5 +39,22 @@ describe('delivery fee', () => {
 		expect(q(from('kfc-main', 'sit'), 1, true).fee).toBe(20);
 		expect(q(from('kfc-main', 'dorm-s6'), 8, true).fee).toBe(30);
 		expect(q(null, 2, true).fee).toBe(26);
+	});
+});
+
+// App discount codes: an admin-created effect (AMOUNT off or FREE_DELIVERY), never a hardcoded string
+describe('promo code discount', () => {
+	it('is 0 with no code applied', () => {
+		expect(promoDiscount(null, 15)).toBe(0);
+	});
+	it('takes the code’s amount off for AMOUNT', () => {
+		const code: AppliedCode = { code: 'WELCOME15', kind: 'AMOUNT', amount: 15 };
+		expect(promoDiscount(code, 20)).toBe(15);
+	});
+	it('waives whatever fee is still payable for FREE_DELIVERY', () => {
+		const code: AppliedCode = { code: 'GOOSEFREE', kind: 'FREE_DELIVERY', amount: null };
+		expect(promoDiscount(code, 24)).toBe(24);
+		// Already free from a store promotion: nothing left to waive
+		expect(promoDiscount(code, 0)).toBe(0);
 	});
 });

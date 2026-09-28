@@ -11,6 +11,7 @@ import { bangkokToday } from './format';
 import type {
 	AdminMenuItem,
 	AdminPromo,
+	AdminPromoCode,
 	AdminRider,
 	ClientError,
 	LogEntry,
@@ -248,6 +249,31 @@ export function createDemoApi(): DemoApi {
 		{ id: 'demo-promo-2', store_id: 'kfc-05', store: 'ร้านข้าวมันไก่ & ข้าวหมกไก่ (HALAL FOODS)', store_image: 'stores/kfc-05.webp', kind: 'DEAL', title: 'สั่ง 3 กล่อง ลด 15 บาท', description: '', min_qty: 3, discount: 15, free_delivery: false, ends_at: null, active: true, approved: true, created_at: new Date(now() - 5 * 86_400_000).toISOString(), review_note: null, state: 'LIVE', uses: 6 }
 	];
 	const invites: { email: string; store_id: string; store: string; invited_at: string }[] = [];
+	// App discount codes (the app's own money; a store's DEAL is separate)
+	const promoCodes: AdminPromoCode[] = [
+		{
+			code: 'WELCOME15',
+			kind: 'AMOUNT',
+			amount: 15,
+			starts_at: new Date(now() - 20 * 86_400_000).toISOString(),
+			max_uses: 200,
+			uses: 42,
+			active: true,
+			created_at: new Date(now() - 20 * 86_400_000).toISOString(),
+			created_by: DEMO_ADMIN.nickname
+		},
+		{
+			code: 'GOOSEFREE',
+			kind: 'FREE_DELIVERY',
+			amount: null,
+			starts_at: new Date(now() - 40 * 86_400_000).toISOString(),
+			max_uses: 9999,
+			uses: 318,
+			active: true,
+			created_at: new Date(now() - 40 * 86_400_000).toISOString(),
+			created_by: DEMO_ADMIN.nickname
+		}
+	];
 	// Recycle bin: the deleted row, its catalogue entry (to restore it whole), and when
 	const BIN_DAYS = 60;
 	const trash: { row: (typeof stores)[number]; live: Store | undefined; deleted_at: string; deleted_by: string }[] = [];
@@ -402,7 +428,7 @@ export function createDemoApi(): DemoApi {
 				delivery_fee: o.delivery_fee,
 				code_discount: o.code_discount,
 				partner_discount: 0,
-				promo_code: o.code_discount ? 'KMUTTFIRST' : null,
+				promo_code: o.code_discount ? 'WELCOME15' : null,
 				slip_ref: o.slip_ref,
 				accepted_at: o.accepted_at,
 				delivering_at: o.delivering_at,
@@ -761,6 +787,38 @@ export function createDemoApi(): DemoApi {
 		async setRainSurcharge(on) {
 			flags = on ? { ...flags, rain_surcharge: true, rain_since: new Date().toISOString(), rain_by: me.nickname } : { ...flags, rain_surcharge: false, rain_since: null, rain_by: null };
 			record(on ? 'RAIN_ON' : 'RAIN_OFF', 'setting', 'rain_surcharge', 'ค่าหิ้วช่วงฝนตก +5 บาท');
+			return wait(undefined);
+		},
+		promoCodes: () => wait(promoCodes),
+		async createPromoCode(d) {
+			if (me.role !== 'ADMIN') return fail('ADMIN_ONLY');
+			const code = d.code.trim().toUpperCase();
+			if (!/^[A-Z0-9]{3,20}$/.test(code)) return fail('BAD_CODE');
+			if (d.kind === 'AMOUNT' && (!d.amount || d.amount < 1 || d.amount > 500)) return fail('BAD_AMOUNT');
+			if (d.kind === 'FREE_DELIVERY' && d.amount) return fail('BAD_AMOUNT');
+			if (!d.maxUses || d.maxUses < 1 || d.maxUses > 100_000) return fail('BAD_MAX_USES');
+			if (promoCodes.some((p) => p.code === code)) return fail('CODE_TAKEN');
+			const row: AdminPromoCode = {
+				code,
+				kind: d.kind,
+				amount: d.kind === 'AMOUNT' ? d.amount : null,
+				starts_at: d.startsAt ?? new Date().toISOString(),
+				max_uses: d.maxUses,
+				uses: 0,
+				active: true,
+				created_at: new Date().toISOString(),
+				created_by: me.nickname
+			};
+			promoCodes.unshift(row);
+			record('PROMO_CODE_CREATED', 'promo_code', code, code, { kind: d.kind, amount: row.amount, max_uses: d.maxUses });
+			return wait(code);
+		},
+		async setPromoCodeActive(code, active) {
+			if (me.role !== 'ADMIN') return fail('ADMIN_ONLY');
+			const p = promoCodes.find((x) => x.code === code);
+			if (!p) return fail('PROMO_NOT_FOUND');
+			p.active = active;
+			record(active ? 'PROMO_CODE_ON' : 'PROMO_CODE_OFF', 'promo_code', code, code);
 			return wait(undefined);
 		},
 		async storeForEdit(storeId) {

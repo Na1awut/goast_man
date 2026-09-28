@@ -93,6 +93,7 @@ try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20261013000000_male_dorm_zone.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261014000000_payment_test_mode.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261015000000_delivery_fees.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261016000000_promo_codes.sql`, 'utf8'));
 	ok('profile-at-first-order migration applies cleanly', true);
 } catch (e) {
 	ok('profile-at-first-order migration applies cleanly', false, e.message);
@@ -109,6 +110,8 @@ await db.exec(`
 		('kfc-10', 'CO_PROMO', 'fixture co-promo', 3, 20, false, true, true),
 		('kfc-05', 'CO_PROMO', 'fixture free delivery', 3, 0, true, true, true);
 	update menu_items set is_available = false where id = 'kfc-04-8';
+	insert into promo_codes (code, kind, amount, starts_at, max_uses, created_by) values
+		('GOOSEFREE', 'FREE_DELIVERY', null, now() - interval '1 day', 9999, 'fixture');
 `);
 
 // ---------- Sign-up rules ----------
@@ -156,16 +159,9 @@ await ready(alice, 'Alice', '0811111111', '66070500101');
 
 // ---------- Pricing (must match frontend/src/lib/pricing.ts) ----------
 await as(alice, async () => {
-	// kfc-10-1 ส้มปั่น 18 ฿. 2 cups: 36 food + 15 fee - 10 (DEAL min 2) - 15 KMUTTFIRST = 26
-	const o1 = await orderRow((await placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-1', quantity: 2 }], 'KMUTTFIRST')).id);
-	ok('first order KMUTTFIRST accepted', o1.code_discount === 15);
-	ok('2 drinks → deal 10, total 26', o1.partner_discount === 10 && o1.total_price === 26, `total=${o1.total_price}`);
-
-	await expectError(
-		'KMUTTFIRST refused on 2nd order',
-		`select place_order_at('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":1}]', 'sit', 1, '', 'CASH', 'KMUTTFIRST')`,
-		'PROMO_NOT_ELIGIBLE'
-	);
+	// kfc-10-1 ส้มปั่น 18 ฿. 2 cups: 36 food + 15 fee - 10 (DEAL min 2) = 41, no app code this time
+	const o1 = await orderRow((await placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-1', quantity: 2 }])).id);
+	ok('2 drinks → deal 10, total 41', o1.partner_discount === 10 && o1.code_discount === 0 && o1.total_price === 41, `total=${o1.total_price}`);
 
 	// 3 cups: co-promo 20 beats deal 10 → 54 + 15 - 20 = 49
 	const o2 = await orderRow((await placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-1', quantity: 3 }])).id);
@@ -1184,6 +1180,51 @@ await as(tina, async () => {
 	ok('the rain switch is in the log', acts.has('RAIN_ON') && acts.has('RAIN_OFF'));
 });
 ok('rain off: back to the normal fee', (await quote('kfc-10', 'sit', 1)).fee === 15);
+
+// ---------- App discount codes: ADMIN creates, buyers redeem, uses run out ----------
+await as(alice, () => expectError('a buyer cannot create a discount code', `select admin_create_promo_code('WELCOME10', 'AMOUNT', 10, now(), 5)`, 'TEAM_ONLY'));
+await as(sam, () => expectError('STAFF cannot create one either (money given away)', `select admin_create_promo_code('WELCOME10', 'AMOUNT', 10, now(), 5)`, 'ADMIN_ONLY'));
+await as(tina, async () => {
+	await expectError('a code shorter than 3 characters is refused', `select admin_create_promo_code('ab', 'AMOUNT', 10, now(), 5)`, 'BAD_CODE');
+	await expectError('an unknown kind is refused', `select admin_create_promo_code('BADKIND', 'PERCENT', 10, now(), 5)`, 'BAD_KIND');
+	await expectError('AMOUNT needs an amount', `select admin_create_promo_code('NOAMOUNT', 'AMOUNT', null, now(), 5)`, 'BAD_AMOUNT');
+	await expectError('FREE_DELIVERY takes no amount', `select admin_create_promo_code('EXTRA', 'FREE_DELIVERY', 10, now(), 5)`, 'BAD_AMOUNT');
+	await expectError('max_uses must be at least 1', `select admin_create_promo_code('NOUSES', 'AMOUNT', 10, now(), 0)`, 'BAD_MAX_USES');
+	const code = (await one(`select admin_create_promo_code('welcome10', 'AMOUNT', 10, now(), 2) as c`)).c;
+	ok('the code is stored uppercase however it was typed', code === 'WELCOME10');
+	await expectError('the same code cannot be made twice', `select admin_create_promo_code('WELCOME10', 'AMOUNT', 10, now(), 2)`, 'CODE_TAKEN');
+	const row = (await rpc(`admin_promo_codes()`)).find((c) => c.code === 'WELCOME10');
+	ok('the new code lists with 0 uses so far', row?.kind === 'AMOUNT' && row.amount === 10 && row.max_uses === 2 && row.active === true && row.uses === 0, JSON.stringify(row));
+	// Scheduled for later ("จะปล่อยโค้ดตอนไหน"): not usable until then
+	await db.exec(`select admin_create_promo_code('LATER5', 'AMOUNT', 5, now() + interval '1 day', 10)`);
+});
+await as(alice, async () => {
+	await expectError('a code not started yet is refused when checked', `select check_promo_code('LATER5')`, 'PROMO_NOT_STARTED');
+	await expectError('and refused at order time too', `select place_order_at('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":1}]'::jsonb, 'sit', 1, '', 'CASH', 'LATER5')`, 'PROMO_NOT_STARTED');
+	const check = (await one(`select check_promo_code('welcome10') as c`)).c;
+	ok('checking a code (typed lowercase) previews its effect without using it up', check.code === 'WELCOME10' && check.kind === 'AMOUNT' && check.amount === 10);
+	const o1 = await orderRow((await placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-1', quantity: 1 }], 'WELCOME10')).id);
+	ok('the code takes 10 ฿ off', o1.code_discount === 10);
+	const o2 = await orderRow((await placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-1', quantity: 1 }], 'WELCOME10')).id);
+	ok('a second redemption still fits max_uses 2', o2.code_discount === 10);
+	await expectError('a 3rd redemption is refused: max_uses reached', `select place_order_at('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":1}]'::jsonb, 'sit', 1, '', 'CASH', 'WELCOME10')`, 'PROMO_USES_UP');
+	await expectError('checking it now says the same', `select check_promo_code('WELCOME10')`, 'PROMO_USES_UP');
+	// Cancelling an order that used the code frees a use back up
+	await db.exec(`select cancel_order('${o1.id}')`);
+	const o3 = await orderRow((await placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-1', quantity: 1 }], 'WELCOME10')).id);
+	ok('a cancelled redemption does not count against the limit', o3.code_discount === 10);
+	await db.exec(`select cancel_order('${o2.id}'); select cancel_order('${o3.id}')`);
+});
+await as(tina, () => db.exec(`select admin_set_promo_code_active('WELCOME10', false)`));
+await as(alice, () => expectError('a switched-off code is refused', `select check_promo_code('WELCOME10')`, 'PROMO_INVALID'));
+await as(sam, () => expectError('STAFF cannot switch a code off either', `select admin_set_promo_code_active('LATER5', false)`, 'ADMIN_ONLY'));
+await as(tina, async () => {
+	const acts = new Set((await rpc(`admin_activity()`)).map((l) => l.action));
+	ok('creating and switching a code is in the log', acts.has('PROMO_CODE_CREATED') && acts.has('PROMO_CODE_OFF'));
+});
+await db.exec(`set role anon;`);
+await expectError('a signed-out visitor has no grant to check a code', `select check_promo_code('WELCOME10')`, 'permission denied');
+await db.exec(`reset role;`);
 
 // Anonymous visitors can browse the catalogue
 await db.exec(`set role anon;`);

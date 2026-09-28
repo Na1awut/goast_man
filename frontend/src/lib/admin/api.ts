@@ -9,6 +9,7 @@ import { ADMIN_ERRORS } from './labels';
 import type {
 	AdminMenuItem,
 	AdminPromo,
+	AdminPromoCode,
 	AdminRider,
 	AdminStore,
 	TrashStore,
@@ -19,6 +20,7 @@ import type {
 	ErrorStatus,
 	LogEntry,
 	MoneyEntry,
+	NewPromoCode,
 	NewStore,
 	OrderDetail,
 	OrdersPage,
@@ -93,6 +95,10 @@ export interface AdminApi {
 	setPaymentTestMode(on: boolean): Promise<void>;
 	/** Rain fee +5 on every delivery (STAFF or ADMIN) */
 	setRainSurcharge(on: boolean): Promise<void>;
+	/** App discount codes: ADMIN creates and switches, STAFF can see the list */
+	promoCodes(): Promise<AdminPromoCode[]>;
+	createPromoCode(draft: NewPromoCode): Promise<string>;
+	setPromoCodeActive(code: string, active: boolean): Promise<void>;
 	/** The full store (details, storefront, menu) for the editor; hidden stores included */
 	storeForEdit(storeId: string): Promise<Store>;
 	uploadStoreImage(storeId: string, file: File, kind: 'banner' | 'logo' | 'photo' | 'menu'): Promise<string>;
@@ -172,6 +178,10 @@ const liveApi: AdminApi = {
 	appFlags: () => call('app_flags'),
 	setPaymentTestMode: (on) => call('admin_set_payment_test_mode', { p_on: on }),
 	setRainSurcharge: (on) => call('admin_set_rain_surcharge', { p_on: on }),
+	promoCodes: () => call('admin_promo_codes'),
+	createPromoCode: (d) =>
+		call('admin_create_promo_code', { p_code: d.code, p_kind: d.kind, p_amount: d.amount, p_starts_at: d.startsAt, p_max_uses: d.maxUses }),
+	setPromoCodeActive: (code, active) => call('admin_set_promo_code_active', { p_code: code, p_active: active }),
 	storeForEdit: (storeId) => app.fetchStore(storeId),
 	uploadStoreImage: (storeId, file, kind) => app.uploadStoreImage(storeId, file, kind),
 	saveMenuItem: (storeId, m) =>
