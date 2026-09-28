@@ -7,12 +7,18 @@
 	import PromoLine from '$lib/components/PromoLine.svelte';
 	import SmartImage from '$lib/components/SmartImage.svelte';
 	import StoreLogo from '$lib/components/StoreLogo.svelte';
-	import { hasReviews, livePromotions, searchStores, STORE_ZONES, ZONE_NAMES } from '$lib/data/stores';
+	import { hasReviews, livePromotions, searchStores, STORE_TYPES, STORE_ZONES, STORE_ZONE_TYPE, ZONE_NAMES } from '$lib/data/stores';
+	import type { StoreType } from '$lib/types';
 	import { catalog } from '$lib/stores/catalog.svelte';
 	import { cart } from '$lib/stores/cart.svelte';
 	import { storeView } from '$lib/stores/storeView.svelte';
 
-	const results = $derived(searchStores(catalog.stores, storeView.query, storeView.zone));
+	const results = $derived(searchStores(catalog.stores, storeView.query, storeView.zone, storeView.type));
+	const zones = $derived(STORE_ZONES.filter((z) => z.id === 'all' || (
+		(storeView.type === 'all' || STORE_ZONE_TYPE[z.id] === storeView.type)
+		&& (z.id === storeView.zone || catalog.stores.some((s) => s.zone === z.id))
+	)));
+	const hasFilters = $derived(storeView.type !== 'all' || storeView.zone !== 'all');
 
 	let searchInput = $state<HTMLInputElement>();
 	$effect(() => {
@@ -39,22 +45,31 @@
 			/>
 		</label>
 
-		<div class="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4" role="tablist" aria-label="โซนอาหาร">
-			{#each STORE_ZONES.filter((z) => z.id === 'all' || catalog.stores.some((s) => s.zone === z.id)) as zone (zone.id)}
-				{@const active = storeView.zone === zone.id}
-				<button
-					type="button"
-					role="tab"
-					aria-selected={active}
-					onclick={() => (storeView.zone = zone.id)}
-					class="shrink-0 rounded-full px-4 py-2 text-sm whitespace-nowrap transition-colors {active ? 'bg-brand font-medium text-white' : 'border border-slate-200 bg-white text-slate-600'}"
-				>
-					{zone.label}
-				</button>
-			{/each}
+		<div class="grid grid-cols-[0.85fr_1.15fr] gap-3">
+			<label class="min-w-0 space-y-1.5">
+				<span class="block text-xs font-medium text-slate-600">ประเภทร้าน</span>
+				<span class="relative block">
+					<select value={storeView.type} onchange={(e) => storeView.selectType(e.currentTarget.value as StoreType | 'all')} class="h-11 w-full min-w-0 appearance-none rounded-xl border border-slate-200 bg-white pr-8 pl-3 text-sm text-slate-900 outline-none focus:border-brand focus-visible:ring-2 focus-visible:ring-brand/20">
+						{#each STORE_TYPES as type (type.id)}<option value={type.id}>{type.label}</option>{/each}
+					</select>
+					<Icon name="chevron-down" class="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-slate-500" />
+				</span>
+			</label>
+			<label class="min-w-0 space-y-1.5">
+				<span class="block text-xs font-medium text-slate-600">โซน / อาคาร</span>
+				<span class="relative block">
+					<select bind:value={storeView.zone} class="h-11 w-full min-w-0 appearance-none rounded-xl border border-slate-200 bg-white pr-8 pl-3 text-sm text-slate-900 outline-none focus:border-brand focus-visible:ring-2 focus-visible:ring-brand/20">
+						{#each zones as zone (zone.id)}<option value={zone.id}>{zone.label}</option>{/each}
+					</select>
+					<Icon name="chevron-down" class="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-slate-500" />
+				</span>
+			</label>
 		</div>
 
-		<p class="text-xs text-slate-500" aria-live="polite">{catalog.loading ? 'กำลังโหลดร้าน...' : `${results.length} ร้าน`}</p>
+		<div class="flex min-h-6 items-center justify-between gap-3">
+			<p class="text-xs text-slate-500" aria-live="polite">{catalog.loading ? 'กำลังโหลดร้าน...' : `${results.length} ร้าน`}</p>
+			{#if hasFilters}<button type="button" onclick={() => storeView.clearFilters()} class="-my-2 min-h-11 text-xs font-medium text-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">ล้างตัวกรอง</button>{/if}
+		</div>
 
 		{#if catalog.error}
 			<div class="rounded-2xl border border-slate-100 bg-white px-6 py-10 text-center">
@@ -73,7 +88,7 @@
 		{:else if results.length === 0}
 			<div class="rounded-2xl border border-slate-100 bg-white px-6 py-12 text-center">
 				<Goose pose="wait" class="mx-auto mb-3 w-24" />
-				<p class="text-sm font-medium text-slate-800">ไม่เจอ “{storeView.query}” ในร้านพาร์ทเนอร์</p>
+				<p class="text-sm font-medium text-slate-800">{storeView.query.trim() ? `ไม่เจอ “${storeView.query}” ในร้านค้า` : 'ยังไม่มีร้านในหมวดนี้'}</p>
 				<p class="mt-1 text-xs text-slate-500">ร้านไหนก็ฝากเพื่อนซื้อให้ได้ ไม่ต้องเป็นร้านในแอป</p>
 				<button type="button" onclick={() => nav.go('CUSTOM_ORDER')} class="mt-4 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white">ฝากเพื่อนซื้อแทน</button>
 			</div>

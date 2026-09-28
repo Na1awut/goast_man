@@ -6,7 +6,7 @@
 //   - ratings / reviews: every store starts as "ร้านใหม่ในแอป"
 //   - partner status and promotions: no stall has signed up yet
 // queueMinutes is an estimate by kind of stall, used for the rider's pickup timing.
-import type { MenuItem, Promotion, Store, StoreZone } from '$lib/types';
+import type { MenuItem, Promotion, Store, StoreType, StoreZone } from '$lib/types';
 import { mockMenuPhoto } from './menuPhotos.ts';
 
 export const STORE_ZONES: { id: StoreZone | 'all'; label: string }[] = [
@@ -26,6 +26,22 @@ export const ZONE_NAMES: Record<StoreZone, string> = {
 	cb1: 'อาคาร CB1',
 	'green-canteen': 'Green Canteen 190 ปี',
 	dorm: 'โซนหอพักนักศึกษา'
+};
+
+export const STORE_TYPES: { id: StoreType | 'all'; label: string }[] = [
+	{ id: 'all', label: 'ทั้งหมด' },
+	{ id: 'canteen', label: 'โรงอาหาร' },
+	{ id: 'shop', label: 'ร้านค้า' }
+];
+
+/** Group locations for browsing; this is independent of food/menu categories. */
+export const STORE_ZONE_TYPE: Record<StoreZone, StoreType> = {
+	'kfc-main': 'canteen',
+	'female-dorm': 'canteen',
+	'male-dorm': 'canteen',
+	'green-canteen': 'canteen',
+	cb1: 'shop',
+	dorm: 'shop'
 };
 
 /** [name, price, special price (พิเศษ), description] */
@@ -426,10 +442,11 @@ export function sortForBrowsing(stores: Store[]): Store[] {
 }
 
 /** Live search across store name, category and menu item names */
-export function searchStores(stores: Store[], query: string, zone: StoreZone | 'all'): { store: Store; matchedItems: string[] }[] {
+export function searchStores(stores: Store[], query: string, zone: StoreZone | 'all', type: StoreType | 'all' = 'all'): { store: Store; matchedItems: string[] }[] {
 	const q = query.trim().toLowerCase();
 	return sortForBrowsing(stores)
 		.filter((s) => zone === 'all' || s.zone === zone)
+		.filter((s) => type === 'all' || STORE_ZONE_TYPE[s.zone] === type)
 		.map((store) => {
 			if (!q) return { store, matchedItems: [] };
 			const storeHit = store.name.toLowerCase().includes(q) || store.category.toLowerCase().includes(q);

@@ -7,10 +7,10 @@
 	import PromoLine from '$lib/components/PromoLine.svelte';
 	import SmartImage from '$lib/components/SmartImage.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
-	import { DROPOFF_POINTS, PICKUP_HUBS } from '$lib/data/locations';
+	import { DROPOFF_POINTS } from '$lib/data/locations';
 	import { hasReviews, livePromotions } from '$lib/data/stores';
 	import { describeBenefit, STORE_DELIVERY_FEE } from '$lib/pricing';
-	import type { PickupHub, StoreZone } from '$lib/types';
+	import type { StoreType } from '$lib/types';
 	import { auth } from '$lib/stores/auth.svelte';
 	import { campus } from '$lib/stores/campus.svelte';
 	import { cart } from '$lib/stores/cart.svelte';
@@ -32,31 +32,18 @@
 
 	const activeOrder = $derived(orders.active[0]);
 
-	// --- Where to buy: canteens open the partner list, the rest become a free-form request
-	const PICKUP_ZONE: Partial<Record<string, StoreZone>> = { 'kfc-main': 'kfc-main', 'female-dorm': 'female-dorm', 'male-dorm': 'male-dorm', cb1: 'cb1', 'green-canteen': 'green-canteen' };
-	const PICKUP_ICON: Record<string, IconName> = { 'kfc-main': 'utensils', 'female-dorm': 'utensils', 'male-dorm': 'utensils', cb1: 'store', 'green-canteen': 'utensils', '7eleven-dorm': 'cart', soi45: 'store' };
-	/** Stores listed in the app for this hub; 0 means it is served by free-form errands (ฝากซื้อ) */
-	const storesAt = (hub: PickupHub) => {
-		const zone = PICKUP_ZONE[hub.id];
-		return zone ? catalog.stores.filter((s) => s.zone === zone).length : 0;
-	};
-	const TILE_LABEL: Record<string, string> = { '7eleven-dorm': 'เซเว่น หอใน' };
-	const pickupSub = (hub: PickupHub) => {
-		if (!PICKUP_ZONE[hub.id]) return 'ฝากซื้อ';
-		if (catalog.loading) return '…';
-		const count = storesAt(hub);
-		return count ? `${count} ร้าน` : 'ฝากซื้อ';
-	};
+	// Broad choices stay compact as new campus locations are added.
+	const pickupTypes: { id: StoreType | 'seven'; label: string; icon: IconName }[] = [
+		{ id: 'canteen', label: 'โรงอาหาร', icon: 'utensils' },
+		{ id: 'shop', label: 'ร้านค้า', icon: 'store' },
+		{ id: 'seven', label: 'เซเว่น', icon: 'cart' }
+	];
 
-	function choosePickup(hub: PickupHub) {
-		const zone = PICKUP_ZONE[hub.id];
-		if (zone && storesAt(hub) > 0) {
-			storeView.zone = zone;
-			nav.go('STORES');
-		} else {
-			customDraft.pickupId = hub.id;
+	function choosePickupType(type: StoreType | 'seven') {
+		if (type === 'seven') {
+			customDraft.pickupId = '7eleven-dorm';
 			nav.go('CUSTOM_ORDER');
-		}
+		} else storeView.browse(type);
 	}
 
 	// --- Frequent drop-offs as a compact chip row
@@ -108,7 +95,7 @@
 
 	function openSearch() {
 		storeView.focusSearch = true;
-		nav.go('STORES');
+		storeView.browse();
 	}
 </script>
 
@@ -189,7 +176,7 @@
 					<p class="text-sm font-semibold text-slate-900">ขี้เกียจเดินฝ่าแดด? ให้ห่านบางมดหิ้วให้</p>
 					<p class="text-xs text-slate-500">ค่าหิ้วเริ่มต้นเพียง {STORE_DELIVERY_FEE}.-</p>
 				</div>
-				<button type="button" onclick={() => nav.go('STORES')} class="flex shrink-0 items-center gap-1 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white">
+				<button type="button" onclick={() => storeView.browse()} class="flex shrink-0 items-center gap-1 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white">
 					ฝากหิ้วเลย <Icon name="arrow-right" class="h-4 w-4" />
 				</button>
 			</div>
@@ -244,14 +231,11 @@
 		<!-- Where to buy -->
 		<section class="space-y-3">
 			<h2 class="text-base font-semibold text-slate-900">สั่งจากที่ไหนดี</h2>
-			<div class="grid grid-cols-4 gap-1.5">
-				{#each PICKUP_HUBS as hub (hub.id)}
-					<button type="button" onclick={() => choosePickup(hub)} class="flex flex-col items-center gap-2 rounded-2xl bg-white px-1 pt-3 pb-2.5 text-center">
-						<span class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand"><Icon name={PICKUP_ICON[hub.id] ?? 'store'} /></span>
-						<span class="w-full">
-							<span class="line-clamp-2 min-h-[2lh] text-xs leading-tight font-medium text-slate-900">{TILE_LABEL[hub.id] ?? hub.shortName}</span>
-							<span class="block text-[11px] text-slate-500">{pickupSub(hub)}</span>
-						</span>
+			<div class="grid grid-cols-3 gap-2" aria-label="ประเภทจุดซื้อ">
+				{#each pickupTypes as type (type.id)}
+					<button type="button" onclick={() => choosePickupType(type.id)} class="flex min-h-20 flex-col items-center justify-center gap-2 rounded-xl bg-white px-2 py-3 text-center text-slate-900 transition-colors hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand active:bg-brand-50">
+						<Icon name={type.icon} class="h-6 w-6 text-brand" />
+						<span class="text-sm font-medium">{type.label}</span>
 					</button>
 				{/each}
 			</div>
@@ -299,7 +283,7 @@
 			<section class="space-y-3">
 				<div class="flex items-baseline justify-between">
 					<h2 class="text-base font-semibold text-slate-900">ดีลเฉพาะเด็กบางมด</h2>
-					<button type="button" onclick={() => nav.go('STORES')} class="text-sm font-medium text-brand">ดูทั้งหมด</button>
+					<button type="button" onclick={() => storeView.browse()} class="text-sm font-medium text-brand">ดูทั้งหมด</button>
 				</div>
 				<div class="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1">
 					{#each deals as { store, deal } (store.id)}

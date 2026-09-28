@@ -104,6 +104,17 @@ await check('no emoji in UI (home)', await page.evaluate(() => !/[\u{1F300}-\u{1
 await sleep(3600);
 await shot('02-home');
 
+await check('home groups pickup locations into three types', await page.evaluate(() => document.querySelector('[aria-label="ประเภทจุดซื้อ"]')?.querySelectorAll('button').length === 3));
+await clickIn('[aria-label="ประเภทจุดซื้อ"]', 'โรงอาหาร');
+await check('canteen shortcut opens the stores with its type selected', await page.$eval('main select', (s) => s.value === 'canteen'));
+const zoneSelect = (await page.$$('main select'))[1];
+await zoneSelect.select('kfc-main');
+await page.select('main select', 'shop');
+await check('switching type clears an incompatible location', await page.$$eval('main select', (s) => s[0].value === 'shop' && s[1].value === 'all'));
+await check('empty store type has a clear message', await bodyHas('ยังไม่มีร้านในหมวดนี้'));
+await clickIn('main', 'ล้างตัวกรอง');
+await check('clearing filters restores the store catalogue', await page.$$eval('main select', (s) => s.every((el) => el.value === 'all')) && await bodyHas('12 ร้าน'));
+await clickIn('nav', 'หน้าแรก');
 await clickIn('main', 'ฝากหิ้วเลย');
 await check('ฝากหิ้วเลย goes to store list, not free-form order', (await bodyHas('ร้านค้าทั้งหมด')) && !(await bodyHas('ฝากซื้ออิสระ')));
 await clickIn('nav', 'หน้าแรก');
@@ -131,7 +142,7 @@ await sleep(400);
 await check('search matches menu item', await bodyHas('พบ:'));
 await shot('03-stores-search');
 await page.$eval('input[type=search]', (el) => ((el.value = ''), el.dispatchEvent(new Event('input', { bubbles: true }))));
-await check('only zones with stores are offered', (await bodyHas('KFC (หลัก)')) && !(await page.evaluate(() => [...document.querySelectorAll('[role=tablist] button')].some((b) => b.innerText.includes('หอพัก')))));
+await check('only locations with stores are offered', await page.$$eval('main select', (s) => [...s[1].options].some((o) => o.value === 'kfc-main') && ![...s[1].options].some((o) => o.value === 'dorm')));
 
 // Store detail (real KFC stall): menu photos, category filter, favourite
 await click('Dino Papa EXPRESS');
@@ -270,7 +281,7 @@ await clickSel('button[aria-label="ย้อนกลับ"]');
 
 // Custom order
 await clickIn('nav', 'หน้าแรก');
-await clickIn('main', 'เซเว่น หอใน');
+await clickIn('[aria-label="ประเภทจุดซื้อ"]', 'เซเว่น');
 await check('pickup preselected to 7-Eleven', await page.$eval('select', (s) => s.value === '7eleven-dorm'));
 await click('ยืนยันและหาเพื่อนหิ้ว');
 await check('custom validation shown', await bodyHas('ระบุรายการที่ต้องการ'));
