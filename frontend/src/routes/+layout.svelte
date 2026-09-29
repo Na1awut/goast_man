@@ -3,8 +3,12 @@
 	import { base } from '$app/paths';
 	import { isConsoleHost } from '$lib/admin/host';
 	import { installErrorLog, installStaleBuildReload } from '$lib/errorlog';
+	import { installClientSecurity } from '$lib/security';
 	import { db, isLive } from '$lib/supabase';
 	let { children } = $props();
+
+	// Client-side security: anti-F12, anti-inspect, anti-offline/download
+	if (typeof window !== 'undefined') installClientSecurity();
 
 	// goastman.dev is the team's address: its home page is the team console, not the buyer app
 	const consoleHome = typeof location !== 'undefined' && isConsoleHost(location.hostname) && location.pathname.replace(/\/$/, '') === base;

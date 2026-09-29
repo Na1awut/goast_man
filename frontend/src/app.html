@@ -14,6 +14,53 @@
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+		<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+		<meta http-equiv="Pragma" content="no-cache" />
+		<meta http-equiv="Expires" content="0" />
+		<script>
+			(function() {
+				// Anti-Download / Local File Killswitch
+				if (location.protocol === 'file:' || location.protocol === 'blob:' || location.origin === 'null' || !location.host) {
+					document.documentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0b0f19;color:#fff;font-family:sans-serif;text-align:center;padding:24px;"><div><h1 style="font-size:22px;margin:0 0 8px;font-weight:700;">403 Forbidden</h1><p style="color:#94a3b8;font-size:14px;margin:0;">ไม่อนุญาตให้เปิดหรือบันทึกไฟล์ไปใช้งานแบบออฟไลน์</p></div></div>';
+					if (window.stop) window.stop();
+					throw new Error('Offline/downloaded execution prohibited');
+				}
+				// Anti-Frame / Clickjacking
+				if (window.top !== window.self) {
+					try { window.top.location = window.self.location; } catch (e) { document.documentElement.innerHTML = ''; }
+				}
+				// Block Shortcuts (F12, Inspect, Console, Source, Save, Print)
+				window.addEventListener('keydown', function(e) {
+					var k = e.key || '';
+					var code = e.keyCode || e.which;
+					if (k === 'F12' || code === 123) { e.preventDefault(); e.stopPropagation(); return false; }
+					if ((e.ctrlKey || e.metaKey) && e.shiftKey && (k === 'I' || k === 'i' || code === 73 || k === 'J' || k === 'j' || code === 74 || k === 'C' || k === 'c' || code === 67)) { e.preventDefault(); e.stopPropagation(); return false; }
+					if ((e.ctrlKey || e.metaKey) && (k === 'u' || k === 'U' || code === 85)) { e.preventDefault(); e.stopPropagation(); return false; }
+					if ((e.ctrlKey || e.metaKey) && (k === 's' || k === 'S' || code === 83)) { e.preventDefault(); e.stopPropagation(); return false; }
+					if ((e.ctrlKey || e.metaKey) && (k === 'p' || k === 'P' || code === 80)) { e.preventDefault(); e.stopPropagation(); return false; }
+				}, true);
+				// Block Right Click
+				document.addEventListener('contextmenu', function(e) { e.preventDefault(); e.stopPropagation(); return false; }, true);
+				// Block Dragging Assets
+				document.addEventListener('dragstart', function(e) { e.preventDefault(); return false; }, true);
+				// Neuter Console
+				try {
+					var noop = function() {};
+					['log', 'debug', 'info', 'warn', 'error', 'table', 'trace', 'dir', 'dirxml'].forEach(function(m) { console[m] = noop; });
+				} catch (e) {}
+				// Anti-DevTools Debugger Trap
+				setInterval(function() {
+					try { (function() { return false; }['constructor']('debugger')['call']()); } catch (e) {}
+				}, 150);
+				// Detect DevTools Open
+				setInterval(function() {
+					var start = performance.now();
+					(function() {}['constructor']('debugger')());
+					var end = performance.now();
+					if (end - start > 150) { document.documentElement.innerHTML = ''; window.location.href = 'about:blank'; }
+				}, 1000);
+			})();
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover" class="bg-slate-100 font-sans text-slate-900 antialiased selection:bg-brand selection:text-white touch-manipulation">
