@@ -101,7 +101,15 @@ export function friendlyError(error: unknown): string {
 		SLIP_INVALID: 'อ่านสลิปไม่ได้ ลองเลือกรูปสลิปที่ชัดกว่านี้',
 		ALREADY_PAID: 'ออเดอร์นี้ชำระแล้ว',
 		ORDER_NOT_PAYABLE: 'ออเดอร์นี้ชำระด้วย PromptPay ไม่ได้แล้ว',
-		ORDER_NOT_FOUND: 'ไม่พบออเดอร์นี้'
+		ORDER_NOT_FOUND: 'ไม่พบออเดอร์นี้',
+		// Auth / session errors from Supabase (refresh token failure, JWT expired)
+		'JWT expired': 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่',
+		'Invalid Refresh Token': 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่',
+		'Refresh Token Not Found': 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่',
+		'invalid claim': 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่',
+		'Auth session missing': 'กรุณาเข้าสู่ระบบก่อน',
+		'not_authenticated': 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่',
+		'401': 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่'
 	};
 	const code = Object.keys(known).find((k) => text.includes(k));
 	return code ? known[code] : 'เชื่อมต่อไม่สำเร็จ ลองใหม่อีกครั้ง';

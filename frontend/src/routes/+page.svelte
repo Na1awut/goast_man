@@ -68,9 +68,22 @@
 		reduceMotion = prefersReducedMotion();
 		campus.init();
 		void start();
+
+		// When the browser restores from bfcache all WebSocket connections are
+		// dead and the refresh token may have expired in the meantime. Re-check
+		// the session so we redirect to LOGIN immediately instead of letting
+		// every subsequent API call fail with 401.
+		const handlePageShow = (e: PageTransitionEvent) => {
+			if (e.persisted) {
+				void auth.init().catch(() => {});
+			}
+		};
+		window.addEventListener('pageshow', handlePageShow);
+
 		return () => {
 			orders.reset();
 			rider.reset();
+			window.removeEventListener('pageshow', handlePageShow);
 		};
 	});
 

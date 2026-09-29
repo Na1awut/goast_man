@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import AppBar from '$lib/components/AppBar.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import PartnerBadge from '$lib/components/PartnerBadge.svelte';
@@ -25,6 +26,14 @@
 	let tab = $state<(typeof TABS)[number]['id']>('overview');
 
 	const store = $derived(auth.user?.partnerStoreId ? catalog.byId(auth.user.partnerStoreId) : undefined);
+	$effect(() => {
+		const id = auth.user?.partnerStoreId;
+		if (auth.isPartner && id) untrack(() => { void catalog.loadPartnerStore(id); });
+	});
+
+	function retryStore() {
+		if (auth.isPartner && auth.user?.partnerStoreId) void catalog.loadPartnerStore(auth.user.partnerStoreId);
+	}
 
 	// ---------- Promotions ----------
 	interface Draft {
@@ -129,12 +138,19 @@
 	<AppBar title="จัดการร้านของฉัน" onback={() => nav.reset('PROFILE')} />
 
 	{#if !store}
-		<div class="flex flex-1 flex-col items-center justify-center px-8 text-center">
-			<p class="text-sm font-medium text-slate-800">{catalog.loading ? 'กำลังโหลดร้าน...' : 'บัญชีนี้ยังไม่ได้ผูกกับร้าน Partner'}</p>
-			{#if !catalog.loading}<p class="mt-1 text-xs text-slate-500">ติดต่อทีม Goose Man เพื่อเปิดบัญชีร้านค้า</p>{/if}
+		<div class="flex flex-1 flex-col items-center justify-center gap-3 px-8 py-12 text-center" aria-live="polite">
+			<Icon name="store" class="h-10 w-10 text-brand" />
+			<p class="text-sm font-medium text-slate-800">{catalog.partnerLoading ? 'กำลังโหลดร้านของคุณ...' : catalog.partnerError ?? 'บัญชีนี้ยังไม่ได้ผูกกับร้าน Partner'}</p>
+			{#if !catalog.partnerLoading}
+				{#if auth.isPartner}
+					<button type="button" onclick={retryStore} class="min-h-11 rounded-xl bg-brand px-5 text-sm font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">ลองโหลดร้านอีกครั้ง</button>
+				{:else}<p class="text-xs text-slate-600">ติดต่อทีม Goose Man เพื่อเปิดบัญชีร้านค้า</p>{/if}
+				<button type="button" onclick={() => nav.reset('PROFILE')} class="min-h-11 text-sm font-medium text-brand-700">กลับไปโปรไฟล์</button>
+			{/if}
 		</div>
 	{:else}
 		<div class="space-y-6 px-4 pt-4 pb-10">
+			{#if store.hidden}<p class="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">ร้านนี้ยังไม่แสดงให้ลูกค้าเห็น คุณจัดการข้อมูลและเมนูได้ ติดต่อทีม Goose Man เมื่อต้องการแสดงร้านในแอป</p>{/if}
 			<!-- Identity -->
 			<div class="flex items-center justify-between gap-3">
 				<div class="min-w-0">

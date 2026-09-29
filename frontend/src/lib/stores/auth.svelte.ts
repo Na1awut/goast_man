@@ -3,7 +3,8 @@ import type { User } from '$lib/types';
 import { isKmuttEmail } from '$lib/utils';
 import { digitsOnly, needsOnboarding, TERMS_VERSION, type ProfileInput } from '$lib/profile';
 import * as api from '$lib/api/live';
-import { friendlyError, isLive } from '$lib/supabase';
+import { friendlyError, isLive, supabase } from '$lib/supabase';
+import { toast } from './toast.svelte';
 import { catalog } from './catalog.svelte';
 
 const USER_KEY = 'gooseman_user';
@@ -86,6 +87,8 @@ class AuthStore {
 	token = $state<string | null>(null);
 	/** Error from the last sign-in attempt (e.g. a non-KMUTT Google account), shown on the login page */
 	signInError = $state('');
+	/** True when a live session was dropped unexpectedly (refresh failure); the page guard shows a toast */
+	sessionExpired = $state(false);
 	isAuthenticated = $derived(this.user !== null && (isLive || this.token !== null));
 	isPartner = $derived(this.user?.role === 'PARTNER' && !!this.user.partnerStoreId);
 	/** Profile or consent missing: asked for at the first order (see profileGate) */
@@ -104,6 +107,18 @@ class AuthStore {
 				return false;
 			}
 			this.user = await api.currentUser();
+
+			// Detect session expiry: when the refresh token fails Supabase fires
+			// SIGNED_OUT. Without this listener the user stays on an
+			// authenticated screen but every API call returns 401.
+			supabase!.auth.onAuthStateChange((event) => {
+				if (event === 'SIGNED_OUT' && this.user) {
+					this.user = null;
+					this.sessionExpired = true;
+					toast.show('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่', 'error', { duration: 6000 });
+				}
+			});
+
 			return this.user !== null;
 		}
 		const saved = localStorage.getItem(USER_KEY);
@@ -181,9 +196,11 @@ class AuthStore {
 	}
 
 	async logout() {
+		catalog.resetPartnerStore();
 		if (isLive) await api.signOut();
 		this.user = null;
 		this.token = null;
+		this.sessionExpired = false;
 		localStorage.removeItem(USER_KEY);
 		localStorage.removeItem(TOKEN_KEY);
 	}

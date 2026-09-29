@@ -283,7 +283,7 @@ export async function fetchCatalog(): Promise<Store[]> {
 }
 
 export async function fetchStore(storeId: string): Promise<Store> {
-	const row = check(await db().from('stores').select('*, menu_items(*), promotions(*)').eq('id', storeId).single());
+	const row = check(await db().from('stores').select('*, menu_items(*), promotions(*)').eq('id', storeId).maybeSingle());
 	if (!row) throw new Error('STORE_NOT_FOUND');
 	return mapStore(row);
 }

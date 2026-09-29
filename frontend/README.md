@@ -66,6 +66,9 @@ src/
 - **Promotions:** `DEAL` (store's own, live at once) and `CO_PROMO` (joint with Goose Man, shown on Home only after approval).
   One best promotion applies per order (`bestPromotion` in `pricing.ts`, mirrored by `place_order()` in SQL).
 - **Partner accounts** open *จัดการร้านของฉัน* to edit the banner, tagline, fast lane and promotions.
+  The owner’s shop is fetched separately from the buyer catalogue, so hidden shops remain editable.
+  A failed load offers retry; a missing/deleted shop asks the owner to contact the team.
+  Owner data is cleared on logout and never added to buyer store lists.
   Demo: tap **เข้าสู่ระบบร้านค้า** on the login screen (signs in as the demo owner of `kfc-05`; co-promos auto-approve after a few seconds).
 
 ## Demo behaviour

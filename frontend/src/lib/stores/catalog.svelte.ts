@@ -22,6 +22,11 @@ class CatalogStore {
 	stores = $state<Store[]>(isLive ? [] : STORE_CATALOGUE);
 	loading = $state(isLive);
 	error = $state<string | null>(null);
+	/** Owner-only data stays separate from the catalogue shown to buyers. */
+	partnerStore = $state<Store | null>(null);
+	partnerLoading = $state(false);
+	partnerError = $state<string | null>(null);
+	#partnerRequest = 0;
 
 	browsing = $derived(sortForBrowsing(this.stores));
 	/** Store deals that are live right now, across every store (home page) */
@@ -34,7 +39,35 @@ class CatalogStore {
 	);
 
 	byId(id: string): Store | undefined {
-		return findStore(this.stores, id);
+		return this.partnerStore?.id === id ? this.partnerStore : findStore(this.stores, id);
+	}
+
+	async loadPartnerStore(storeId: string) {
+		const request = ++this.#partnerRequest;
+		if (this.partnerStore?.id !== storeId) this.partnerStore = null;
+		this.partnerLoading = true;
+		this.partnerError = null;
+		try {
+			const store = isLive ? await api.fetchStore(storeId) : findStore(this.stores, storeId);
+			if (request !== this.#partnerRequest) return;
+			if (!store) throw new Error('STORE_NOT_FOUND');
+			this.partnerStore = store;
+		} catch (err) {
+			if (request !== this.#partnerRequest) return;
+			this.partnerStore = null;
+			this.partnerError = err instanceof Error && err.message === 'STORE_NOT_FOUND'
+				? 'ไม่พบร้านที่เชื่อมกับบัญชีนี้ ติดต่อทีม Goose Man เพื่อตรวจสอบร้าน'
+				: friendlyError(err);
+		} finally {
+			if (request === this.#partnerRequest) this.partnerLoading = false;
+		}
+	}
+
+	resetPartnerStore() {
+		this.#partnerRequest++;
+		this.partnerStore = null;
+		this.partnerLoading = false;
+		this.partnerError = null;
 	}
 
 	async load() {
@@ -54,12 +87,16 @@ class CatalogStore {
 
 	async #reloadStore(storeId: string) {
 		const fresh = await api.fetchStore(storeId);
-		this.stores = this.stores.map((s) => (s.id === storeId ? fresh : s));
+		if (this.partnerStore?.id === storeId) this.partnerStore = fresh;
+		this.stores = this.stores.map((s) => (s.id === storeId ? fresh : s)).filter((s) => !s.hidden);
 	}
 
 	#patch(storeId: string, fn: (store: Store) => void) {
-		const store = this.stores.find((s) => s.id === storeId);
-		if (store) fn(store);
+		const stores = new Set([
+			findStore(this.stores, storeId),
+			this.partnerStore?.id === storeId ? this.partnerStore : undefined
+		]);
+		for (const store of stores) if (store) fn(store);
 	}
 
 	/** Demo mode only: let the demo shop owner's store act as a partner in this browser */
