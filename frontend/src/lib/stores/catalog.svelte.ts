@@ -12,10 +12,13 @@ export interface StorefrontDraft {
 	fastLaneMinutes?: number;
 	/** A new banner picked by the partner; `null` removes the current one */
 	bannerFile?: File | null;
+	bannerUrl?: string | null;
 	/** A new logo; `null` removes it (screens then show the name's first letter) */
 	logoFile?: File | null;
+	logoUrl?: string | null;
 	/** A new store photo for lists and cards. A store always keeps a photo, so it can only be replaced */
 	photoFile?: File;
+	imageUrl?: string | null;
 }
 
 class CatalogStore {
@@ -125,13 +128,21 @@ class CatalogStore {
 	async updateStorefront(storeId: string, draft: StorefrontDraft) {
 		if (isLive) {
 			const current = this.byId(storeId);
-			// undefined = unchanged, null = removed, File = upload and use
-			const resolve = async (file: File | null | undefined, now: string | undefined, kind: 'banner' | 'logo' | 'photo') =>
-				file === undefined ? now : file === null ? undefined : api.uploadStoreImage(storeId, file, kind);
+			const resolve = async (
+				url: string | null | undefined,
+				file: File | null | undefined,
+				now: string | undefined,
+				kind: 'banner' | 'logo' | 'photo'
+			) => {
+				if (url !== undefined) return url ? url.trim() : undefined;
+				if (file === null) return undefined;
+				if (file) return api.uploadStoreImage(storeId, file, kind);
+				return now;
+			};
 			const [bannerUrl, logoUrl, imageUrl] = await Promise.all([
-				resolve(draft.bannerFile, current?.bannerUrl, 'banner'),
-				resolve(draft.logoFile, current?.logoUrl, 'logo'),
-				resolve(draft.photoFile, current?.imageUrl, 'photo')
+				resolve(draft.bannerUrl, draft.bannerFile, current?.bannerUrl, 'banner'),
+				resolve(draft.logoUrl, draft.logoFile, current?.logoUrl, 'logo'),
+				resolve(draft.imageUrl, draft.photoFile, current?.imageUrl, 'photo')
 			]);
 			await api.updateStorefront({ tagline: draft.tagline, fastLaneMinutes: draft.fastLaneMinutes, bannerUrl, logoUrl, imageUrl });
 			await this.#reloadStore(storeId);

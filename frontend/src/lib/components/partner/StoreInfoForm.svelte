@@ -8,7 +8,7 @@
 
 	let { store, ops = partnerOps }: { store: Store; ops?: StoreOps } = $props();
 
-	const MAX_BYTES = 3 * 1024 * 1024;
+	const MAX_BYTES = 25 * 1024 * 1024;
 
 	let name = $state('');
 	let category = $state('');
@@ -18,6 +18,10 @@
 	let photoFile = $state<File | undefined>(undefined);
 	let logoPreview = $state<string | null>(null);
 	let photoPreview = $state<string | null>(null);
+	let manualLogoUrl = $state('');
+	let manualPhotoUrl = $state('');
+	let showLogoUrlInput = $state(false);
+	let showPhotoUrlInput = $state(false);
 	let saving = $state(false);
 	let error = $state('');
 	let loadedFor = $state<string | null>(null);
@@ -30,21 +34,28 @@
 		category = store.category;
 		description = store.description;
 		queue = store.queueMinutes;
+		manualLogoUrl = store.logoUrl ?? '';
+		manualPhotoUrl = store.imageUrl ?? '';
 	});
+
+	const shownLogo = $derived(logoPreview ?? (manualLogoUrl.trim() || store.logoUrl));
+	const shownPhoto = $derived(photoPreview ?? (manualPhotoUrl.trim() || store.imageUrl));
 
 	function pick(e: Event, kind: 'logo' | 'photo') {
 		const file = (e.currentTarget as HTMLInputElement).files?.[0];
 		if (!file) return;
 		if (file.size > MAX_BYTES) {
-			toast.show('รูปใหญ่เกินไป (ไม่เกิน 3 MB)', 'error');
+			toast.show('รูปใหญ่เกินไป (ไม่เกิน 25 MB)', 'error');
 			return;
 		}
 		if (kind === 'logo') {
 			logoFile = file;
 			logoPreview = URL.createObjectURL(file);
+			manualLogoUrl = '';
 		} else {
 			photoFile = file;
 			photoPreview = URL.createObjectURL(file);
+			manualPhotoUrl = '';
 		}
 	}
 
@@ -56,14 +67,17 @@
 		saving = true;
 		try {
 			await ops.updateStoreInfo(store.id, { name, category, description, queueMinutes: queue });
-			if (logoFile || photoFile) {
-				// Same call as the storefront form: keeps the tagline, banner and Fast lane as they are
+			const hasLogo = logoFile || manualLogoUrl.trim() !== (store.logoUrl ?? '');
+			const hasPhoto = photoFile || manualPhotoUrl.trim() !== (store.imageUrl ?? '');
+			if (hasLogo || hasPhoto) {
 				await ops.updateStorefront(store.id, {
 					tagline: store.tagline ?? '',
 					fastLaneMinutes: store.fastLaneMinutes,
 					bannerFile: undefined,
-					logoFile,
-					photoFile
+					logoFile: manualLogoUrl.trim() ? undefined : logoFile,
+					logoUrl: manualLogoUrl.trim() || undefined,
+					photoFile: manualPhotoUrl.trim() ? undefined : photoFile,
+					imageUrl: manualPhotoUrl.trim() || undefined
 				});
 			}
 			logoFile = photoFile = undefined;
@@ -88,27 +102,60 @@
 	<div class="grid grid-cols-[auto_1fr] gap-3">
 		<div class="space-y-1.5 text-center">
 			<div class="h-20 w-20 overflow-hidden rounded-2xl bg-slate-100">
-				{#if logoPreview ?? store.logoUrl}
-					<SmartImage src={logoPreview ?? store.logoUrl ?? ''} alt="โลโก้ร้าน" class="h-20 w-20" />
+				{#if shownLogo}
+					<SmartImage src={shownLogo} alt="โลโก้ร้าน" class="h-20 w-20" />
 				{:else}
 					<span class="flex h-full w-full items-center justify-center text-slate-400"><Icon name="store" class="h-6 w-6" /></span>
 				{/if}
 			</div>
-			<label class="inline-block cursor-pointer text-xs font-medium text-brand">
-				{store.logoUrl || logoPreview ? 'เปลี่ยนโลโก้' : 'ใส่โลโก้'}
-				<input type="file" accept="image/png,image/jpeg,image/webp" class="sr-only" onchange={(e) => pick(e, 'logo')} />
-			</label>
+			<div class="flex flex-col items-center gap-1">
+				<label class="cursor-pointer text-xs font-medium text-brand">
+					{shownLogo ? 'เปลี่ยนโลโก้' : 'ใส่โลโก้'}
+					<input type="file" accept="image/*" class="sr-only" onchange={(e) => pick(e, 'logo')} />
+				</label>
+				<button type="button" onclick={() => (showLogoUrlInput = !showLogoUrlInput)} class="text-[10px] text-slate-500 underline">
+					{showLogoUrlInput ? 'ปิดลิงก์' : 'ใส่ลิงก์ URL'}
+				</button>
+			</div>
 		</div>
 		<div class="space-y-1.5">
 			<div class="h-20 overflow-hidden rounded-2xl bg-slate-100">
-				<SmartImage src={photoPreview ?? store.imageUrl} alt="รูปร้าน" class="h-20 w-full" />
+				{#if shownPhoto}
+					<SmartImage src={shownPhoto} alt="รูปร้าน" class="h-20 w-full" />
+				{:else}
+					<span class="flex h-full w-full items-center justify-center text-slate-400"><Icon name="store" class="h-6 w-6" /></span>
+				{/if}
 			</div>
-			<label class="inline-block cursor-pointer text-xs font-medium text-brand">
-				{store.imageUrl || photoPreview ? 'เปลี่ยนรูปร้าน' : 'ใส่รูปร้าน'}
-				<input type="file" accept="image/png,image/jpeg,image/webp" class="sr-only" onchange={(e) => pick(e, 'photo')} />
-			</label>
+			<div class="flex items-center gap-2">
+				<label class="cursor-pointer text-xs font-medium text-brand">
+					{shownPhoto ? 'เปลี่ยนรูปร้าน' : 'ใส่รูปร้าน'}
+					<input type="file" accept="image/*" class="sr-only" onchange={(e) => pick(e, 'photo')} />
+				</label>
+				<button type="button" onclick={() => (showPhotoUrlInput = !showPhotoUrlInput)} class="text-xs text-slate-500 underline">
+					{showPhotoUrlInput ? 'ปิดลิงก์' : 'หรือใส่ลิงก์รูป (URL)'}
+				</button>
+			</div>
 		</div>
 	</div>
+
+	{#if showLogoUrlInput}
+		<div class="rounded-xl border border-slate-200 bg-slate-50 p-2.5">
+			<label class="block">
+				<span class="mb-1 block text-xs font-medium text-slate-700">ลิงก์โลโก้ร้าน (URL)</span>
+				<input type="url" bind:value={manualLogoUrl} placeholder="เช่น https://..." class="w-full rounded-lg bg-white px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-brand" />
+			</label>
+		</div>
+	{/if}
+
+	{#if showPhotoUrlInput}
+		<div class="rounded-xl border border-slate-200 bg-slate-50 p-2.5">
+			<label class="block">
+				<span class="mb-1 block text-xs font-medium text-slate-700">ลิงก์รูปร้านค้า (URL)</span>
+				<input type="url" bind:value={manualPhotoUrl} placeholder="เช่น https://..." class="w-full rounded-lg bg-white px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-brand" />
+				<span class="mt-1 block text-[10px] text-slate-400">ใส่ลิงก์รูปภาพโดยตรงจากเว็บได้เลย (เหมือนร้านอื่น)</span>
+			</label>
+		</div>
+	{/if}
 
 	<label class="block">
 		<span class="mb-1 block text-sm font-medium text-slate-900">ชื่อร้าน</span>

@@ -10,7 +10,7 @@
 	/** item: a dish to edit; null = add a new one; undefined = closed */
 	let { store, item, onclose, ops = partnerOps }: { store: Store; item: MenuItem | null | undefined; onclose: () => void; ops?: StoreOps } = $props();
 
-	const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
+	const MAX_PHOTO_BYTES = 25 * 1024 * 1024;
 	const categories = $derived([...new Set(store.menuItems.map((m) => m.category).filter(Boolean))]);
 
 	let name = $state('');
@@ -61,7 +61,7 @@
 		const file = (e.currentTarget as HTMLInputElement).files?.[0];
 		if (!file) return;
 		if (file.size > MAX_PHOTO_BYTES) {
-			toast.show('รูปใหญ่เกินไป (ไม่เกิน 3 MB)', 'error');
+			toast.show('รูปใหญ่เกินไป (ไม่เกิน 25 MB)', 'error');
 			return;
 		}
 		photoFile = file;
@@ -135,7 +135,7 @@
 				<div class="flex flex-wrap items-center gap-2">
 					<label class="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-xl border border-brand px-3 text-sm font-medium text-brand focus-within:ring-2 focus-within:ring-brand active:bg-brand-50">
 						<Icon name="upload" class="h-4 w-4" />{shownPhoto ? 'เปลี่ยนรูป' : 'ใส่รูปเมนู'}
-						<input type="file" accept="image/png,image/jpeg,image/webp" class="sr-only" onchange={pickPhoto} />
+						<input type="file" accept="image/*" class="sr-only" onchange={pickPhoto} />
 					</label>
 					<button type="button" onclick={() => (showUrlInput = !showUrlInput)} class="inline-flex h-10 items-center gap-1 rounded-xl border border-slate-200 px-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
 						<Icon name="link" class="h-3.5 w-3.5" />{showUrlInput ? 'ซ่อนลิงก์' : 'หรือใส่ลิงก์รูป (URL)'}
