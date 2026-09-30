@@ -38,6 +38,9 @@ jobs:
           # Empty secrets build the demo-data version
           PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
           PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
+          PUBLIC_PROMPTPAY_ID: ${{ secrets.PUBLIC_PROMPTPAY_ID || vars.PUBLIC_PROMPTPAY_ID }}
+          PUBLIC_PROMPTPAY_NAME: ${{ secrets.PUBLIC_PROMPTPAY_NAME || vars.PUBLIC_PROMPTPAY_NAME }}
+          PUBLIC_PROMPTPAY_API_URL: ${{ secrets.PUBLIC_PROMPTPAY_API_URL || vars.PUBLIC_PROMPTPAY_API_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: frontend/build

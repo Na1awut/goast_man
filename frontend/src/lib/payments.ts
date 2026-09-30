@@ -11,7 +11,9 @@ import generatePayload from 'promptpay-qr';
 import type { Order } from '$lib/types';
 import { isLive } from './supabase';
 
-export const verifySlipUrl = env.PUBLIC_PROMPTPAY_API_URL?.trim() ?? '';
+export const verifySlipUrl =
+	env.PUBLIC_PROMPTPAY_API_URL?.trim() ||
+	(env.PUBLIC_SUPABASE_URL ? `${env.PUBLIC_SUPABASE_URL}/functions/v1/verify-slip` : 'https://pguhzjtdwgualqeqzleu.supabase.co/functions/v1/verify-slip');
 export const promptPayId = env.PUBLIC_PROMPTPAY_ID?.trim() ?? '';
 /** Account name shown under the QR so buyers know who they are paying (optional) */
 export const promptPayName = env.PUBLIC_PROMPTPAY_NAME?.trim() ?? '';
