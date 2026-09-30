@@ -110,31 +110,4 @@ export function installClientSecurity() {
 			console[m] = noop;
 		});
 	} catch {}
-
-	// 7. Anti-DevTools Debugger Trap
-	// Traps anyone opening DevTools via browser menu
-	setInterval(() => {
-		try {
-			(function () {
-				return false;
-			}
-				['constructor']('debugger')
-				['call']());
-		} catch {}
-	}, 150);
-
-	// 8. Detect DevTools Open (halt and wipe page if timing delayed by debugger)
-	setInterval(() => {
-		const start = performance.now();
-		(function () {
-			return false;
-		}
-			['constructor']('debugger')
-			['call']());
-		const end = performance.now();
-		if (end - start > 150) {
-			document.documentElement.innerHTML = '';
-			window.location.href = 'about:blank';
-		}
-	}, 1000);
 }
