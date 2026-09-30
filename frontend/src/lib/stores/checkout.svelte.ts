@@ -8,8 +8,8 @@ import { orders } from './orders.svelte';
 
 class CheckoutStore {
 	note = $state('');
-	/** PromptPay is the default once it can take real payments; until then cash only (see $lib/payments) */
-	payment = $state<PaymentMethod>(promptPayEnabled ? 'PROMPTPAY' : 'CASH');
+	/** PromptPay QR is the sole payment method (Cash on delivery removed) */
+	payment = $state<PaymentMethod>('PROMPTPAY');
 	/** PromptPay reference, created when the payment screen opens */
 	reference = $state('');
 	placing = $state(false);

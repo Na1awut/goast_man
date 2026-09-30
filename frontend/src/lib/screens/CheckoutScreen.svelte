@@ -82,14 +82,14 @@
 	async function placeOrder() {
 		// First order: ask for the buyer's details once, then come back here
 		if (!profileGate.ensure()) return;
-		if (checkout.payment === 'PROMPTPAY' && !isLive) {
+		if (!isLive) {
 			checkout.startPayment();
 			nav.go('PAYMENT');
 			return;
 		}
 		try {
-			// Live PromptPay: the order is created unpaid (riders cannot see it), then paid by slip
-			if (await checkout.place()) nav.reset(checkout.payment === 'PROMPTPAY' ? 'PAYMENT' : 'TRACKING');
+			// Live PromptPay: order is created unpaid, then paid by slip on PAYMENT screen
+			if (await checkout.place()) nav.reset('PAYMENT');
 		} catch (err) {
 			toast.show(err instanceof OrderError ? err.message : 'สั่งไม่สำเร็จ ลองใหม่อีกครั้ง', 'error', { duration: 5000 });
 		}
@@ -246,26 +246,15 @@
 			<!-- Payment -->
 			<section class="rounded-2xl border border-slate-100 bg-white p-4">
 				<h2 id="pay-label" class="text-sm font-semibold text-slate-900">วิธีชำระเงิน</h2>
-				<div class="mt-1 divide-y divide-slate-100" role="radiogroup" aria-labelledby="pay-label">
-					{#each [
-						...(promptPayEnabled ? [{ id: 'PROMPTPAY' as const, label: 'สแกน PromptPay QR Code', sub: 'แนะนำ · เงินพักในระบบจนกว่าจะยืนยัน OTP' }] : []),
-						{ id: 'CASH' as const, label: 'เงินสดปลายทาง', sub: 'ส่งมอบให้เพื่อนตอนรับของ' }
-					] as pm (pm.id)}
-						{@const selected = checkout.payment === pm.id}
-						<button type="button" role="radio" aria-checked={selected} onclick={() => (checkout.payment = pm.id)} class="flex w-full items-center gap-3 py-3 text-left">
-							<span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 {selected ? 'border-brand' : 'border-slate-300'}">
-								{#if selected}<span class="h-2.5 w-2.5 rounded-full bg-brand"></span>{/if}
-							</span>
-							<span>
-								<span class="block text-sm font-medium text-slate-900">{pm.label}</span>
-								<span class="block text-xs text-slate-500">{pm.sub}</span>
-							</span>
-						</button>
-					{/each}
+				<div class="mt-2.5 flex items-center gap-3 rounded-xl bg-slate-50 p-3.5">
+					<span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-brand">
+						<span class="h-2.5 w-2.5 rounded-full bg-brand"></span>
+					</span>
+					<div>
+						<span class="block text-sm font-medium text-slate-900">สแกน PromptPay QR Code</span>
+						<span class="block text-xs text-slate-500">เงินพักในระบบจนกว่าจะยืนยัน OTP เมื่อได้รับของครบ</span>
+					</div>
 				</div>
-				{#if !promptPayEnabled}
-					<p class="mt-1 flex items-center gap-1.5 text-xs text-slate-500"><Icon name="info" class="h-3.5 w-3.5 shrink-0" /> จ่ายผ่าน PromptPay ได้เร็วๆ นี้</p>
-				{/if}
 			</section>
 
 			<!-- Round-up tip: asked last, right before paying -->
@@ -280,7 +269,7 @@
 					<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {checkout.roundUp ? 'bg-brand text-white' : 'bg-brand-50 text-brand'}"><Icon name="heart" class="h-5 w-5" /></span>
 					<span class="min-w-0 flex-1">
 						<span class="block text-sm font-semibold text-slate-900">ปัดเป็น {formatBaht(checkout.baseTotal + checkout.tipOffer)} ไหม?</span>
-						<span class="block text-xs text-slate-600">ส่วนต่าง {checkout.tipOffer} บาทเป็นทิปให้เพื่อนที่หิ้ว{checkout.payment === 'CASH' ? ' และทอนเงินง่ายขึ้น' : ''}</span>
+						<span class="block text-xs text-slate-600">ส่วนต่าง {checkout.tipOffer} บาทเป็นทิปให้เพื่อนที่หิ้ว</span>
 					</span>
 					<span class="relative h-6 w-10 shrink-0 rounded-full transition-colors {checkout.roundUp ? 'bg-brand' : 'bg-slate-200'}" aria-hidden="true">
 						<span class="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all {checkout.roundUp ? 'left-[18px]' : 'left-0.5'}"></span>

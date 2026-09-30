@@ -195,6 +195,16 @@ class AuthStore {
 		return user;
 	}
 
+	assignPartnerStore(storeId: string) {
+		if (this.user) {
+			this.user = {
+				...this.user,
+				role: 'PARTNER',
+				partnerStoreId: storeId
+			};
+		}
+	}
+
 	async logout() {
 		catalog.resetPartnerStore();
 		if (isLive) await api.signOut();

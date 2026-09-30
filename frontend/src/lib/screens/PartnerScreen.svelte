@@ -15,8 +15,63 @@
 	import { nav } from '$lib/stores/nav.svelte';
 	import { storeView } from '$lib/stores/storeView.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
-	import { describeBenefit } from '$lib/pricing';
-	import { friendlyError } from '$lib/supabase';
+	import * as api from '$lib/api/live';
+	import { friendlyError, isLive } from '$lib/supabase';
+	import { STORE_ZONES } from '$lib/data/stores';
+
+	// Self-service store setup (No hardcoding)
+	let setupMode = $state<'create' | 'claim'>('create');
+	let regName = $state('');
+	let regCategory = $state('อาหารตามสั่ง');
+	let regZone = $state('kfc-main');
+	let regDesc = $state('');
+	let claimStoreId = $state('');
+	let busySetup = $state(false);
+	let setupError = $state('');
+
+	async function handleRegisterStore(e: SubmitEvent) {
+		e.preventDefault();
+		if (!regName.trim() || busySetup) return;
+		busySetup = true;
+		setupError = '';
+		try {
+			let id: string;
+			if (isLive) {
+				id = await api.registerPartnerStore(regName.trim(), regCategory.trim(), regZone, regDesc.trim());
+			} else {
+				id = `demo-${Date.now().toString().slice(-4)}`;
+				catalog.markDemoPartner(id);
+			}
+			auth.assignPartnerStore(id);
+			await catalog.loadPartnerStore(id);
+			toast.show('สร้างร้านสำเร็จแล้ว! คุณสามารถใส่รูปและเพิ่มเมนูได้ทันที', 'success');
+		} catch (err) {
+			setupError = friendlyError(err);
+		} finally {
+			busySetup = false;
+		}
+	}
+
+	async function handleClaimStore(e: SubmitEvent) {
+		e.preventDefault();
+		if (!claimStoreId.trim() || busySetup) return;
+		busySetup = true;
+		setupError = '';
+		try {
+			if (isLive) {
+				await api.claimPartnerStore(claimStoreId.trim());
+			} else {
+				catalog.markDemoPartner(claimStoreId.trim());
+			}
+			auth.assignPartnerStore(claimStoreId.trim());
+			await catalog.loadPartnerStore(claimStoreId.trim());
+			toast.show('เชื่อมต่อร้านสำเร็จแล้ว!', 'success');
+		} catch (err) {
+			setupError = friendlyError(err);
+		} finally {
+			busySetup = false;
+		}
+	}
 
 	const TABS = [
 		{ id: 'overview', label: 'ภาพรวม' },
@@ -138,16 +193,95 @@
 	<AppBar title="จัดการร้านของฉัน" onback={() => nav.reset('PROFILE')} />
 
 	{#if !store}
-		<div class="flex flex-1 flex-col items-center justify-center gap-3 px-8 py-12 text-center" aria-live="polite">
-			<Icon name="store" class="h-10 w-10 text-brand" />
-			<p class="text-sm font-medium text-slate-800">{catalog.partnerLoading ? 'กำลังโหลดร้านของคุณ...' : catalog.partnerError ?? 'บัญชีนี้ยังไม่ได้ผูกกับร้าน Partner'}</p>
-			{#if !catalog.partnerLoading}
-				{#if auth.isPartner}
-					<button type="button" onclick={retryStore} class="min-h-11 rounded-xl bg-brand px-5 text-sm font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">ลองโหลดร้านอีกครั้ง</button>
-				{:else}<p class="text-xs text-slate-600">ติดต่อทีม Goose Man เพื่อเปิดบัญชีร้านค้า</p>{/if}
-				<button type="button" onclick={() => nav.reset('PROFILE')} class="min-h-11 text-sm font-medium text-brand-700">กลับไปโปรไฟล์</button>
-			{/if}
-		</div>
+		{#if catalog.partnerLoading}
+			<div class="flex flex-1 flex-col items-center justify-center gap-3 px-8 py-12 text-center" aria-live="polite">
+				<Icon name="store" class="h-10 w-10 animate-bounce text-brand" />
+				<p class="text-sm font-medium text-slate-800">กำลังโหลดร้านของคุณ...</p>
+			</div>
+		{:else}
+			<div class="flex-1 space-y-4 px-4 pt-4 pb-12">
+				<div class="rounded-2xl border border-brand-100 bg-gradient-to-br from-brand-50 to-white p-5 text-center shadow-sm">
+					<span class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-brand text-white shadow-md shadow-brand/20">
+						<Icon name="store" class="h-6 w-6" />
+					</span>
+					<h2 class="mt-3 text-lg font-bold text-slate-900">เปิดร้านค้ากับ Goose Man</h2>
+					<p class="mt-1 text-xs text-slate-600">จัดการข้อมูลร้าน รูปภาพ โลโก้ และเมนูอาหารได้ด้วยตนเอง ไม่ต้องรอแอดมิน</p>
+				</div>
+
+				<!-- Switcher -->
+				<div class="grid grid-cols-2 rounded-xl bg-slate-100 p-1 text-sm font-medium">
+					<button type="button" onclick={() => { setupMode = 'create'; setupError = ''; }} class="rounded-lg py-2 transition-all {setupMode === 'create' ? 'bg-white font-semibold text-slate-900 shadow-sm' : 'text-slate-500'}">
+						สร้างร้านใหม่
+					</button>
+					<button type="button" onclick={() => { setupMode = 'claim'; setupError = ''; }} class="rounded-lg py-2 transition-all {setupMode === 'claim' ? 'bg-white font-semibold text-slate-900 shadow-sm' : 'text-slate-500'}">
+						เชื่อมต่อร้านเดิม
+					</button>
+				</div>
+
+				{#if setupError}
+					<p class="rounded-xl bg-red-50 p-3 text-xs text-red-600" role="alert">{setupError}</p>
+				{/if}
+
+				{#if setupMode === 'create'}
+					<!-- Create Form -->
+					<form onsubmit={handleRegisterStore} class="space-y-3.5 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+						<label class="block">
+							<span class="mb-1 block text-xs font-semibold text-slate-700">ชื่อร้านค้า <span class="text-red-500">*</span></span>
+							<input type="text" bind:value={regName} required placeholder="เช่น ข้าวมันไก่ป้าณี, ก๋วยเตี๋ยวเรือบางมด" class="w-full rounded-xl bg-slate-100 px-3.5 py-3 text-sm outline-none focus:ring-2 focus:ring-brand" />
+						</label>
+
+						<div class="grid grid-cols-2 gap-3">
+							<label class="block">
+								<span class="mb-1 block text-xs font-semibold text-slate-700">หมวดหมู่อาหาร</span>
+								<input type="text" bind:value={regCategory} placeholder="เช่น อาหารตามสั่ง, เครื่องดื่ม" class="w-full rounded-xl bg-slate-100 px-3.5 py-3 text-sm outline-none focus:ring-2 focus:ring-brand" />
+							</label>
+
+							<label class="block">
+								<span class="mb-1 block text-xs font-semibold text-slate-700">โซน / ทำเลร้าน</span>
+								<select bind:value={regZone} class="w-full rounded-xl bg-slate-100 px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-brand">
+									<option value="kfc-main">โรงอาหาร KFC (หลัก)</option>
+									<option value="female-dorm">โรงอาหารหอหญิง</option>
+									<option value="male-dorm">โรงอาหารหอชาย</option>
+									<option value="cb1">อาคาร CB1</option>
+									<option value="green-canteen">Green Canteen 190 ปี</option>
+									<option value="dorm">โซนหอพักนักศึกษา</option>
+								</select>
+							</label>
+						</div>
+
+						<label class="block">
+							<span class="mb-1 block text-xs font-semibold text-slate-700">รายละเอียดร้านสั้นๆ <span class="font-normal text-slate-400">(ไม่บังคับ)</span></span>
+							<input type="text" bind:value={regDesc} placeholder="เช่น ล็อค 11 ตรงข้ามร้านผลไม้" class="w-full rounded-xl bg-slate-100 px-3.5 py-3 text-sm outline-none focus:ring-2 focus:ring-brand" />
+						</label>
+
+						<button type="submit" disabled={!regName.trim() || busySetup} class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-3.5 text-sm font-semibold text-white shadow-md shadow-brand/20 active:bg-brand-600 disabled:opacity-50">
+							{#if busySetup}<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></span>{/if}
+							เปิดร้านค้าและเริ่มใส่เมนู
+						</button>
+					</form>
+				{:else}
+					<!-- Claim Form -->
+					<form onsubmit={handleClaimStore} class="space-y-3.5 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+						<label class="block">
+							<span class="mb-1 block text-xs font-semibold text-slate-700">เลือกร้านค้าของคุณ หรือใส่รหัสร้าน <span class="text-red-500">*</span></span>
+							<select bind:value={claimStoreId} class="w-full rounded-xl bg-slate-100 px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-brand">
+								<option value="">-- เลือกร้านค้าในระบบ --</option>
+								{#each catalog.all as s (s.id)}
+									<option value={s.id}>{s.name} ({s.id})</option>
+								{/each}
+							</select>
+						</label>
+
+						<p class="text-xs text-slate-500">หากร้านของคุณอยู่ในระบบอยู่แล้ว (เช่น ร้าน KFC ล็อคต่างๆ) สามารถกดเลือกเพื่อเป็นผู้จัดการร้านและใส่รูปภาพเองได้ทันที</p>
+
+						<button type="submit" disabled={!claimStoreId.trim() || busySetup} class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-3.5 text-sm font-semibold text-white shadow-md shadow-brand/20 active:bg-brand-600 disabled:opacity-50">
+							{#if busySetup}<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></span>{/if}
+							ยืนยันเชื่อมต่อร้านค้า
+						</button>
+					</form>
+				{/if}
+			</div>
+		{/if}
 	{:else}
 		<div class="space-y-6 px-4 pt-4 pb-10">
 			{#if store.hidden}<p class="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">ร้านนี้ยังไม่แสดงให้ลูกค้าเห็น คุณจัดการข้อมูลและเมนูได้ ติดต่อทีม Goose Man เมื่อต้องการแสดงร้านในแอป</p>{/if}

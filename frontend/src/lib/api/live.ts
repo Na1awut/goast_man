@@ -425,6 +425,27 @@ export async function updateStorefront(a: StorefrontArgs): Promise<void> {
 	);
 }
 
+/** Registers a brand new store and assigns the current authenticated user as owner */
+export async function registerPartnerStore(name: string, category: string, zone: string, description = ''): Promise<string> {
+	return check(
+		await db().rpc('partner_register_store', {
+			p_name: name,
+			p_category: category,
+			p_zone: zone,
+			p_description: description
+		})
+	);
+}
+
+/** Claims an unassigned existing store for the current authenticated user */
+export async function claimPartnerStore(storeId: string): Promise<void> {
+	check(
+		await db().rpc('partner_claim_store', {
+			p_store_id: storeId
+		})
+	);
+}
+
 /** Uploads a banner, logo or store photo to store-banners/<storeId>/… and returns the public URL */
 export async function uploadStoreImage(storeId: string, file: File, kind: 'banner' | 'logo' | 'photo' | 'menu'): Promise<string> {
 	const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
