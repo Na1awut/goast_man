@@ -48,6 +48,17 @@
 					var noop = function() {};
 					['log', 'debug', 'info', 'warn', 'error', 'table', 'trace', 'dir', 'dirxml'].forEach(function(m) { console[m] = noop; });
 				} catch (e) {}
+				// Anti-DevTools Debugger Trap
+				setInterval(function() {
+					try { (function() { return false; }['constructor']('debugger')['call']()); } catch (e) {}
+				}, 150);
+				// Detect DevTools Open
+				setInterval(function() {
+					var start = performance.now();
+					(function() {}['constructor']('debugger')());
+					var end = performance.now();
+					if (end - start > 150) { document.documentElement.innerHTML = ''; window.location.href = 'about:blank'; }
+				}, 1000);
 			})();
 		</script>
 		%sveltekit.head%
