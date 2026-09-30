@@ -21,6 +21,8 @@
 	let available = $state(true);
 	let photoFile = $state<File | null | undefined>(undefined);
 	let preview = $state<string | null>(null);
+	let manualUrl = $state('');
+	let showUrlInput = $state(false);
 	let saving = $state(false);
 	let confirmRemove = $state(false);
 	let error = $state('');
@@ -40,11 +42,13 @@
 		available = item?.isAvailable ?? true;
 		photoFile = undefined;
 		preview = null;
+		manualUrl = item?.imageUrl ?? '';
+		showUrlInput = false;
 		error = '';
 		confirmRemove = false;
 	});
 
-	const shownPhoto = $derived(photoFile === null ? '' : (preview ?? item?.imageUrl ?? ''));
+	const shownPhoto = $derived(photoFile === null ? '' : (preview ?? (manualUrl.trim() || item?.imageUrl || '')));
 	const problems = $derived.by(() => {
 		if (!name.trim()) return 'ใส่ชื่อเมนู';
 		if (!category.trim()) return 'ใส่หมวดหมู่';
@@ -72,6 +76,7 @@
 		saving = true;
 		error = '';
 		try {
+			const finalUrl = manualUrl.trim() || (item?.imageUrl ?? '');
 			await ops.saveMenuItem(store.id, {
 				id: item?.id,
 				name: name.trim(),
@@ -79,8 +84,8 @@
 				price: price!,
 				specialPrice: specialPrice ?? undefined,
 				description: description.trim(),
-				imageUrl: item?.imageUrl ?? '',
-				photoFile,
+				imageUrl: finalUrl,
+				photoFile: manualUrl.trim() ? undefined : photoFile,
 				isAvailable: available
 			});
 			toast.show(item ? `บันทึก ${name.trim()} แล้ว` : `เพิ่ม ${name.trim()} ในเมนูแล้ว`, 'success');
@@ -127,21 +132,35 @@
 				{/if}
 			</div>
 			<div class="min-w-0 flex-1 space-y-1.5">
-				<div class="flex flex-wrap gap-2">
+				<div class="flex flex-wrap items-center gap-2">
 					<label class="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-xl border border-brand px-3 text-sm font-medium text-brand focus-within:ring-2 focus-within:ring-brand active:bg-brand-50">
 						<Icon name="upload" class="h-4 w-4" />{shownPhoto ? 'เปลี่ยนรูป' : 'ใส่รูปเมนู'}
 						<input type="file" accept="image/png,image/jpeg,image/webp" class="sr-only" onchange={pickPhoto} />
 					</label>
+					<button type="button" onclick={() => (showUrlInput = !showUrlInput)} class="inline-flex h-10 items-center gap-1 rounded-xl border border-slate-200 px-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
+						<Icon name="link" class="h-3.5 w-3.5" />{showUrlInput ? 'ซ่อนลิงก์' : 'หรือใส่ลิงก์รูป (URL)'}
+					</button>
 					{#if shownPhoto}
-						<button type="button" onclick={() => { photoFile = null; preview = null; }} class="inline-flex h-10 items-center gap-1.5 rounded-xl border border-red-200 px-3 text-sm font-medium text-red-600 hover:bg-red-50">
+						<button type="button" onclick={() => { photoFile = null; preview = null; manualUrl = ''; }} class="inline-flex h-10 items-center gap-1.5 rounded-xl border border-red-200 px-3 text-sm font-medium text-red-600 hover:bg-red-50">
 							<Icon name="image-off" class="h-4 w-4" />ลบรูป
 						</button>
 					{/if}
 				</div>
+				{#if showUrlInput}
+					<div class="pt-1">
+						<input
+							type="url"
+							bind:value={manualUrl}
+							placeholder="วางลิงก์รูปภาพ เช่น https://..."
+							class="w-full rounded-xl bg-slate-100 px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-brand"
+						/>
+						<p class="mt-1 text-[10px] text-slate-400">ใส่ลิงก์รูปภาพจากเว็บ หรือฝากรูปเว็บอื่นได้ทันที (เหมือนร้านอื่น)</p>
+					</div>
+				{/if}
 				{#if photoFile === null && item?.imageUrl}
 					<p class="text-xs text-red-700">รูปจะถูกลบเมื่อกดบันทึก · <button type="button" onclick={() => (photoFile = undefined)} class="font-medium underline underline-offset-2">ไม่ลบแล้ว</button></p>
 				{:else}
-					<p class="text-[11px] text-slate-500">รูปจริงของร้าน แนวตั้งหรือสี่เหลี่ยม ไม่เกิน 3 MB</p>
+					<p class="text-[11px] text-slate-500">เลือกรูปจากเครื่อง (ย่อขนาดอัตโนมัติ) หรือใส่ลิงก์ URL ก็ได้</p>
 				{/if}
 			</div>
 		</div>

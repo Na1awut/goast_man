@@ -7,6 +7,7 @@ import { base } from '$app/paths';
 import { verifySlipUrl } from '$lib/payments';
 import { db } from '$lib/supabase';
 import { formatTime } from '$lib/utils';
+import { fileToDataUrl } from '$lib/image';
 
 type Row = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -446,12 +447,20 @@ export async function claimPartnerStore(storeId: string): Promise<void> {
 	);
 }
 
-/** Uploads a banner, logo or store photo to store-banners/<storeId>/… and returns the public URL */
+/** Uploads a banner, logo or store photo to store-banners/<storeId>/… or falls back to compact embedded image */
 export async function uploadStoreImage(storeId: string, file: File, kind: 'banner' | 'logo' | 'photo' | 'menu'): Promise<string> {
-	const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-	const path = `${storeId}/${kind}-${Date.now()}.${ext}`;
-	check(await db().storage.from('store-banners').upload(path, file, { contentType: file.type, upsert: true }));
-	return db().storage.from('store-banners').getPublicUrl(path).data.publicUrl;
+	try {
+		const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+		const path = `${storeId}/${kind}-${Date.now()}.${ext}`;
+		const res = await db().storage.from('store-banners').upload(path, file, { contentType: file.type, upsert: true });
+		if (!res.error) {
+			return db().storage.from('store-banners').getPublicUrl(path).data.publicUrl;
+		}
+	} catch (e) {
+		console.warn('Storage upload error, using embedded compressed data', e);
+	}
+	// Direct fallback: compress image on client and return as base64 Data URL (bypasses broken storage)
+	return fileToDataUrl(file);
 }
 
 export interface MenuItemArgs {

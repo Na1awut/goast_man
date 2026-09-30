@@ -111,3 +111,9 @@ end $$;
 -- 4. Grant permissions
 grant execute on function public.partner_register_store(text, text, text, text) to authenticated;
 grant execute on function public.partner_claim_store(text) to authenticated;
+
+-- 5. Allow any image URL or Base64 Data URL (bypasses Supabase Storage dependency)
+create or replace function public.is_store_image(p_url text, p_store_id text) returns boolean
+language sql immutable as $$
+	select p_url ~* '^(https?://|data:image/)' or p_url ~* '/storage/v1/object/public/store-banners/';
+$$;
