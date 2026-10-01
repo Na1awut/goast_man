@@ -6,7 +6,7 @@
 	import { partnerOps, type StoreOps } from '$lib/storeOps';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { friendlyError } from '$lib/supabase';
-	import { uid } from '$lib/utils';
+	import { formatBaht, uid } from '$lib/utils';
 
 	/** item: a dish to edit; null = add a new one; undefined = closed */
 	let { store, item, onclose, ops = partnerOps }: { store: Store; item: MenuItem | null | undefined; onclose: () => void; ops?: StoreOps } = $props();
@@ -292,6 +292,132 @@
 			} catch {
 				// ignore
 			}
+		}
+	}
+
+	// Bulk apply options to other menu items in store/category
+	let applySheetOpen = $state(false);
+	let applyFilter = $state<'category' | 'all'>('category');
+	let applyTargetIds = $state<string[]>([]);
+	let applyMode = $state<'replace' | 'append'>('replace');
+	let applyingBulk = $state(false);
+
+	const candidateItems = $derived.by(() => {
+		const curCat = category.trim().toLowerCase();
+		return store.menuItems.filter((m) => {
+			if (m.id === item?.id) return false;
+			if (applyFilter === 'category' && curCat) {
+				return m.category.trim().toLowerCase() === curCat;
+			}
+			return true;
+		});
+	});
+
+	function openApplyModal() {
+		const valid = options.some((g) => g.name.trim() && g.choices.some((c) => c.name.trim()));
+		if (!valid) {
+			toast.show('กรุณาตั้งชื่อออปชั่นและตัวเลือกอย่างน้อย 1 อย่างก่อนส่งต่อ', 'info');
+			return;
+		}
+		const curCat = category.trim().toLowerCase();
+		const hasSameCat = store.menuItems.some((m) => m.id !== item?.id && m.category.trim().toLowerCase() === curCat);
+		applyFilter = hasSameCat ? 'category' : 'all';
+		applyTargetIds = [];
+		applyMode = 'replace';
+		applySheetOpen = true;
+	}
+
+	function toggleTargetId(id: string) {
+		applyTargetIds = applyTargetIds.includes(id)
+			? applyTargetIds.filter((x) => x !== id)
+			: [...applyTargetIds, id];
+	}
+
+	function toggleSelectAllCandidates() {
+		if (applyTargetIds.length === candidateItems.length) {
+			applyTargetIds = [];
+		} else {
+			applyTargetIds = candidateItems.map((c) => c.id);
+		}
+	}
+
+	async function confirmApplyBulk() {
+		if (applyTargetIds.length === 0 || applyingBulk) return;
+		applyingBulk = true;
+		try {
+			const cleanOptions: MenuOptionGroup[] = options
+				.map((g) => ({
+					...g,
+					name: g.name.trim(),
+					choices: g.choices
+						.map((c) => ({ ...c, name: c.name.trim(), price: Math.max(0, Number(c.price) || 0) }))
+						.filter((c) => c.name.length > 0)
+				}))
+				.filter((g) => g.name.length > 0 && g.choices.length > 0);
+
+			if (cleanOptions.length === 0) {
+				toast.show('กรุณาใส่ออปชั่นและตัวเลือกอย่างน้อย 1 อย่างก่อนส่งต่อ', 'error');
+				return;
+			}
+
+			// Automatically remember these options in localStorage
+			if (typeof localStorage !== 'undefined') {
+				try {
+					const key = `gm_store_opts_${store.id}`;
+					const existing = JSON.parse(localStorage.getItem(key) ?? '[]') as MenuOptionGroup[];
+					const map = new Map<string, MenuOptionGroup>();
+					for (const g of existing) if (g.name?.trim()) map.set(g.name.trim().toLowerCase(), g);
+					for (const g of cleanOptions) if (g.name?.trim()) map.set(g.name.trim().toLowerCase(), g);
+					localStorage.setItem(key, JSON.stringify([...map.values()]));
+					customPresetsVersion++;
+				} catch {
+					// ignore
+				}
+			}
+
+			let count = 0;
+			for (const targetId of applyTargetIds) {
+				const target = store.menuItems.find((m) => m.id === targetId);
+				if (!target) continue;
+
+				const freshOptions: MenuOptionGroup[] = cleanOptions.map((g) => ({
+					id: uid('opt'),
+					name: g.name,
+					required: g.required,
+					maxChoices: g.maxChoices,
+					choices: g.choices.map((c) => ({ id: uid('ch'), name: c.name, price: c.price }))
+				}));
+
+				let finalOptions: MenuOptionGroup[];
+				if (applyMode === 'replace') {
+					finalOptions = freshOptions;
+				} else {
+					const incomingNames = new Set(freshOptions.map((g) => g.name.toLowerCase()));
+					const kept = (target.options ?? []).filter((g) => !incomingNames.has(g.name.toLowerCase()));
+					finalOptions = [...kept, ...freshOptions];
+				}
+
+				await ops.saveMenuItem(store.id, {
+					id: target.id,
+					name: target.name,
+					category: target.category,
+					price: target.price,
+					specialPrice: target.specialPrice,
+					description: target.description,
+					imageUrl: target.imageUrl,
+					photoFile: undefined,
+					isAvailable: target.isAvailable,
+					options: finalOptions
+				});
+				count++;
+			}
+
+			toast.show(`นำออปชั่นไปใส่ใน ${count} เมนูเรียบร้อยแล้ว`, 'success');
+			applySheetOpen = false;
+		} catch (err) {
+			toast.show(friendlyError(err), 'error');
+		} finally {
+			applyingBulk = false;
 		}
 	}
 
@@ -646,6 +772,27 @@
 							</div>
 						</div>
 					{/each}
+
+					<!-- Bulk apply button to copy options to other items in category/store -->
+					<div class="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-2xl border border-amber-200/90 bg-gradient-to-r from-amber-50/80 to-orange-50/40 p-3">
+						<div class="min-w-0">
+							<p class="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+								<Icon name="copy" class="h-3.5 w-3.5 text-amber-600" />
+								<span>ส่งต่อออปชั่นนี้ให้เมนูอื่น</span>
+							</p>
+							<p class="mt-0.5 text-[11px] text-amber-800/80 truncate">
+								{candidateItems.length > 0 ? `คัดลอกออปชั่นชุดนี้ไปใส่ในอีก ${candidateItems.length} เมนูของหมวด "${category.trim() || 'ทั่วไป'}" พร้อมกันได้` : 'คัดลอกออปชั่นชุดนี้ไปใส่ในเมนูอื่นของร้านพร้อมกัน'}
+							</p>
+						</div>
+						<button
+							type="button"
+							onclick={openApplyModal}
+							class="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-900 shadow-xs hover:bg-amber-100 transition-colors active:scale-95"
+						>
+							<Icon name="share" class="h-3.5 w-3.5 text-amber-600" />
+							<span>เลือกเมนูที่จะส่งต่อ...</span>
+						</button>
+					</div>
 				</div>
 			{/if}
 		</div>
@@ -679,4 +826,141 @@
 			{/if}
 		{/if}
 	</form>
+</Sheet>
+
+<!-- Bulk apply modal (double-guarded against accidental clicks) -->
+<Sheet open={applySheetOpen} title="ส่งต่อออปชั่นไปเมนูอื่น" onclose={() => (applySheetOpen = false)}>
+	<div class="space-y-4 pb-3">
+		<!-- Summary of options being copied -->
+		<div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+			<p class="text-xs font-semibold text-slate-700">ออปชั่นที่จะนำไปใช้ ({options.filter(g => g.name.trim()).length} กลุ่ม):</p>
+			<div class="mt-1.5 flex flex-wrap gap-1.5">
+				{#each options.filter(g => g.name.trim()) as opt}
+					{@const choiceCount = opt.choices.filter(c => c.name.trim()).length}
+					<span class="inline-flex items-center gap-1 rounded-lg bg-white px-2 py-1 text-xs font-medium text-slate-800 border border-slate-200 shadow-xs">
+						<span>{opt.name}</span>
+						<span class="text-slate-400">({choiceCount} ตัวเลือก)</span>
+					</span>
+				{/each}
+			</div>
+		</div>
+
+		<!-- Filter & Select All header -->
+		<div class="flex items-center justify-between gap-2">
+			<div class="flex items-center gap-1 rounded-xl bg-slate-100 p-1 text-xs">
+				<button
+					type="button"
+					onclick={() => (applyFilter = 'category')}
+					class="rounded-lg px-2.5 py-1 font-medium transition-all {applyFilter === 'category' ? 'bg-white font-semibold text-slate-900 shadow-xs' : 'text-slate-600'}"
+				>
+					หมวด "{category.trim() || 'ทั่วไป'}"
+				</button>
+				<button
+					type="button"
+					onclick={() => (applyFilter = 'all')}
+					class="rounded-lg px-2.5 py-1 font-medium transition-all {applyFilter === 'all' ? 'bg-white font-semibold text-slate-900 shadow-xs' : 'text-slate-600'}"
+				>
+					ทุกเมนูในร้าน
+				</button>
+			</div>
+
+			{#if candidateItems.length > 0}
+				<button
+					type="button"
+					onclick={toggleSelectAllCandidates}
+					class="text-xs font-semibold text-brand hover:underline"
+				>
+					{applyTargetIds.length === candidateItems.length ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด'}
+				</button>
+			{/if}
+		</div>
+
+		<!-- Mode: Replace vs Append -->
+		<div class="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1 text-xs">
+			<button
+				type="button"
+				onclick={() => (applyMode = 'replace')}
+				class="rounded-lg py-1.5 font-medium transition-all {applyMode === 'replace' ? 'bg-white font-semibold text-slate-900 shadow-xs' : 'text-slate-500'}"
+			>
+				แทนที่ออปชั่นเดิม
+			</button>
+			<button
+				type="button"
+				onclick={() => (applyMode = 'append')}
+				class="rounded-lg py-1.5 font-medium transition-all {applyMode === 'append' ? 'bg-white font-semibold text-slate-900 shadow-xs' : 'text-slate-500'}"
+			>
+				เพิ่มต่อท้ายออปชั่นเดิม
+			</button>
+		</div>
+
+		<!-- Target dishes list with explicit checkboxes -->
+		{#if candidateItems.length === 0}
+			<div class="rounded-2xl border border-dashed border-slate-200 py-8 text-center text-xs text-slate-500">
+				{applyFilter === 'category' ? `ไม่มีเมนูอื่นในหมวด "${category.trim()}" (ลองกดสลับเป็น "ทุกเมนูในร้าน")` : 'ไม่มีเมนูอื่นในร้าน'}
+			</div>
+		{:else}
+			<ul class="max-h-60 overflow-y-auto divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
+				{#each candidateItems as candidate (candidate.id)}
+					{@const checked = applyTargetIds.includes(candidate.id)}
+					{@const hasExistingOpts = (candidate.options?.length ?? 0) > 0}
+					<li>
+						<button
+							type="button"
+							onclick={() => toggleTargetId(candidate.id)}
+							class="flex w-full items-center justify-between p-3 text-left text-xs hover:bg-slate-50 active:bg-slate-100 transition-colors"
+						>
+							<div class="flex items-center gap-2.5 min-w-0 pr-2">
+								<span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all {checked ? 'border-brand bg-brand text-white' : 'border-slate-300 bg-white'}">
+									{#if checked}
+										<Icon name="check" class="h-3.5 w-3.5" strokeWidth={3} />
+									{/if}
+								</span>
+								<div class="min-w-0">
+									<span class="block font-medium truncate text-slate-900">{candidate.name}</span>
+									<span class="text-[11px] text-slate-500">
+										{formatBaht(candidate.price)} · หมวด {candidate.category}
+									</span>
+								</div>
+							</div>
+
+							{#if hasExistingOpts}
+								<span class="shrink-0 text-[10px] rounded bg-amber-50 px-1.5 py-0.5 font-medium text-amber-700 border border-amber-200/60">
+									{applyMode === 'replace' ? `เขียนทับ (${candidate.options!.length} ออปชั่นเดิม)` : `มีอยู่แล้ว ${candidate.options!.length} ออปชั่น`}
+								</span>
+							{/if}
+						</button>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+
+		<!-- Confirmation buttons (double-guarded against accidental clicks) -->
+		<div class="pt-2">
+			{#if applyTargetIds.length === 0}
+				<p class="mb-2 text-center text-xs text-slate-400">
+					กรุณาติ๊กเลือกเมนูที่ต้องการส่งต่อออปชั่นไปให้อย่างน้อย 1 เมนู
+				</p>
+			{/if}
+			<div class="grid grid-cols-2 gap-3">
+				<button
+					type="button"
+					onclick={() => (applySheetOpen = false)}
+					class="rounded-xl bg-slate-100 py-3 text-sm font-medium text-slate-700 hover:bg-slate-200 transition-colors"
+				>
+					ยกเลิก
+				</button>
+				<button
+					type="button"
+					disabled={applyTargetIds.length === 0 || applyingBulk}
+					onclick={confirmApplyBulk}
+					class="flex items-center justify-center gap-1.5 rounded-xl bg-brand py-3 text-sm font-semibold text-white shadow-md shadow-brand/20 active:scale-98 transition-all disabled:opacity-50"
+				>
+					{#if applyingBulk}
+						<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span>
+					{/if}
+					<span>ยืนยัน ({applyTargetIds.length} เมนู)</span>
+				</button>
+			</div>
+		</div>
+	</div>
 </Sheet>
