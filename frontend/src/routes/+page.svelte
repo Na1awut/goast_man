@@ -95,7 +95,7 @@
 		void catalog.load().then(() => cart.init());
 		try {
 			if (await withTimeout(auth.init(), AUTH_TIMEOUT_MS)) {
-				nav.reset(auth.mustOnboardNow ? 'ONBOARDING' : auth.isPartner ? 'PARTNER' : 'HOME');
+				nav.reset(auth.isPartner ? 'PARTNER' : auth.mustOnboardNow ? 'ONBOARDING' : 'HOME');
 				void orders.init(auth.user!.id);
 				// Say hello only after a fresh sign-in, not when a saved session is restored
 				if (returnedFromSignIn) welcome.show(auth.displayName);
@@ -110,10 +110,14 @@
 	// Guard: never render an authenticated screen without a session
 	$effect(() => {
 		if (!ready) return;
-		if (!auth.isAuthenticated && nav.screen !== 'LOGIN') nav.reset('LOGIN');
-		// Shop owners need their contact details before managing a store. Students are
-		// asked at their first order instead (profileGate), and the server checks too.
-		else if (auth.isAuthenticated && auth.mustOnboardNow && nav.screen !== 'ONBOARDING') nav.reset('ONBOARDING');
+		if (!auth.isAuthenticated && nav.screen !== 'LOGIN') {
+			nav.reset('LOGIN');
+		} else if (auth.isPartner) {
+			// Partner accounts only manage the store; no access to student screens
+			if (nav.screen !== 'PARTNER') nav.reset('PARTNER');
+		} else if (auth.isAuthenticated && auth.mustOnboardNow && nav.screen !== 'ONBOARDING') {
+			nav.reset('ONBOARDING');
+		}
 	});
 
 	const ActiveScreen = $derived(nav.screen === 'LOGIN' ? null : SCREENS[nav.screen]);
@@ -134,7 +138,7 @@
 				</div>
 			{/key}
 		</main>
-		{#if nav.showBottomNav}<BottomNav />{/if}
+		{#if nav.showBottomNav && !auth.isPartner}<BottomNav />{/if}
 		<LocationSheet />
 		<NotificationSheet />
 	{/if}

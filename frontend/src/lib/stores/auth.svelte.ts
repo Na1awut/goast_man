@@ -90,11 +90,11 @@ class AuthStore {
 	/** True when a live session was dropped unexpectedly (refresh failure); the page guard shows a toast */
 	sessionExpired = $state(false);
 	isAuthenticated = $derived(this.user !== null && (isLive || this.token !== null));
-	isPartner = $derived(this.user?.role === 'PARTNER' && !!this.user.partnerStoreId);
+	isPartner = $derived(this.user?.role === 'PARTNER');
 	/** Profile or consent missing: asked for at the first order (see profileGate) */
 	needsProfile = $derived(this.user !== null && needsOnboarding(this.user));
-	/** Shop owners fill in their contact details straight after sign-in; students can browse first */
-	mustOnboardNow = $derived(this.needsProfile && this.user?.role === 'PARTNER');
+	/** Partners bypass onboarding per requirements; students are gated at order placement */
+	mustOnboardNow = false;
 	/** What to call the user before they have picked a nickname */
 	displayName = $derived(this.user ? this.user.nickname || this.user.fullName.split(' ')[0] || '' : '');
 

@@ -21,7 +21,7 @@
 		error = '';
 		try {
 			const user = await auth.signInWithGoogle({ asPartner: as === 'partner', asRider: as === 'rider' });
-			nav.reset(auth.mustOnboardNow ? 'ONBOARDING' : auth.isPartner ? 'PARTNER' : 'HOME');
+			nav.reset(auth.isPartner ? 'PARTNER' : auth.mustOnboardNow ? 'ONBOARDING' : 'HOME');
 			void orders.init(user.id);
 			welcome.show(auth.displayName);
 		} catch (err) {

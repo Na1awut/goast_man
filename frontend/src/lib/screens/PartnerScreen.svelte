@@ -18,6 +18,7 @@
 	import * as api from '$lib/api/live';
 	import { friendlyError, isLive } from '$lib/supabase';
 	import { STORE_ZONES } from '$lib/data/stores';
+	import { describeBenefit } from '$lib/pricing';
 
 	// Self-service store setup (No hardcoding)
 	let setupMode = $state<'create' | 'claim'>('create');
@@ -88,6 +89,14 @@
 
 	function retryStore() {
 		if (auth.isPartner && auth.user?.partnerStoreId) void catalog.loadPartnerStore(auth.user.partnerStoreId);
+	}
+
+	let confirmLogout = $state(false);
+
+	async function handleLogout() {
+		confirmLogout = false;
+		await auth.logout();
+		nav.reset('LOGIN');
 	}
 
 	// ---------- Promotions ----------
@@ -190,12 +199,24 @@
 </script>
 
 <div class="flex flex-1 flex-col">
-	<AppBar title="จัดการร้านของฉัน" onback={() => nav.reset('PROFILE')} />
+	<AppBar title="จัดการร้านของฉัน" showBack={false}>
+		{#snippet action()}
+			<button
+				type="button"
+				onclick={() => (confirmLogout = true)}
+				class="flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 active:bg-red-200"
+				aria-label="ออกจากระบบ"
+			>
+				<Icon name="logout" class="h-3.5 w-3.5" />
+				<span>ออกจากระบบ</span>
+			</button>
+		{/snippet}
+	</AppBar>
 
 	{#if !store}
 		{#if catalog.partnerLoading}
 			<div class="flex flex-1 flex-col items-center justify-center gap-3 px-8 py-12 text-center" aria-live="polite">
-				<Icon name="store" class="h-10 w-10 animate-bounce text-brand" />
+				<Icon name="store" class="h-10 w-10 animate-pulse text-brand" />
 				<p class="text-sm font-medium text-slate-800">กำลังโหลดร้านของคุณ...</p>
 			</div>
 		{:else}
@@ -266,7 +287,7 @@
 							<span class="mb-1 block text-xs font-semibold text-slate-700">เลือกร้านค้าของคุณ หรือใส่รหัสร้าน <span class="text-red-500">*</span></span>
 							<select bind:value={claimStoreId} class="w-full rounded-xl bg-slate-100 px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-brand">
 								<option value="">-- เลือกร้านค้าในระบบ --</option>
-								{#each catalog.all as s (s.id)}
+								{#each catalog.stores as s (s.id)}
 									<option value={s.id}>{s.name} ({s.id})</option>
 								{/each}
 							</select>
@@ -291,7 +312,6 @@
 					<p class="truncate text-lg font-semibold text-slate-900">{store.name}</p>
 					<PartnerBadge compact />
 				</div>
-				<button type="button" onclick={() => storeView.open(store.id)} class="shrink-0 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-sm text-slate-700">ดูหน้าร้าน</button>
 			</div>
 
 			<div class="grid grid-cols-3 rounded-xl bg-slate-100 p-1 text-sm" role="tablist" aria-label="จัดการร้าน">
@@ -414,4 +434,14 @@
 			<button type="button" onclick={() => remove(target)} class="rounded-xl bg-red-600 py-3 text-sm font-medium text-white">ลบโปร</button>
 		</div>
 	{/if}
+</Sheet>
+
+<Sheet open={confirmLogout} title="ออกจากระบบ?" onclose={() => (confirmLogout = false)}>
+	<p class="text-sm text-slate-600">
+		คุณต้องการออกจากระบบบัญชีร้านค้านี้หรือไม่?
+	</p>
+	<div class="mt-5 grid grid-cols-2 gap-3">
+		<button type="button" onclick={() => (confirmLogout = false)} class="rounded-xl bg-slate-100 py-3 text-sm font-medium text-slate-700">ยกเลิก</button>
+		<button type="button" onclick={handleLogout} class="rounded-xl bg-red-600 py-3 text-sm font-medium text-white">ออกจากระบบ</button>
+	</div>
 </Sheet>

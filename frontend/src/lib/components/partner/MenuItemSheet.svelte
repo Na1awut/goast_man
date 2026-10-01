@@ -482,18 +482,17 @@
 							aria-haspopup="listbox"
 						>
 							<span>เลือกออปชั่น</span>
-							<Icon name={dropdownOpen ? 'chevron-up' : 'chevron-down'} class="h-3.5 w-3.5 text-brand" />
+							<Icon name="chevron-down" class="h-3.5 w-3.5 text-brand transition-transform {dropdownOpen ? 'rotate-180' : ''}" />
 						</button>
 
 						{#if dropdownOpen}
 							<!-- Backdrop for closing on outside click -->
-							<div
-								class="fixed inset-0 z-40"
+							<button
+								type="button"
+								class="fixed inset-0 z-40 bg-transparent cursor-default border-none p-0 m-0"
 								onclick={() => (dropdownOpen = false)}
-								tabindex="-1"
-								role="button"
 								aria-label="ปิดเมนู"
-							></div>
+							></button>
 
 							<!-- Drop Down Menu -->
 							<div
