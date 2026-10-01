@@ -97,7 +97,16 @@
 								</span>
 								<span class="min-w-0 flex-1">
 									<span class="block truncate text-sm {m.isAvailable ? 'text-slate-900' : 'text-slate-400 line-through'}">{m.name}</span>
-									<span class="block text-xs text-slate-500 tabular-nums">{formatBaht(m.price)}{m.specialPrice ? ` · พิเศษ ${formatBaht(m.specialPrice)}` : ''}</span>
+									<span class="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 tabular-nums">
+										<span>{formatBaht(m.price)}{m.specialPrice ? ` · พิเศษ ${formatBaht(m.specialPrice)}` : ''}</span>
+										{#if m.options?.length}
+											{#each m.options as opt}
+												<span class="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 border border-amber-200/60">
+													{opt.name} ({opt.choices.length})
+												</span>
+											{/each}
+										{/if}
+									</span>
 								</span>
 							</button>
 							<!-- One tap takes the photo off (after a confirm), without opening the dish -->

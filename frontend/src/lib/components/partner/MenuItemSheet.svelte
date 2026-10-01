@@ -133,6 +133,82 @@
 		}
 	}
 
+	let customPresetsVersion = $state(0);
+	const storeOptionPresets = $derived.by<MenuOptionGroup[]>(() => {
+		void customPresetsVersion;
+		const seen = new Map<string, MenuOptionGroup>();
+		// 1. Gather all option groups from all dishes in this store
+		for (const m of store.menuItems) {
+			for (const g of m.options ?? []) {
+				const key = g.name.trim().toLowerCase();
+				if (key && !seen.has(key) && g.choices?.length > 0) {
+					seen.set(key, g);
+				}
+			}
+		}
+		// 2. Also check any presets saved in localStorage for this store
+		if (typeof localStorage !== 'undefined') {
+			try {
+				const saved = localStorage.getItem(`gm_store_opts_${store.id}`);
+				if (saved) {
+					const list = JSON.parse(saved) as MenuOptionGroup[];
+					for (const g of list) {
+						const key = g.name?.trim().toLowerCase();
+						if (key && !seen.has(key) && g.choices?.length > 0) {
+							seen.set(key, g);
+						}
+					}
+				}
+			} catch {
+				// ignore storage errors
+			}
+		}
+		return [...seen.values()];
+	});
+
+	function copyStorePreset(preset: MenuOptionGroup) {
+		const newGroup: MenuOptionGroup = {
+			id: uid('opt'),
+			name: preset.name,
+			required: preset.required,
+			maxChoices: preset.maxChoices,
+			choices: preset.choices.map((c) => ({
+				id: uid('ch'),
+				name: c.name,
+				price: c.price
+			}))
+		};
+		options = [...options, newGroup];
+		toast.show(`ดึง "${preset.name}" มาใส่ในเมนูแล้ว`, 'success');
+	}
+
+	function saveGroupAsPreset(group: MenuOptionGroup) {
+		const cleanName = group.name.trim();
+		const cleanChoices = group.choices.filter((c) => c.name.trim().length > 0);
+		if (!cleanName || cleanChoices.length === 0) {
+			toast.show('กรุณาตั้งชื่อกลุ่มและใส่ตัวเลือกก่อนบันทึก', 'info');
+			return;
+		}
+		if (typeof localStorage !== 'undefined') {
+			try {
+				const key = `gm_store_opts_${store.id}`;
+				const existing = JSON.parse(localStorage.getItem(key) ?? '[]') as MenuOptionGroup[];
+				const map = new Map<string, MenuOptionGroup>();
+				for (const g of existing) if (g.name?.trim()) map.set(g.name.trim().toLowerCase(), g);
+				map.set(cleanName.toLowerCase(), {
+					...group,
+					name: cleanName,
+					choices: cleanChoices.map((c) => ({ ...c, name: c.name.trim(), price: Math.max(0, Number(c.price) || 0) }))
+				});
+				localStorage.setItem(key, JSON.stringify([...map.values()]));
+				customPresetsVersion++;
+				toast.show(`บันทึกหมวด "${cleanName}" ไว้ใช้กับเมนูอื่นในร้านแล้ว`, 'success');
+			} catch {
+				// ignore
+			}
+		}
+	}
+
 	async function save() {
 		if (problems) {
 			error = problems;
@@ -151,6 +227,21 @@
 						.filter((c) => c.name.length > 0)
 				}))
 				.filter((g) => g.name.length > 0 && g.choices.length > 0);
+
+			// Automatically remember these option groups for this store
+			if (typeof localStorage !== 'undefined' && cleanOptions.length > 0) {
+				try {
+					const key = `gm_store_opts_${store.id}`;
+					const existing = JSON.parse(localStorage.getItem(key) ?? '[]') as MenuOptionGroup[];
+					const map = new Map<string, MenuOptionGroup>();
+					for (const g of existing) if (g.name?.trim()) map.set(g.name.trim().toLowerCase(), g);
+					for (const g of cleanOptions) if (g.name?.trim()) map.set(g.name.trim().toLowerCase(), g);
+					localStorage.setItem(key, JSON.stringify([...map.values()]));
+					customPresetsVersion++;
+				} catch {
+					// ignore
+				}
+			}
 
 			await ops.saveMenuItem(store.id, {
 				id: item?.id,
@@ -324,6 +415,29 @@
 				</button>
 			</div>
 
+			<!-- Store Option Presets (reused from other menus in this store) -->
+			{#if storeOptionPresets.length > 0}
+				<div class="rounded-xl border border-amber-200/80 bg-amber-50/60 p-2.5 space-y-1.5">
+					<div class="flex items-center justify-between">
+						<span class="text-[11px] font-semibold text-amber-900">📦 ตัวเลือกของร้านนี้ (คลิกเพื่อดึงมาใส่เมนูนี้):</span>
+						<span class="text-[10px] text-amber-700 font-medium">{storeOptionPresets.length} หมวด</span>
+					</div>
+					<div class="flex flex-wrap items-center gap-1.5">
+						{#each storeOptionPresets as preset (preset.name)}
+							<button
+								type="button"
+								onclick={() => copyStorePreset(preset)}
+								class="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-white px-2.5 py-1 text-xs font-medium text-amber-900 shadow-xs hover:border-brand hover:text-brand transition-colors active:scale-95"
+							>
+								<Icon name="plus" class="h-3 w-3" />
+								<span>{preset.name}</span>
+								<span class="text-[10px] text-slate-400">({preset.choices.length})</span>
+							</button>
+						{/each}
+					</div>
+				</div>
+			{/if}
+
 			{#if options.length === 0}
 				<p class="py-2 text-center text-xs text-slate-400">ยังไม่มีตัวเลือก กดปุ่มลัดด้านบนหรือกด "เพิ่มกลุ่ม" ได้เลย</p>
 			{:else}
@@ -337,6 +451,15 @@
 									placeholder="ชื่อกลุ่ม เช่น ท็อปปิ้ง, ระดับความเผ็ด"
 									class="flex-1 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-semibold text-slate-900 outline-none focus:ring-1 focus:ring-brand"
 								/>
+								<button
+									type="button"
+									onclick={() => saveGroupAsPreset(group)}
+									class="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-600 hover:border-brand hover:text-brand"
+									title="จำหมวดนี้ไว้ใช้กับเมนูอื่นในร้าน"
+								>
+									<Icon name="copy" class="h-3 w-3" />
+									<span class="hidden sm:inline">จำหมวดนี้</span>
+								</button>
 								<button
 									type="button"
 									onclick={() => removeOptionGroup(gIdx)}
