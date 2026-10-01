@@ -10,6 +10,7 @@
 	import { formatBaht, formatRelativeDate } from '$lib/utils';
 	import { describeSchedule, formatDaysText, getBangkokDate, isWithinHours } from '$lib/operatingHours';
 	import SalesChart from './SalesChart.svelte';
+	import TimePicker24 from '$lib/components/TimePicker24.svelte';
 
 	let { store }: { store: Store } = $props();
 
@@ -220,25 +221,53 @@
 			</div>
 
 			<!-- Hours Configuration Form -->
-			<div class="space-y-3 pt-1 border-t border-slate-100">
-				<!-- Open and close time -->
+			<div class="space-y-3.5 pt-1 border-t border-slate-100">
+				<!-- Open and close time in 24-hr format (00:00 - 23:59) -->
 				<div class="grid grid-cols-2 gap-3">
-					<label class="block space-y-1">
-						<span class="text-xs font-medium text-slate-700">เวลาเปิดร้าน</span>
-						<input
-							type="time"
-							bind:value={openTime}
-							class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none focus:border-brand"
-						/>
-					</label>
-					<label class="block space-y-1">
-						<span class="text-xs font-medium text-slate-700">เวลาปิดร้าน</span>
-						<input
-							type="time"
-							bind:value={closeTime}
-							class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none focus:border-brand"
-						/>
-					</label>
+					<TimePicker24 bind:value={openTime} label="เวลาเปิดร้าน" id="partner-open" />
+					<TimePicker24 bind:value={closeTime} label="เวลาปิดร้าน" id="partner-close" />
+				</div>
+
+				<!-- Quick shift presets -->
+				<div class="space-y-1.5">
+					<span class="text-xs font-medium text-slate-700">ช่วงเวลายอดนิยม</span>
+					<div class="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1">
+						<button
+							type="button"
+							onclick={() => { openTime = '08:00'; closeTime = '17:00'; }}
+							class="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-100 active:bg-brand-50"
+						>
+							08:00 - 17:00 (กลางวัน)
+						</button>
+						<button
+							type="button"
+							onclick={() => { openTime = '07:00'; closeTime = '15:00'; }}
+							class="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-100 active:bg-brand-50"
+						>
+							07:00 - 15:00 (รอบเช้า)
+						</button>
+						<button
+							type="button"
+							onclick={() => { openTime = '10:00'; closeTime = '20:00'; }}
+							class="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-100 active:bg-brand-50"
+						>
+							10:00 - 20:00 (ทั้งวัน)
+						</button>
+						<button
+							type="button"
+							onclick={() => { openTime = '16:00'; closeTime = '23:00'; }}
+							class="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-100 active:bg-brand-50"
+						>
+							16:00 - 23:00 (รอบเย็น)
+						</button>
+						<button
+							type="button"
+							onclick={() => { openTime = '18:00'; closeTime = '02:00'; }}
+							class="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-100 active:bg-brand-50"
+						>
+							18:00 - 02:00 (รอบดึก)
+						</button>
+					</div>
 				</div>
 
 				<!-- Days of week -->

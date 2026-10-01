@@ -18,7 +18,7 @@ export function formatBaht(amount: number): string {
 
 export function formatTime(iso: string | undefined): string {
 	if (!iso) return '';
-	return new Date(iso).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.';
+	return new Date(iso).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' น.';
 }
 
 export function nowTime(): string {
