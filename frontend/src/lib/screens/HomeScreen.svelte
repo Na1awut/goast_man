@@ -16,7 +16,7 @@
 	import { cart } from '$lib/stores/cart.svelte';
 	import { catalog } from '$lib/stores/catalog.svelte';
 	import { nav } from '$lib/stores/nav.svelte';
-	import { customDraft, orders } from '$lib/stores/orders.svelte';
+	import { orders } from '$lib/stores/orders.svelte';
 	import { storeView } from '$lib/stores/storeView.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { formatBaht, formatRelativeDate } from '$lib/utils';
@@ -33,17 +33,13 @@
 	const activeOrder = $derived(orders.active[0]);
 
 	// Broad choices stay compact as new campus locations are added.
-	const pickupTypes: { id: StoreType | 'seven'; label: string; icon: IconName }[] = [
+	const pickupTypes: { id: StoreType; label: string; icon: IconName }[] = [
 		{ id: 'canteen', label: 'โรงอาหาร', icon: 'utensils' },
-		{ id: 'shop', label: 'ร้านค้า', icon: 'store' },
-		{ id: 'seven', label: 'เซเว่น', icon: 'cart' }
+		{ id: 'shop', label: 'ร้านค้า', icon: 'store' }
 	];
 
-	function choosePickupType(type: StoreType | 'seven') {
-		if (type === 'seven') {
-			customDraft.pickupId = '7eleven-dorm';
-			nav.go('CUSTOM_ORDER');
-		} else storeView.browse(type);
+	function choosePickupType(type: StoreType) {
+		storeView.browse(type);
 	}
 
 	// --- Frequent drop-offs as a compact chip row
@@ -220,7 +216,7 @@
 		<!-- Where to buy -->
 		<section class="space-y-3">
 			<h2 class="text-base font-semibold text-slate-900">สั่งจากที่ไหนดี</h2>
-			<div class="grid grid-cols-3 gap-2" aria-label="ประเภทจุดซื้อ">
+			<div class="grid grid-cols-2 gap-3" aria-label="ประเภทจุดซื้อ">
 				{#each pickupTypes as type (type.id)}
 					<button type="button" onclick={() => choosePickupType(type.id)} class="flex min-h-20 flex-col items-center justify-center gap-2 rounded-xl bg-white px-2 py-3 text-center text-slate-900 transition-colors hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand active:bg-brand-50">
 						<Icon name={type.icon} class="h-6 w-6 text-brand" />
