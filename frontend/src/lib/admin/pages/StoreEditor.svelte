@@ -62,6 +62,28 @@
 	}
 	let inviting = $state(false);
 	let inviteEmail = $state('');
+	let confirmUnlink = $state(false);
+
+	function openInviteOrChange() {
+		inviteEmail = meta?.owner_email || meta?.invite_email || '';
+		dialogError = '';
+		inviting = true;
+	}
+
+	function openUnlink() {
+		dialogError = '';
+		confirmUnlink = true;
+	}
+
+	async function unlinkOwner() {
+		await run(() => c.api!.unlinkStoreOwner(storeId), `ปลดสิทธิ์เจ้าของร้าน ${store?.name ?? ''} แล้ว`);
+		confirmUnlink = false;
+	}
+
+	async function cancelInvite() {
+		if (!meta?.invite_email) return;
+		await run(() => c.api!.cancelInvite(meta.invite_email!), `ยกเลิกคำเชิญ ${meta.invite_email} แล้ว`);
+	}
 
 	async function run(action: () => Promise<unknown>, success: string) {
 		busy = true;
@@ -69,6 +91,7 @@
 		try {
 			await action();
 			confirmClear = false;
+			confirmUnlink = false;
 			inviting = false;
 			c.done(success);
 			await load();
@@ -105,16 +128,44 @@
 			<div class="min-w-0 flex-1">
 				<h2 class="truncate text-lg font-bold">{store.name}</h2>
 				<p class="text-sm text-slate-500">{store.id}{store.lock ? ` · ล็อก ${store.lock}` : ''} · {store.category} · {store.menuItems.length} เมนู</p>
-				<p class="mt-1 text-xs">
+				<div class="mt-1 flex flex-wrap items-center gap-2 text-xs">
 					{#if meta?.owner_email}
-						<span class="text-fresh-700">ร้านดูแลเอง: {meta.owner_email}</span>
+						<span class="inline-flex items-center gap-1 rounded-md bg-fresh-50 px-2 py-0.5 font-medium text-fresh-700">
+							<Icon name="check" class="h-3.5 w-3.5 text-fresh-600" />
+							ร้านดูแลเอง: {meta.owner_email}
+						</span>
+						{#if c.isAdmin}
+							<button type="button" onclick={openInviteOrChange} class="font-medium text-brand hover:underline">
+								เปลี่ยนอีเมล
+							</button>
+							<span class="text-slate-300">·</span>
+							<button type="button" onclick={openUnlink} class="font-medium text-rose-600 hover:underline">
+								ปลดสิทธิ์ร้าน
+							</button>
+						{/if}
 					{:else if meta?.invite_email}
-						<span class="text-amber-700">เชิญ {meta.invite_email} แล้ว รอร้าน login</span>
+						<span class="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 font-medium text-amber-800">
+							<Icon name="clock" class="h-3.5 w-3.5 text-amber-600" />
+							เชิญ {meta.invite_email} แล้ว (รอร้าน login)
+						</span>
+						{#if c.isAdmin}
+							<button type="button" onclick={openInviteOrChange} class="font-medium text-brand hover:underline">
+								แก้เมลที่เชิญ
+							</button>
+							<span class="text-slate-300">·</span>
+							<button type="button" onclick={cancelInvite} class="font-medium text-rose-600 hover:underline">
+								ยกเลิกคำเชิญ
+							</button>
+						{/if}
 					{:else}
 						<span class="text-slate-500">ยังไม่มีเมลร้าน ทีมดูแลไปก่อน</span>
-						{#if c.isAdmin}<button type="button" onclick={() => { inviting = true; inviteEmail = ''; dialogError = ''; }} class="ml-2 font-medium text-brand">เชิญร้าน</button>{/if}
+						{#if c.isAdmin}
+							<button type="button" onclick={openInviteOrChange} class="font-medium text-brand hover:underline">
+								เชิญร้าน
+							</button>
+						{/if}
 					{/if}
-				</p>
+				</div>
 			</div>
 			<div class="flex basis-full justify-end gap-5 sm:basis-auto">
 				<div class="flex flex-col items-center gap-1">
@@ -173,11 +224,55 @@
 	<p class="mt-2">ร้านจะรออยู่ใน <strong>ร้านค้า → ถังขยะ</strong> 60 วัน กู้คืนได้ก่อนนั้น พอครบ 60 วันร้านและเมนูจะถูกลบถาวร ส่วนออเดอร์เก่ายังเก็บไว้ครบ</p>
 </Modal>
 
-<Modal open={inviting} title="เชิญร้าน {store?.name ?? ''}" onclose={() => (inviting = false)} confirmLabel="ส่งคำเชิญ" {busy} disabled={!inviteEmail.trim()} error={dialogError}
-	onconfirm={() => run(() => c.api!.invitePartner(inviteEmail, storeId), `เชิญ ${inviteEmail.trim()} แล้ว`)}>
+<Modal
+	open={inviting}
+	title={meta?.owner_email ? `เปลี่ยนอีเมลเจ้าของร้าน ${store?.name ?? ''}` : meta?.invite_email ? `แก้ไขอีเมลที่เชิญร้าน ${store?.name ?? ''}` : `เชิญร้าน ${store?.name ?? ''}`}
+	onclose={() => (inviting = false)}
+	confirmLabel={meta?.owner_email ? 'เปลี่ยนเจ้าของร้าน' : 'ส่งคำเชิญ'}
+	{busy}
+	disabled={!inviteEmail.trim() || inviteEmail.trim().toLowerCase() === (meta?.owner_email || '').toLowerCase()}
+	error={dialogError}
+	onconfirm={() => run(() => c.api!.invitePartner(inviteEmail, storeId), meta?.owner_email ? `เปลี่ยนอีเมลเจ้าของร้านเป็น ${inviteEmail.trim()} แล้ว` : `เชิญ ${inviteEmail.trim()} แล้ว`)}
+>
 	<label class="block">
 		<span class="mb-1 block font-medium text-slate-900">อีเมล Google ของเจ้าของร้าน</span>
-		<input bind:value={inviteEmail} type="email" autocomplete="off" placeholder="เช่น ร้านป้าแดง@gmail.com" class="h-11 w-full rounded-xl bg-slate-100 px-3.5 outline-none focus:ring-2 focus:ring-brand" />
+		<input
+			bind:value={inviteEmail}
+			type="email"
+			autocomplete="off"
+			placeholder="เช่น ร้านป้าแดง@gmail.com"
+			class="h-11 w-full rounded-xl bg-slate-100 px-3.5 outline-none focus:ring-2 focus:ring-brand"
+		/>
 	</label>
-	<p class="mt-2 text-xs text-slate-500">ร้าน login ที่ goose-man.tech → "เข้าสู่ระบบร้านค้า" ด้วยอีเมลนี้ แล้วจะจัดการร้านเองได้ ทีมยังแก้ร้านได้เหมือนเดิม · อีเมลต้องยังไม่เคย login Goose Man มาก่อน</p>
+	{#if meta?.owner_email}
+		<p class="mt-2.5 rounded-xl bg-amber-50 p-2.5 text-xs text-amber-800">
+			⚠️ ร้านนี้เชื่อมต่อกับ <strong>{meta.owner_email}</strong> อยู่แล้ว หากเปลี่ยนอีเมล บัญชีเดิมจะถูกยกเลิกสิทธิ์ทันที และสิทธิ์จะโอนไปยังอีเมลใหม่นี้
+		</p>
+	{:else if meta?.invite_email}
+		<p class="mt-2 text-xs text-slate-500">
+			จะยกเลิกคำเชิญเดิมของ {meta.invite_email} และส่งคำเชิญไปยังอีเมลใหม่นี้แทน
+		</p>
+	{:else}
+		<p class="mt-2 text-xs text-slate-500">
+			ร้าน login ที่ goose-man.tech → "เข้าสู่ระบบร้านค้า" ด้วยอีเมลนี้ แล้วจะจัดการร้านเองได้ ทีมยังแก้ร้านได้เหมือนเดิม
+		</p>
+	{/if}
+</Modal>
+
+<Modal
+	open={confirmUnlink}
+	title="ปลดสิทธิ์เจ้าของร้าน {store?.name ?? ''}?"
+	onclose={() => (confirmUnlink = false)}
+	confirmLabel="ปลดสิทธิ์ร้าน"
+	danger
+	{busy}
+	error={dialogError}
+	onconfirm={unlinkOwner}
+>
+	<p class="text-sm text-slate-700">
+		คุณแน่ใจหรือไม่ว่าต้องการปลดสิทธิ์บัญชี <strong class="text-slate-900">{meta?.owner_email || meta?.invite_email}</strong> ออกจากร้านนี้?
+	</p>
+	<p class="mt-2 rounded-xl bg-slate-100 p-2.5 text-xs text-slate-600">
+		ร้านจะกลับมาเป็นสถานะ "ยังไม่มีเมลร้าน ทีมดูแลไปก่อน" เจ้าของเดิมจะไม่สามารถเข้ามาแก้ไขหรือรับออเดอร์ของร้านนี้ได้อีก จนกว่าจะได้รับเชิญใหม่
+	</p>
 </Modal>

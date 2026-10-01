@@ -73,6 +73,7 @@ export interface AdminApi {
 	partners(): Promise<Partners>;
 	invitePartner(email: string, storeId: string): Promise<void>;
 	cancelInvite(email: string): Promise<void>;
+	unlinkStoreOwner(storeId: string): Promise<void>;
 	team(): Promise<TeamMember[]>;
 	setMember(email: string, role: TeamRole, note?: string): Promise<void>;
 	removeMember(email: string): Promise<void>;
@@ -162,6 +163,7 @@ const liveApi: AdminApi = {
 	partners: () => call('admin_partners'),
 	invitePartner: (email, storeId) => call('admin_invite_partner', { p_email: email, p_store_id: storeId }),
 	cancelInvite: (email) => call('admin_cancel_invite', { p_email: email }),
+	unlinkStoreOwner: (storeId) => call('admin_unlink_store_owner', { p_store_id: storeId }),
 	team: () => call('admin_team'),
 	setMember: (email, role, note) => call('admin_set_member', { p_email: email, p_role: role, p_note: note ?? null }),
 	removeMember: (email) => call('admin_remove_member', { p_email: email }),

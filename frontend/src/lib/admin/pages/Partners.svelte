@@ -110,16 +110,22 @@
 				{:else}
 					<ul class="divide-y divide-slate-100">
 						{#each partners.partners as p (p.store_id)}
-							<li class="flex items-center gap-3 px-4 py-3.5 sm:px-5">
+							<li class="flex flex-wrap items-center gap-3 px-4 py-3.5 sm:px-5">
 								<div class="min-w-0 flex-1"><p class="truncate font-semibold">{p.store}</p><p class="truncate text-xs text-slate-500">{p.owner_name} · {p.owner_email} · เข้าร่วม {thaiDate(p.joined_at)}</p></div>
 								<span class="shrink-0 rounded-full bg-fresh-50 px-2.5 py-1 text-xs font-medium text-fresh-700">เข้าร่วมแล้ว</span>
+								{#if c.isAdmin}
+									<button type="button" onclick={() => c.go('stores', p.store_id)} class="h-9 shrink-0 rounded-lg border border-slate-200 px-3 text-xs font-medium text-slate-700 hover:bg-slate-50">จัดการ / เปลี่ยนเมล</button>
+								{/if}
 							</li>
 						{/each}
 						{#each partners.invites as inv (inv.email)}
-							<li class="flex items-center gap-3 px-4 py-3.5 sm:px-5">
+							<li class="flex flex-wrap items-center gap-3 px-4 py-3.5 sm:px-5">
 								<div class="min-w-0 flex-1"><p class="truncate font-semibold">{inv.store}</p><p class="truncate text-xs text-slate-500">{inv.email} · เชิญ {ago(inv.invited_at)}</p></div>
 								<span class="shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">รอเจ้าของร้าน login</span>
-								{#if c.isAdmin}<button type="button" onclick={() => c.act(() => c.api!.cancelInvite(inv.email), `ยกเลิกคำเชิญ ${inv.email} แล้ว`)} class="h-9 shrink-0 rounded-lg px-3 text-sm text-red-600 hover:bg-red-50">ยกเลิกคำเชิญ</button>{/if}
+								{#if c.isAdmin}
+									<button type="button" onclick={() => c.go('stores', inv.store_id)} class="h-9 shrink-0 rounded-lg border border-slate-200 px-3 text-xs font-medium text-slate-700 hover:bg-slate-50">แก้เมล</button>
+									<button type="button" onclick={() => c.act(() => c.api!.cancelInvite(inv.email), `ยกเลิกคำเชิญ ${inv.email} แล้ว`)} class="h-9 shrink-0 rounded-lg px-3 text-sm text-red-600 hover:bg-red-50">ยกเลิกคำเชิญ</button>
+								{/if}
 							</li>
 						{/each}
 					</ul>

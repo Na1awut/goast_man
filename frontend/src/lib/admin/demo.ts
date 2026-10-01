@@ -646,11 +646,37 @@ export function createDemoApi(): DemoApi {
 			if (me.role !== 'ADMIN') return fail('ADMIN_ONLY');
 			const e = email.trim().toLowerCase();
 			if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return fail('BAD_EMAIL');
-			if (storeId === 'kfc-05') return fail('STORE_HAS_OWNER');
 			const store = stores.find((s) => s.id === storeId);
 			if (!store) return fail('STORE_NOT_FOUND');
-			invites.unshift({ email: e, store_id: storeId, store: store.name, invited_at: new Date().toISOString() });
-			record('PARTNER_INVITED', 'store', storeId, store.name, { email: e });
+
+			// Remove any previous invite for this store
+			const prevInvIdx = invites.findIndex((x) => x.store_id === storeId);
+			if (prevInvIdx >= 0) invites.splice(prevInvIdx, 1);
+
+			// Unlink old owner if different
+			const prevPartnerIdx = partners.findIndex((p) => p.store_id === storeId);
+			if (prevPartnerIdx >= 0 && partners[prevPartnerIdx].owner_email !== e) {
+				partners.splice(prevPartnerIdx, 1);
+			}
+
+			// If email matches demo partner, link immediately
+			if (e === 'demo.shop@example.com') {
+				store.owner_email = e;
+				store.is_partner = true;
+				partners.unshift({
+					store_id: storeId,
+					store: store.name,
+					owner_email: e,
+					owner_name: 'บัญชีร้านทดลอง',
+					joined_at: new Date().toISOString()
+				});
+				record('PARTNER_ASSIGNED', 'store', storeId, store.name, { email: e });
+			} else {
+				store.owner_email = null;
+				store.is_partner = false;
+				invites.unshift({ email: e, store_id: storeId, store: store.name, invited_at: new Date().toISOString() });
+				record('PARTNER_INVITED', 'store', storeId, store.name, { email: e });
+			}
 			return wait(undefined);
 		},
 		async cancelInvite(email) {
@@ -659,6 +685,23 @@ export function createDemoApi(): DemoApi {
 			if (i < 0) return fail('INVITE_NOT_FOUND');
 			const [inv] = invites.splice(i, 1);
 			record('INVITE_CANCELLED', 'store', inv.store_id, inv.store, { email });
+			return wait(undefined);
+		},
+		async unlinkStoreOwner(storeId) {
+			if (me.role !== 'ADMIN') return fail('ADMIN_ONLY');
+			const store = stores.find((s) => s.id === storeId);
+			if (!store) return fail('STORE_NOT_FOUND');
+
+			store.owner_email = null;
+			store.is_partner = false;
+
+			const invIdx = invites.findIndex((x) => x.store_id === storeId);
+			if (invIdx >= 0) invites.splice(invIdx, 1);
+
+			const pIdx = partners.findIndex((p) => p.store_id === storeId);
+			if (pIdx >= 0) partners.splice(pIdx, 1);
+
+			record('PARTNER_UNLINKED', 'store', storeId, store.name, {});
 			return wait(undefined);
 		},
 
