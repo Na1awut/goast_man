@@ -1,7 +1,7 @@
 // Every Supabase call the app makes lives here, so stores stay mode-agnostic and
 // the row ↔ type mapping has exactly one home. Only imported on live paths.
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import type { CartItem, ChatMessage, MenuItem, MenuOptionGroup, OperatingHours, Order, OrderStatus, PaymentMethod, PartnerDashboard, Promotion, Rider, RiderEarning, RiderJob, SelectedOptionChoice, Store, User } from '$lib/types';
+import type { CartItem, ChatMessage, HomeBanner, MenuItem, MenuOptionGroup, OperatingHours, Order, OrderStatus, PaymentMethod, PartnerDashboard, Promotion, Rider, RiderEarning, RiderJob, SelectedOptionChoice, Store, User } from '$lib/types';
 import { owedToRider } from '$lib/admin/rules';
 import { base } from '$app/paths';
 import { verifySlipUrl } from '$lib/payments';
@@ -707,4 +707,45 @@ export async function setMyItemAvailable(itemId: string, available: boolean): Pr
 export async function setMyOperatingHours(hours: OperatingHours): Promise<void> {
 	check(await db().rpc('partner_set_operating_hours', { p_hours: hours }));
 }
+
+// ---------- Home Banners ----------
+
+export async function fetchHomeBanners(): Promise<HomeBanner[]> {
+	try {
+		const { data, error } = await db().from('home_banners').select('*').order('sort', { ascending: true });
+		if (error || !data) return [];
+		return (data as Row[]).map((r) => ({
+			id: r.id,
+			imageUrl: r.image_url,
+			title: r.title ?? '',
+			subtitle: r.subtitle ?? '',
+			linkUrl: r.link_url ?? undefined,
+			buttonText: r.button_text ?? undefined,
+			active: !!r.active,
+			sort: Number(r.sort ?? 0)
+		}));
+	} catch {
+		return [];
+	}
+}
+
+export async function saveHomeBanner(banner: HomeBanner): Promise<string> {
+	return check(
+		await db().rpc('admin_save_home_banner', {
+			p_id: banner.id || null,
+			p_image_url: banner.imageUrl,
+			p_title: banner.title,
+			p_subtitle: banner.subtitle,
+			p_link_url: banner.linkUrl ?? null,
+			p_button_text: banner.buttonText ?? 'ฝากหิ้วเลย',
+			p_active: banner.active,
+			p_sort: banner.sort
+		})
+	) as string;
+}
+
+export async function deleteHomeBanner(id: string): Promise<void> {
+	check(await db().rpc('admin_delete_home_banner', { p_id: id }));
+}
+
 

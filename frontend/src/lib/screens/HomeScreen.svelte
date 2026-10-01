@@ -1,5 +1,5 @@
 <script lang="ts">
-	import banner from '../../../../src/picture/web_banner_1.png';
+	import HomeBannerCarousel from '$lib/components/HomeBannerCarousel.svelte';
 	import GooseMark from '$lib/components/GooseMark.svelte';
 	import StoreLogo from '$lib/components/StoreLogo.svelte';
 	import Icon, { type IconName } from '$lib/components/Icon.svelte';
@@ -9,7 +9,7 @@
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
 	import { DROPOFF_POINTS } from '$lib/data/locations';
 	import { hasReviews, livePromotions } from '$lib/data/stores';
-	import { describeBenefit, STORE_DELIVERY_FEE } from '$lib/pricing';
+	import { describeBenefit } from '$lib/pricing';
 	import type { StoreType } from '$lib/types';
 	import { auth } from '$lib/stores/auth.svelte';
 	import { campus } from '$lib/stores/campus.svelte';
@@ -169,18 +169,7 @@
 		{/if}
 
 		<!-- Banner -->
-		<section class="overflow-hidden rounded-2xl border border-slate-100 bg-white">
-			<img src={banner} alt="Goose Rider เพื่อนแท้เรื่องส่งของ ก้าวเดียวถึงมือคุณ" width="1200" height="444" class="block aspect-[2658/984] w-full object-cover" />
-			<div class="flex items-center gap-3 px-4 py-3">
-				<div class="min-w-0 flex-1">
-					<p class="text-sm font-semibold text-slate-900">ขี้เกียจเดินฝ่าแดด? ให้ห่านบางมดหิ้วให้</p>
-					<p class="text-xs text-slate-500">ค่าหิ้วเริ่มต้นเพียง {STORE_DELIVERY_FEE}.-</p>
-				</div>
-				<button type="button" onclick={() => storeView.browse()} class="flex shrink-0 items-center gap-1 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white">
-					ฝากหิ้วเลย <Icon name="arrow-right" class="h-4 w-4" />
-				</button>
-			</div>
-		</section>
+		<HomeBannerCarousel />
 
 		{#if catalog.error}
 			<div class="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">

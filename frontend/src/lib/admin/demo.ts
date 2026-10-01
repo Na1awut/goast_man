@@ -4,7 +4,7 @@
 import { DROPOFF_POINTS } from '$lib/data/locations';
 import { STORE_CATALOGUE } from '$lib/data/stores';
 import { catalog } from '$lib/stores/catalog.svelte';
-import type { Store } from '$lib/types';
+import type { HomeBanner, Store } from '$lib/types';
 import type { AdminApi, OrderQuery } from './api';
 import { attentionOf, owedToRider, stageOf } from './rules';
 import { bangkokToday } from './format';
@@ -887,6 +887,57 @@ export function createDemoApi(): DemoApi {
 			e.resolved_at = new Date().toISOString();
 			e.resolved_by = me.nickname;
 			record('ERROR_RESOLVED', 'error', String(id), e.message.slice(0, 80));
+			return wait(undefined);
+		},
+
+		async homeBanners() {
+			if (typeof localStorage !== 'undefined') {
+				try {
+					const raw = localStorage.getItem('gooseman_home_banners');
+					if (raw) return wait(JSON.parse(raw));
+				} catch {}
+			}
+			return wait([
+				{
+					id: 'default-1',
+					imageUrl: '',
+					title: 'ขี้เกียจเดินฝ่าแดด? ให้ห่านบางมดหิ้วให้',
+					subtitle: 'ค่าหิ้วเริ่มต้นเพียง 15.-',
+					linkUrl: 'STORES',
+					buttonText: 'ฝากหิ้วเลย',
+					active: true,
+					sort: 0
+				}
+			]);
+		},
+		async saveHomeBanner(banner: HomeBanner) {
+			const id = banner.id || `banner-${Date.now()}`;
+			const saved = { ...banner, id };
+			let list: HomeBanner[] = [];
+			if (typeof localStorage !== 'undefined') {
+				try {
+					const raw = localStorage.getItem('gooseman_home_banners');
+					if (raw) list = JSON.parse(raw);
+				} catch {}
+				const idx = list.findIndex((b) => b.id === id);
+				if (idx >= 0) list[idx] = saved;
+				else list.push(saved);
+				localStorage.setItem('gooseman_home_banners', JSON.stringify(list));
+			}
+			record('BANNER_SAVED', 'banner', id, banner.title, { id });
+			return wait(id);
+		},
+		async deleteHomeBanner(id: string) {
+			if (typeof localStorage !== 'undefined') {
+				try {
+					const raw = localStorage.getItem('gooseman_home_banners');
+					if (raw) {
+						const list: HomeBanner[] = JSON.parse(raw);
+						localStorage.setItem('gooseman_home_banners', JSON.stringify(list.filter((b) => b.id !== id)));
+					}
+				} catch {}
+			}
+			record('BANNER_DELETED', 'banner', id, id);
 			return wait(undefined);
 		},
 

@@ -108,6 +108,18 @@ export interface OperatingHours {
 	days?: number[];
 }
 
+export interface HomeBanner {
+	id: string;
+	imageUrl: string;
+	title: string;
+	subtitle: string;
+	linkUrl?: string;
+	buttonText?: string;
+	active: boolean;
+	sort: number;
+}
+
+
 export interface Store {
 	id: string;
 	zone: StoreZone;

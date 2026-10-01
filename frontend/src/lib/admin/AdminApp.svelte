@@ -14,6 +14,7 @@
 	import RidersPage from './pages/Riders.svelte';
 	import PartnersPage from './pages/Partners.svelte';
 	import CodesPage from './pages/Codes.svelte';
+	import BannersPage from './pages/Banners.svelte';
 	import TeamPage from './pages/Team.svelte';
 	import ActivityPage from './pages/Activity.svelte';
 	import SettingsPage from './pages/Settings.svelte';
@@ -27,6 +28,7 @@
 		riders: RidersPage,
 		partners: PartnersPage,
 		codes: CodesPage,
+		banners: BannersPage,
 		team: TeamPage,
 		errors: ErrorsPage,
 		activity: ActivityPage,

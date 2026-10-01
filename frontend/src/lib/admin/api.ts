@@ -3,7 +3,7 @@
 // same interface on sample data in memory (./demo.ts).
 import { db, friendlyError, isLive } from '$lib/supabase';
 import * as app from '$lib/api/live';
-import type { Store } from '$lib/types';
+import type { HomeBanner, Store } from '$lib/types';
 import type { StoreInfo } from '$lib/storeOps';
 import { ADMIN_ERRORS } from './labels';
 import type {
@@ -108,6 +108,9 @@ export interface AdminApi {
 	updateStorefront(storeId: string, f: app.StorefrontArgs): Promise<void>;
 	riderApplications(status?: ApplicationStatus | null): Promise<RiderApplicationRow[]>;
 	reviewRiderApplication(id: string, approve: boolean, note: string): Promise<void>;
+	homeBanners(): Promise<HomeBanner[]>;
+	saveHomeBanner(banner: HomeBanner): Promise<string>;
+	deleteHomeBanner(id: string): Promise<void>;
 }
 
 /** A database error code or message, in the team's words */
@@ -210,7 +213,10 @@ const liveApi: AdminApi = {
 			p_image_url: f.imageUrl ?? ''
 		}),
 	riderApplications: (status) => call('admin_rider_applications', { p_status: status === undefined ? 'PENDING' : status }),
-	reviewRiderApplication: (id, approve, note) => call('admin_review_rider_application', { p_id: id, p_approve: approve, p_note: note })
+	reviewRiderApplication: (id, approve, note) => call('admin_review_rider_application', { p_id: id, p_approve: approve, p_note: note }),
+	homeBanners: () => app.fetchHomeBanners(),
+	saveHomeBanner: (b) => app.saveHomeBanner(b),
+	deleteHomeBanner: (id) => app.deleteHomeBanner(id)
 };
 
 let demo: import('./demo').DemoApi | null = null;

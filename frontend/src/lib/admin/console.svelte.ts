@@ -9,7 +9,7 @@ import { DEMO_ADMIN } from './demo';
 import { bangkokToday } from './format';
 import type { AppFlags, Overview, TeamMe, TeamRole } from './types';
 
-export type Page = 'overview' | 'orders' | 'finance' | 'stores' | 'riders' | 'partners' | 'codes' | 'errors' | 'team' | 'activity' | 'settings';
+export type Page = 'overview' | 'orders' | 'finance' | 'stores' | 'riders' | 'partners' | 'codes' | 'banners' | 'errors' | 'team' | 'activity' | 'settings';
 export type SessionState = 'loading' | 'signed-out' | 'no-access' | 'ready';
 
 export const PAGES: { id: Page; label: string; title: string; subtitle: string; icon: import('$lib/components/Icon.svelte').IconName; admin?: boolean }[] = [
@@ -20,6 +20,7 @@ export const PAGES: { id: Page; label: string; title: string; subtitle: string; 
 	{ id: 'riders', label: 'คนหิ้ว', title: 'คนหิ้ว', subtitle: 'คนหิ้วที่ผ่านการ verify และงานที่ถืออยู่ตอนนี้', icon: 'bike' },
 	{ id: 'partners', label: 'Partner และโปร', title: 'Partner และโปร', subtitle: 'โปรของร้านที่เปิดอยู่ และเชิญร้านเข้าร่วม', icon: 'tag' },
 	{ id: 'codes', label: 'โค้ดส่วนลด', title: 'โค้ดส่วนลด', subtitle: 'สร้างโค้ด กำหนดวันปล่อย และจำนวนครั้งที่ใช้ได้', icon: 'ticket' },
+	{ id: 'banners', label: 'แบนเนอร์', title: 'แบนเนอร์หน้าแรก', subtitle: 'จัดการรูปและข้อความแบนเนอร์บนหน้าแรกของแอป', icon: 'image' },
 	{ id: 'errors', label: 'ข้อผิดพลาด', title: 'ข้อผิดพลาด', subtitle: 'error ที่ผู้ใช้เจอในแอปและหน้านี้ รวมเป็นกลุ่มตามจุดที่พัง', icon: 'alert' },
 	{ id: 'team', label: 'ทีมงาน', title: 'ทีมงาน', subtitle: 'ใครเข้าหน้านี้ได้ และทำอะไรได้บ้าง', icon: 'users', admin: true },
 	{ id: 'activity', label: 'บันทึกการทำงาน', title: 'บันทึกการทำงาน', subtitle: 'ทุกอย่างที่ทีมงานเปลี่ยนในระบบ ใครทำ เมื่อไร', icon: 'clipboard-list', admin: true },
