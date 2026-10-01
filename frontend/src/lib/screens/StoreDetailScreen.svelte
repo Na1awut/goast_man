@@ -15,10 +15,12 @@
 	import type { MenuItem } from '$lib/types';
 	import { describeBenefit } from '$lib/pricing';
 	import { formatBaht } from '$lib/utils';
+	import { formatDaysText, isWithinHours } from '$lib/operatingHours';
 
 	const POPULAR = 'เมนูยอดฮิต';
 
 	const store = $derived(storeView.selected);
+	const storeOpen = $derived(!!store && store.isOpen && (!store.operatingHours?.enabled || isWithinHours(store.operatingHours)));
 	const cartIsThisStore = $derived(!!store && cart.store?.id === store.id);
 	const favorite = $derived(!!store && storeView.favorites.includes(store.id));
 	const menu = $derived(store?.menuItems ?? []);
@@ -116,6 +118,24 @@
 	</section>
 
 	<div class="flex-1 space-y-4 px-4 pt-4 pb-6">
+		{#if !storeOpen}
+			<div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900" role="alert">
+				<div class="flex items-center gap-2 font-semibold text-sm">
+					<Icon name="clock" class="h-4 w-4 text-amber-600" />
+					<span>ร้านนี้ปิดรับออเดอร์อยู่ในขณะนี้</span>
+				</div>
+				{#if store.operatingHours?.enabled}
+					<p class="mt-1 text-xs text-amber-800">
+						เวลาเปิดทำการ: {store.operatingHours.openTime} - {store.operatingHours.closeTime} น. ({formatDaysText(store.operatingHours.days)})
+					</p>
+				{:else}
+					<p class="mt-1 text-xs text-amber-800">
+						ขออภัยในความไม่สะดวก ร้านจะเปิดรับออเดอร์อีกครั้งเร็วๆ นี้
+					</p>
+				{/if}
+			</div>
+		{/if}
+
 		{#if promotions.length}
 			<section class="overflow-hidden rounded-2xl border border-brand-200 bg-brand-50" aria-label="โปรโมชันของร้าน">
 				<h2 class="flex items-center gap-1.5 px-4 pt-3 text-sm font-semibold text-brand-700"><Icon name="zap" class="h-4 w-4" /> ดีลพิเศษเฉพาะเด็กบางมด</h2>
@@ -197,7 +217,7 @@
 									{/if}
 									<button
 										type="button"
-										disabled={!item.isAvailable}
+										disabled={!item.isAvailable || !storeOpen}
 										onclick={() => (customizingItem = item)}
 										class="rounded-xl bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-xs active:bg-brand-600 disabled:opacity-50"
 									>
@@ -214,7 +234,7 @@
 										<QtyStepper
 											qty={cartIsThisStore ? cart.qty(item.id, size.special) : 0}
 											label="{item.name} ({size.label})"
-											disabled={!item.isAvailable}
+											disabled={!item.isAvailable || !storeOpen}
 											onadd={(el) => { if (cart.add(item, store, size.special)) { haptic(); flyToCart(el); } }}
 											onremove={() => { cart.decrement(item.id, size.special); haptic(6); }}
 										/>
@@ -224,7 +244,7 @@
 						{:else}
 							<div class="mt-auto flex items-end justify-between gap-2 pt-1.5">
 								<span class="text-base font-semibold text-slate-900 tabular-nums">{formatBaht(item.price)}</span>
-								<QtyStepper {qty} label={item.name} disabled={!item.isAvailable} onadd={(el) => { if (cart.add(item, store)) { haptic(); flyToCart(el); } }} onremove={() => { cart.decrement(item.id); haptic(6); }} />
+								<QtyStepper {qty} label={item.name} disabled={!item.isAvailable || !storeOpen} onadd={(el) => { if (cart.add(item, store)) { haptic(); flyToCart(el); } }} onremove={() => { cart.decrement(item.id); haptic(6); }} />
 							</div>
 						{/if}
 					</div>

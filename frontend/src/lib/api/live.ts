@@ -1,7 +1,7 @@
 // Every Supabase call the app makes lives here, so stores stay mode-agnostic and
 // the row ↔ type mapping has exactly one home. Only imported on live paths.
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import type { CartItem, ChatMessage, MenuItem, MenuOptionGroup, Order, OrderStatus, PaymentMethod, PartnerDashboard, Promotion, Rider, RiderEarning, RiderJob, SelectedOptionChoice, Store, User } from '$lib/types';
+import type { CartItem, ChatMessage, MenuItem, MenuOptionGroup, OperatingHours, Order, OrderStatus, PaymentMethod, PartnerDashboard, Promotion, Rider, RiderEarning, RiderJob, SelectedOptionChoice, Store, User } from '$lib/types';
 import { owedToRider } from '$lib/admin/rules';
 import { base } from '$app/paths';
 import { verifySlipUrl } from '$lib/payments';
@@ -56,6 +56,7 @@ function mapStore(r: Row): Store {
 		description: r.description ?? '',
 		imageUrl: r.image_url ?? '',
 		isOpen: r.is_open,
+		operatingHours: r.operating_hours ?? undefined,
 		hidden: r.hidden ?? false,
 		rating: Number(r.rating),
 		reviewsCount: r.reviews_count,
@@ -701,3 +702,9 @@ export async function setMyStoreOpen(open: boolean): Promise<void> {
 export async function setMyItemAvailable(itemId: string, available: boolean): Promise<void> {
 	check(await db().rpc('partner_set_item_available', { p_item_id: itemId, p_available: available }));
 }
+
+/** The partner saves automated operating hours for their store */
+export async function setMyOperatingHours(hours: OperatingHours): Promise<void> {
+	check(await db().rpc('partner_set_operating_hours', { p_hours: hours }));
+}
+

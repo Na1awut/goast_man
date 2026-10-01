@@ -100,6 +100,14 @@ export interface Promotion {
 	approved: boolean;
 }
 
+export interface OperatingHours {
+	enabled: boolean;
+	openTime: string; // e.g. "08:00"
+	closeTime: string; // e.g. "17:00"
+	/** 0=Sunday, 1=Monday ... 6=Saturday. If omitted, all days */
+	days?: number[];
+}
+
 export interface Store {
 	id: string;
 	zone: StoreZone;
@@ -108,6 +116,8 @@ export interface Store {
 	description: string;
 	imageUrl: string;
 	isOpen: boolean;
+	/** Optional automated business hours schedule */
+	operatingHours?: OperatingHours;
 	/** Hidden from the app by the team (being set up, or retired) */
 	hidden?: boolean;
 	rating: number;

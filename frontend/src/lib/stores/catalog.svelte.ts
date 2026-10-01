@@ -1,6 +1,6 @@
 // The store catalogue every screen reads (Svelte 5 runes).
 // Demo mode: the in-memory STORE_CATALOGUE. Live mode: Supabase, reloaded on demand.
-import type { MenuItem, Promotion, Store } from '$lib/types';
+import type { MenuItem, OperatingHours, Promotion, Store } from '$lib/types';
 import { findStore, livePromotions, STORE_CATALOGUE, sortForBrowsing } from '$lib/data/stores';
 import * as api from '$lib/api/live';
 import { friendlyError, isLive } from '$lib/supabase';
@@ -41,6 +41,17 @@ class CatalogStore {
 		)
 	);
 
+	constructor() {
+		if (!isLive && typeof localStorage !== 'undefined') {
+			for (const store of this.stores) {
+				try {
+					const raw = localStorage.getItem('gm_store_hours_' + store.id);
+					if (raw) store.operatingHours = JSON.parse(raw);
+				} catch {}
+			}
+		}
+	}
+
 	byId(id: string): Store | undefined {
 		return this.partnerStore?.id === id ? this.partnerStore : findStore(this.stores, id);
 	}
@@ -54,6 +65,12 @@ class CatalogStore {
 			const store = isLive ? await api.fetchStore(storeId) : findStore(this.stores, storeId);
 			if (request !== this.#partnerRequest) return;
 			if (!store) throw new Error('STORE_NOT_FOUND');
+			if (!isLive && typeof localStorage !== 'undefined') {
+				try {
+					const raw = localStorage.getItem('gm_store_hours_' + storeId);
+					if (raw) store.operatingHours = JSON.parse(raw);
+				} catch {}
+			}
 			this.partnerStore = store;
 		} catch (err) {
 			if (request !== this.#partnerRequest) return;
@@ -114,6 +131,23 @@ class CatalogStore {
 	async setStoreOpen(storeId: string, open: boolean) {
 		if (isLive) await api.setMyStoreOpen(open);
 		this.#patch(storeId, (store) => (store.isOpen = open));
+	}
+
+	/** Save automated operating hours schedule for store */
+	async saveOperatingHours(storeId: string, hours: OperatingHours) {
+		if (isLive) {
+			await api.setMyOperatingHours(hours);
+			await this.#reloadStore(storeId);
+			return;
+		}
+		if (typeof localStorage !== 'undefined') {
+			try {
+				localStorage.setItem('gm_store_hours_' + storeId, JSON.stringify(hours));
+			} catch {}
+		}
+		this.#patch(storeId, (store) => {
+			store.operatingHours = { ...hours };
+		});
 	}
 
 	/** The partner marks a dish sold out (or back on) */

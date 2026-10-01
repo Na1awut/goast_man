@@ -4,6 +4,7 @@ import { bestPromotion, MAX_ORDER_ITEMS, quoteDelivery, unitPrice, type AppliedC
 import { distanceMeters, PLACES, STORE_ZONE_PLACE } from '$lib/routing';
 import * as api from '$lib/api/live';
 import { isLive } from '$lib/supabase';
+import { isWithinHours } from '$lib/operatingHours';
 import { campus } from './campus.svelte';
 import { flags } from './flags.svelte';
 import { catalog } from './catalog.svelte';
@@ -87,6 +88,11 @@ class CartStore {
 
 	/** Returns false when nothing was added (sold out, or the cart is full) */
 	add(menuItem: MenuItem, store: Store, special = false, selectedOptions: SelectedOptionChoice[] = [], quantity = 1): boolean {
+		const withinHours = !store.operatingHours?.enabled || isWithinHours(store.operatingHours);
+		if (!store.isOpen || !withinHours) {
+			toast.show(`ร้าน ${store.name} ปิดรับออเดอร์อยู่ในขณะนี้`, 'info');
+			return false;
+		}
 		if (!menuItem.isAvailable || (special && !menuItem.specialPrice)) return false;
 		const switching = !!this.store && this.store.id !== store.id && this.items.length > 0;
 		if (!switching && this.totalItems + quantity > MAX_ORDER_ITEMS) {

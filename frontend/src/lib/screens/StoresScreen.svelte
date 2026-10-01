@@ -12,6 +12,7 @@
 	import { catalog } from '$lib/stores/catalog.svelte';
 	import { cart } from '$lib/stores/cart.svelte';
 	import { storeView } from '$lib/stores/storeView.svelte';
+	import { isWithinHours } from '$lib/operatingHours';
 
 	const results = $derived(searchStores(catalog.stores, storeView.query, storeView.zone, storeView.type));
 	const zones = $derived(STORE_ZONES.filter((z) => z.id === 'all' || (
@@ -105,6 +106,9 @@
 								<p class="flex items-center gap-1.5">
 									<span class="truncate text-sm font-semibold text-slate-900">{store.name}</span>
 									{#if store.isPartner}<PartnerBadge compact />{/if}
+									{#if !store.isOpen || (store.operatingHours?.enabled && !isWithinHours(store.operatingHours))}
+										<span class="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">ปิดรับ</span>
+									{/if}
 								</p>
 								<p class="truncate text-xs text-slate-500">{store.category} · {ZONE_NAMES[store.zone]}</p>
 								<p class="mt-1 flex items-center gap-1 text-xs text-slate-600">
