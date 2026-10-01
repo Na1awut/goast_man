@@ -29,6 +29,7 @@
 	let confirmRemove = $state(false);
 	let error = $state('');
 	let openedFor = $state<object | null>(null);
+	let dropdownOpen = $state(false);
 
 	// Fill the form each time the sheet opens for a new/different dish.
 	// We track the item REFERENCE (not just the id) so that after a save replaces the
@@ -37,11 +38,13 @@
 		// While closed, do nothing and reset the sentinel so the next open always re-inits.
 		if (item === undefined) {
 			openedFor = null;
+			dropdownOpen = false;
 			return;
 		}
 		// Use the object reference as the sentinel – a replaced (saved) object is ≠ the old one.
 		if ((item as object) === openedFor) return;
 		openedFor = item as object;
+		dropdownOpen = false;
 		name = item?.name ?? '';
 		category = item?.category ?? categories[0] ?? '';
 		price = item?.price ?? null;
@@ -102,84 +105,167 @@
 		options[groupIndex].choices = options[groupIndex].choices.filter((_, i) => i !== choiceIndex);
 	}
 
-	function applyPreset(presetKey: 'toppings' | 'spicy' | 'sweet' | 'meat') {
-		if (presetKey === 'toppings') {
-			addOptionGroup('ท็อปปิ้งเพิ่มเติม', false, 5, [
-				{ name: 'ไข่ดาว', price: 10 },
-				{ name: 'ไข่เจียว', price: 15 },
-				{ name: 'เพิ่มข้าว', price: 10 }
-			]);
-		} else if (presetKey === 'spicy') {
-			addOptionGroup('ระดับความเผ็ด', true, 1, [
-				{ name: 'ไม่เผ็ด', price: 0 },
-				{ name: 'เผ็ดน้อย', price: 0 },
-				{ name: 'เผ็ดปกติ', price: 0 },
-				{ name: 'เผ็ดมาก', price: 0 }
-			]);
-		} else if (presetKey === 'sweet') {
-			addOptionGroup('ระดับความหวาน', true, 1, [
-				{ name: 'หวาน 0%', price: 0 },
-				{ name: 'หวาน 25% (หวานน้อย)', price: 0 },
-				{ name: 'หวาน 50%', price: 0 },
-				{ name: 'หวาน 100% (ปกติ)', price: 0 }
-			]);
-		} else if (presetKey === 'meat') {
-			addOptionGroup('เลือกเนื้อสัตว์', true, 1, [
-				{ name: 'หมูสับ', price: 0 },
-				{ name: 'ไก่', price: 0 },
-				{ name: 'หมูกรอบ', price: 10 },
-				{ name: 'ทะเล', price: 20 }
-			]);
-		}
+	interface DropdownOptionItem {
+		id: string;
+		label: string;
+		subtext?: string;
+		group: MenuOptionGroup;
 	}
 
+	const defaultPresets: DropdownOptionItem[] = [
+		{
+			id: 'preset-toppings',
+			label: 'ไข่ดาว / ไข่เจียว',
+			subtext: 'ไข่ดาว +10฿, ไข่เจียว +15฿',
+			group: {
+				id: 'opt-toppings',
+				name: 'ท็อปปิ้งเพิ่มเติม',
+				required: false,
+				maxChoices: 5,
+				choices: [
+					{ id: 'ch-1', name: 'ไข่ดาว', price: 10 },
+					{ id: 'ch-2', name: 'ไข่เจียว', price: 15 },
+					{ id: 'ch-3', name: 'เพิ่มข้าว', price: 10 }
+				]
+			}
+		},
+		{
+			id: 'preset-spicy',
+			label: 'ระดับความเผ็ด',
+			subtext: 'ไม่เผ็ด, น้อย, ปกติ, มาก',
+			group: {
+				id: 'opt-spicy',
+				name: 'ระดับความเผ็ด',
+				required: true,
+				maxChoices: 1,
+				choices: [
+					{ id: 'ch-1', name: 'ไม่เผ็ด', price: 0 },
+					{ id: 'ch-2', name: 'เผ็ดน้อย', price: 0 },
+					{ id: 'ch-3', name: 'เผ็ดปกติ', price: 0 },
+					{ id: 'ch-4', name: 'เผ็ดมาก', price: 0 }
+				]
+			}
+		},
+		{
+			id: 'preset-sweet',
+			label: 'ระดับความหวาน',
+			subtext: '0%, 25%, 50%, 100%',
+			group: {
+				id: 'opt-sweet',
+				name: 'ระดับความหวาน',
+				required: true,
+				maxChoices: 1,
+				choices: [
+					{ id: 'ch-1', name: 'หวาน 0%', price: 0 },
+					{ id: 'ch-2', name: 'หวาน 25% (หวานน้อย)', price: 0 },
+					{ id: 'ch-3', name: 'หวาน 50%', price: 0 },
+					{ id: 'ch-4', name: 'หวาน 100% (ปกติ)', price: 0 }
+				]
+			}
+		},
+		{
+			id: 'preset-meat',
+			label: 'เลือกเนื้อสัตว์',
+			subtext: 'หมู, ไก่, หมูกรอบ, ทะเล',
+			group: {
+				id: 'opt-meat',
+				name: 'เลือกเนื้อสัตว์',
+				required: true,
+				maxChoices: 1,
+				choices: [
+					{ id: 'ch-1', name: 'หมูสับ', price: 0 },
+					{ id: 'ch-2', name: 'ไก่', price: 0 },
+					{ id: 'ch-3', name: 'หมูกรอบ', price: 10 },
+					{ id: 'ch-4', name: 'ทะเล', price: 20 }
+				]
+			}
+		}
+	];
+
 	let customPresetsVersion = $state(0);
-	const storeOptionPresets = $derived.by<MenuOptionGroup[]>(() => {
+	const dropdownItems = $derived.by<DropdownOptionItem[]>(() => {
 		void customPresetsVersion;
-		const seen = new Map<string, MenuOptionGroup>();
-		// 1. Gather all option groups from all dishes in this store
+		const items: DropdownOptionItem[] = [];
+		const seenLabels = new Set<string>();
+
+		function addItem(label: string, subtext: string, group: MenuOptionGroup) {
+			const key = label.trim().toLowerCase();
+			if (!key || seenLabels.has(key)) return;
+			seenLabels.add(key);
+			items.push({ id: group.id || uid('opt'), label: label.trim(), subtext, group });
+		}
+
+		// 1. Gather all option groups and individual choices from dishes in this store
 		for (const m of store.menuItems) {
 			for (const g of m.options ?? []) {
-				const key = g.name.trim().toLowerCase();
-				if (key && !seen.has(key) && g.choices?.length > 0) {
-					seen.set(key, g);
+				if (!g.choices || g.choices.length === 0) continue;
+				const choiceNames = g.choices.map((c) => c.name.trim()).filter(Boolean);
+				if (choiceNames.length === 0) continue;
+
+				const isGeneric = g.name.trim() === 'ตัวเลือกใหม่' || g.name.trim() === 'ท็อปปิ้ง';
+				const groupLabel = isGeneric && choiceNames.length === 1 ? choiceNames[0] : g.name.trim();
+				const subtext = g.choices.length === 1
+					? `${g.choices[0].price > 0 ? `+${g.choices[0].price} ฿` : 'ฟรี'}`
+					: `${g.choices.length} อย่าง (${choiceNames.slice(0, 3).join(', ')}${choiceNames.length > 3 ? '...' : ''})`;
+				addItem(groupLabel, subtext, g);
+
+				if (g.choices.length > 1) {
+					for (const c of g.choices) {
+						if (!c.name.trim()) continue;
+						const singleGroup: MenuOptionGroup = {
+							id: uid('opt'),
+							name: c.name.trim(),
+							required: false,
+							maxChoices: 1,
+							choices: [{ id: uid('ch'), name: c.name.trim(), price: c.price || 0 }]
+						};
+						addItem(c.name.trim(), c.price > 0 ? `+${c.price} ฿` : 'ฟรี', singleGroup);
+					}
 				}
 			}
 		}
-		// 2. Also check any presets saved in localStorage for this store
+
+		// 2. Also check presets saved in localStorage for this store
 		if (typeof localStorage !== 'undefined') {
 			try {
 				const saved = localStorage.getItem(`gm_store_opts_${store.id}`);
 				if (saved) {
 					const list = JSON.parse(saved) as MenuOptionGroup[];
 					for (const g of list) {
-						const key = g.name?.trim().toLowerCase();
-						if (key && !seen.has(key) && g.choices?.length > 0) {
-							seen.set(key, g);
-						}
+						if (!g.choices || g.choices.length === 0) continue;
+						const choiceNames = g.choices.map((c) => c.name.trim()).filter(Boolean);
+						if (choiceNames.length === 0) continue;
+						const isGeneric = g.name.trim() === 'ตัวเลือกใหม่' || g.name.trim() === 'ท็อปปิ้ง';
+						const groupLabel = isGeneric && choiceNames.length === 1 ? choiceNames[0] : g.name.trim();
+						const subtext = g.choices.length === 1
+							? `${g.choices[0].price > 0 ? `+${g.choices[0].price} ฿` : 'ฟรี'}`
+							: `${g.choices.length} อย่าง (${choiceNames.slice(0, 3).join(', ')}${choiceNames.length > 3 ? '...' : ''})`;
+						addItem(groupLabel, subtext, g);
 					}
 				}
 			} catch {
-				// ignore storage errors
+				// ignore
 			}
 		}
-		return [...seen.values()];
+
+		return items;
 	});
 
-	function copyStorePreset(preset: MenuOptionGroup) {
+	function selectDropdownItem(item: DropdownOptionItem) {
 		const newGroup: MenuOptionGroup = {
 			id: uid('opt'),
-			name: preset.name,
-			required: preset.required,
-			maxChoices: preset.maxChoices,
-			choices: preset.choices.map((c) => ({
+			name: item.group.name,
+			required: item.group.required,
+			maxChoices: item.group.maxChoices,
+			choices: item.group.choices.map((c) => ({
 				id: uid('ch'),
 				name: c.name,
 				price: c.price
 			}))
 		};
 		options = [...options, newGroup];
-		toast.show(`ดึง "${preset.name}" มาใส่ในเมนูแล้ว`, 'success');
+		dropdownOpen = false;
+		toast.show(`เพิ่ม "${item.label}" แล้ว`, 'success');
 	}
 
 	function saveGroupAsPreset(group: MenuOptionGroup) {
@@ -368,75 +454,93 @@
 
 		<!-- Options & Toppings -->
 		<div class="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5">
-			<div class="flex items-center justify-between">
+			<!-- Header with Left: [เพิ่มออปชั่น] (อันนี้ตามเดิม) and Right: [เลือกออปชั่น ▾] (Drop Down) -->
+			<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 				<div>
 					<h3 class="text-sm font-semibold text-slate-900">ตัวเลือก & ท็อปปิ้ง</h3>
-					<p class="text-xs text-slate-500">เช่น ไข่ดาว, ไข่เจียว, ความหวาน, ความเผ็ด</p>
+					<p class="text-xs text-slate-500">เช่น ไข่ดาว, ความหวาน, ชีท, วิปครีม</p>
 				</div>
-				<button
-					type="button"
-					onclick={() => addOptionGroup('ตัวเลือกใหม่', false, 1)}
-					class="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-brand shadow-xs border border-slate-200 hover:bg-slate-50"
-				>
-					<Icon name="plus" class="h-3.5 w-3.5" /> เพิ่มกลุ่ม
-				</button>
-			</div>
 
-			<!-- Quick Preset Buttons -->
-			<div class="flex flex-wrap items-center gap-1.5 pt-1">
-				<span class="text-[11px] text-slate-400">ปุ่มลัด:</span>
-				<button
-					type="button"
-					onclick={() => applyPreset('toppings')}
-					class="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-600 hover:border-brand hover:text-brand"
-				>
-					🍳 ไข่ดาว/เจียว
-				</button>
-				<button
-					type="button"
-					onclick={() => applyPreset('spicy')}
-					class="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-600 hover:border-brand hover:text-brand"
-				>
-					🌶️ ความเผ็ด
-				</button>
-				<button
-					type="button"
-					onclick={() => applyPreset('sweet')}
-					class="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-600 hover:border-brand hover:text-brand"
-				>
-					🧋 ความหวาน
-				</button>
-				<button
-					type="button"
-					onclick={() => applyPreset('meat')}
-					class="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-600 hover:border-brand hover:text-brand"
-				>
-					🥩 เนื้อสัตว์
-				</button>
-			</div>
+				<div class="flex items-center gap-2">
+					<!-- ปุ่มซ้าย: เพิ่มออปชั่น (ตามเดิม) -->
+					<button
+						type="button"
+						onclick={() => addOptionGroup('ตัวเลือกใหม่', false, 1)}
+						class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-xs hover:border-brand hover:text-brand transition-colors active:scale-95"
+					>
+						<Icon name="plus" class="h-3.5 w-3.5 text-brand" />
+						<span>เพิ่มออปชั่น</span>
+					</button>
 
-			<!-- Store Option Presets (reused from other menus in this store) -->
-			{#if storeOptionPresets.length > 0}
-				<div class="rounded-xl border border-amber-200/80 bg-amber-50/60 p-2.5 space-y-1.5">
-					<div class="flex items-center justify-between">
-						<span class="text-[11px] font-semibold text-amber-900">📦 ตัวเลือกของร้านนี้ (คลิกเพื่อดึงมาใส่เมนูนี้):</span>
-						<span class="text-[10px] text-amber-700 font-medium">{storeOptionPresets.length} หมวด</span>
-					</div>
-					<div class="flex flex-wrap items-center gap-1.5">
-						{#each storeOptionPresets as preset (preset.name)}
-							<button
-								type="button"
-								onclick={() => copyStorePreset(preset)}
-								class="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-white px-2.5 py-1 text-xs font-medium text-amber-900 shadow-xs hover:border-brand hover:text-brand transition-colors active:scale-95"
+					<!-- ปุ่มขวา: เลือกออปชั่น (Drop Down) -->
+					<div class="relative">
+						<button
+							type="button"
+							onclick={() => (dropdownOpen = !dropdownOpen)}
+							class="inline-flex items-center gap-1.5 rounded-xl border border-brand-200 bg-brand-50/80 px-3 py-1.5 text-xs font-semibold text-brand-800 shadow-xs hover:bg-brand-100 transition-colors active:scale-95"
+							aria-expanded={dropdownOpen}
+							aria-haspopup="listbox"
+						>
+							<span>เลือกออปชั่น</span>
+							<Icon name={dropdownOpen ? 'chevron-up' : 'chevron-down'} class="h-3.5 w-3.5 text-brand" />
+						</button>
+
+						{#if dropdownOpen}
+							<!-- Backdrop for closing on outside click -->
+							<div
+								class="fixed inset-0 z-40"
+								onclick={() => (dropdownOpen = false)}
+								tabindex="-1"
+								role="button"
+								aria-label="ปิดเมนู"
+							></div>
+
+							<!-- Drop Down Menu -->
+							<div
+								class="absolute right-0 top-full z-50 mt-1.5 w-64 max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl ring-1 ring-slate-900/5 transition-all"
+								role="listbox"
 							>
-								<Icon name="plus" class="h-3 w-3" />
-								<span>{preset.name}</span>
-								<span class="text-[10px] text-slate-400">({preset.choices.length})</span>
-							</button>
-						{/each}
+								{#if dropdownItems.length > 0}
+									<div class="px-2.5 py-1 text-[11px] font-semibold text-slate-400">
+										สิ่งที่เคยเพิ่มไว้ในร้าน ({dropdownItems.length})
+									</div>
+									<div class="space-y-0.5">
+										{#each dropdownItems as opt (opt.label)}
+											<button
+												type="button"
+												onclick={() => selectDropdownItem(opt)}
+												class="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-left text-xs text-slate-800 hover:bg-brand-50 hover:text-brand transition-colors"
+											>
+												<span class="font-medium truncate">{opt.label}</span>
+												{#if opt.subtext}
+													<span class="ml-2 shrink-0 text-[11px] text-slate-400 tabular-nums">{opt.subtext}</span>
+												{/if}
+											</button>
+										{/each}
+									</div>
+									<div class="my-1.5 border-t border-slate-100"></div>
+								{/if}
+
+								<div class="px-2.5 py-1 text-[11px] font-semibold text-slate-400">
+									ตัวเลือกยอดนิยม
+								</div>
+								<div class="space-y-0.5">
+									{#each defaultPresets as preset (preset.id)}
+										<button
+											type="button"
+											onclick={() => selectDropdownItem(preset)}
+											class="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-left text-xs text-slate-800 hover:bg-brand-50 hover:text-brand transition-colors"
+										>
+											<span class="font-medium truncate">{preset.label}</span>
+											<span class="ml-2 shrink-0 text-[11px] text-slate-400">{preset.subtext}</span>
+										</button>
+									{/each}
+								</div>
+							</div>
+						{/if}
 					</div>
 				</div>
-			{/if}
+			</div>
 
 			{#if options.length === 0}
 				<p class="py-2 text-center text-xs text-slate-400">ยังไม่มีตัวเลือก กดปุ่มลัดด้านบนหรือกด "เพิ่มกลุ่ม" ได้เลย</p>
