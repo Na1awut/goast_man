@@ -30,11 +30,7 @@
 		quantity = 1;
 		const initMap: Record<string, string[]> = {};
 		for (const g of item.options ?? []) {
-			if (g.required && (g.maxChoices ?? 1) === 1 && g.choices.length > 0) {
-				initMap[g.id] = [g.choices[0].id];
-			} else {
-				initMap[g.id] = [];
-			}
+			initMap[g.id] = [];
 		}
 		selectedMap = initMap;
 	});
@@ -42,7 +38,11 @@
 	function toggleChoice(groupId: string, choiceId: string, maxChoices = 1) {
 		const current = selectedMap[groupId] ?? [];
 		if (maxChoices === 1) {
-			selectedMap[groupId] = [choiceId];
+			if (current.includes(choiceId)) {
+				selectedMap[groupId] = [];
+			} else {
+				selectedMap[groupId] = [choiceId];
+			}
 		} else {
 			if (current.includes(choiceId)) {
 				selectedMap[groupId] = current.filter((id) => id !== choiceId);
@@ -170,6 +170,8 @@
 								</span>
 								{#if group.required}
 									<span class="rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold text-brand-700">จำเป็น</span>
+								{:else}
+									<span class="text-[10px] text-slate-400">(ไม่บังคับ)</span>
 								{/if}
 							</div>
 						</div>
@@ -185,10 +187,10 @@
 									>
 										<div class="flex items-center gap-2.5">
 											<span
-												class="flex h-4 w-4 shrink-0 items-center justify-center border {isSingle ? 'rounded-full' : 'rounded'} {checked ? 'border-brand bg-brand text-white' : 'border-slate-300 bg-white'}"
+												class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all {checked ? 'border-brand bg-brand text-white shadow-xs' : 'border-slate-300 bg-white'}"
 											>
 												{#if checked}
-													<Icon name="check" class="h-3 w-3" strokeWidth={3} />
+													<Icon name="check" class="h-3.5 w-3.5" strokeWidth={3} />
 												{/if}
 											</span>
 											<span class="font-medium {checked ? 'text-slate-900 font-semibold' : 'text-slate-700'}">{choice.name}</span>
