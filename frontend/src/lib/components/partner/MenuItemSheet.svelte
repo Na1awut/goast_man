@@ -28,14 +28,20 @@
 	let saving = $state(false);
 	let confirmRemove = $state(false);
 	let error = $state('');
-	let openedFor = $state<string | null>(null);
+	let openedFor = $state<object | null>(null);
 
-	// Fill the form each time the sheet opens for a different dish
+	// Fill the form each time the sheet opens for a new/different dish.
+	// We track the item REFERENCE (not just the id) so that after a save replaces the
+	// array item with a fresh object, reopening the sheet picks up the updated data.
 	$effect(() => {
-		const key = item === undefined ? null : (item?.id ?? 'new');
-		if (key === openedFor) return;
-		openedFor = key;
-		if (item === undefined) return;
+		// While closed, do nothing and reset the sentinel so the next open always re-inits.
+		if (item === undefined) {
+			openedFor = null;
+			return;
+		}
+		// Use the object reference as the sentinel – a replaced (saved) object is ≠ the old one.
+		if ((item as object) === openedFor) return;
+		openedFor = item as object;
 		name = item?.name ?? '';
 		category = item?.category ?? categories[0] ?? '';
 		price = item?.price ?? null;

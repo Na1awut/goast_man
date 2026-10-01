@@ -182,9 +182,14 @@ class CatalogStore {
 				isAvailable: draft.isAvailable,
 				options: draft.options ?? []
 			};
-			const existing = draft.id ? store.menuItems.find((m) => m.id === draft.id) : undefined;
-			if (existing) Object.assign(existing, fields);
-			else store.menuItems.push({ id: uid(storeId), storeId, isPopular: false, ...fields } as MenuItem);
+			const idx = draft.id ? store.menuItems.findIndex((m) => m.id === draft.id) : -1;
+			if (idx >= 0) {
+				// Replace the whole item (not Object.assign) so Svelte 5's reactive proxy
+				// sees a new object and re-exposes options to any $effect readers.
+				store.menuItems[idx] = { ...store.menuItems[idx], ...fields };
+			} else {
+				store.menuItems.push({ id: uid(storeId), storeId, isPopular: false, ...fields } as MenuItem);
+			}
 		});
 	}
 
