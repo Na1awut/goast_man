@@ -90,7 +90,7 @@
 				{#each items as m (m.id)}
 					<li class="flex items-center gap-2.5 px-4 py-2.5 sm:gap-3">
 						<div class="relative flex min-w-0 flex-1">
-							<button type="button" onclick={() => (editing = m)} aria-label="แก้ไข {m.name}" class="flex min-w-0 flex-1 items-center gap-3 text-left">
+							<button type="button" onclick={() => (editing = $state.snapshot(m))} aria-label="แก้ไข {m.name}" class="flex min-w-0 flex-1 items-center gap-3 text-left">
 								<span class="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-100">
 									{#if m.imageUrl}<SmartImage src={m.imageUrl} alt="" class="h-12 w-12" />{:else}<span class="flex h-full w-full items-center justify-center text-slate-300"><Icon name="camera" class="h-4 w-4" /></span>{/if}
 								</span>
@@ -106,7 +106,7 @@
 								</button>
 							{/if}
 						</div>
-						<button type="button" onclick={() => (editing = m)} tabindex="-1" aria-hidden="true" class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-medium text-slate-700 hover:border-brand hover:text-brand">
+						<button type="button" onclick={() => (editing = $state.snapshot(m))} tabindex="-1" aria-hidden="true" class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-medium text-slate-700 hover:border-brand hover:text-brand">
 							<Icon name="pencil" class="h-4 w-4" />แก้ไข
 						</button>
 						<span class="hidden w-10 shrink-0 text-right text-xs sm:block {m.isAvailable ? 'text-fresh-700' : 'font-medium text-red-600'}">{m.isAvailable ? 'มีขาย' : 'หมด'}</span>
