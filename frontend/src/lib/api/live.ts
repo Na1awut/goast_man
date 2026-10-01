@@ -1,7 +1,7 @@
 // Every Supabase call the app makes lives here, so stores stay mode-agnostic and
 // the row ↔ type mapping has exactly one home. Only imported on live paths.
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import type { CartItem, ChatMessage, MenuItem, Order, OrderStatus, PaymentMethod, PartnerDashboard, Promotion, Rider, RiderEarning, RiderJob, Store, User } from '$lib/types';
+import type { CartItem, ChatMessage, MenuItem, MenuOptionGroup, Order, OrderStatus, PaymentMethod, PartnerDashboard, Promotion, Rider, RiderEarning, RiderJob, SelectedOptionChoice, Store, User } from '$lib/types';
 import { owedToRider } from '$lib/admin/rules';
 import { base } from '$app/paths';
 import { verifySlipUrl } from '$lib/payments';
@@ -42,7 +42,8 @@ function mapMenuItem(r: Row): MenuItem {
 		imageUrl: r.image_url ?? '',
 		isAvailable: r.is_available,
 		isPopular: r.is_popular,
-		category: r.category ?? ''
+		category: r.category ?? '',
+		options: Array.isArray(r.options) ? r.options : []
 	};
 }
 
@@ -112,6 +113,7 @@ function mapOrder(r: Row, findItem: (id: string) => MenuItem | undefined): Order
 	const items: CartItem[] | undefined = (r.items as Row[] | null)?.map((i) => ({
 		quantity: i.quantity,
 		special: !!i.special,
+		selectedOptions: Array.isArray(i.selected_options) ? i.selected_options : [],
 		menuItem: findItem(i.menu_item_id) ?? {
 			id: i.menu_item_id,
 			storeId: r.store_id,
@@ -293,7 +295,7 @@ export async function fetchStore(storeId: string): Promise<Store> {
 
 export interface StoreOrderArgs {
 	storeId: string;
-	items: { menuItemId: string; quantity: number; special?: boolean }[];
+	items: { menuItemId: string; quantity: number; special?: boolean; selectedOptions?: SelectedOptionChoice[] }[];
 	/** Drop-off building and floor: the database works out the fee from them */
 	dropoffId: string;
 	floor: number;
@@ -308,7 +310,12 @@ export async function placeStoreOrder(a: StoreOrderArgs): Promise<string> {
 	return check(
 		await db().rpc('place_order_at', {
 			p_store_id: a.storeId,
-			p_items: a.items.map((i) => ({ menu_item_id: i.menuItemId, quantity: i.quantity, special: !!i.special })),
+			p_items: a.items.map((i) => ({
+				menu_item_id: i.menuItemId,
+				quantity: i.quantity,
+				special: !!i.special,
+				selected_options: i.selectedOptions ?? []
+			})),
 			p_dropoff_id: a.dropoffId,
 			p_floor: a.floor,
 			p_note: a.note ?? '',
@@ -474,6 +481,7 @@ export interface MenuItemArgs {
 	/** URL from uploadStoreImage(), or the dish's current photo */
 	imageUrl: string;
 	isAvailable: boolean;
+	options?: MenuOptionGroup[];
 }
 
 /** Add or change a dish of the partner's own store; returns its id */
@@ -487,7 +495,8 @@ export async function saveMenuItem(a: MenuItemArgs): Promise<string> {
 			p_special_price: a.specialPrice ?? null,
 			p_description: a.description,
 			p_image_url: a.imageUrl,
-			p_available: a.isAvailable
+			p_available: a.isAvailable,
+			p_options: a.options ?? []
 		})
 	) as string;
 }

@@ -1,5 +1,5 @@
 // Cart global store (Svelte 5 runes)
-import type { CartItem, MenuItem, Store } from '$lib/types';
+import type { CartItem, MenuItem, SelectedOptionChoice, Store } from '$lib/types';
 import { bestPromotion, MAX_ORDER_ITEMS, quoteDelivery, unitPrice, type AppliedCode } from '$lib/pricing';
 import { distanceMeters, PLACES, STORE_ZONE_PLACE } from '$lib/routing';
 import * as api from '$lib/api/live';
@@ -13,11 +13,18 @@ const STORAGE_KEY = 'gooseman_cart';
 
 interface PersistedCart {
 	storeId: string;
-	items: { menuItemId: string; quantity: number; special?: boolean }[];
+	items: { menuItemId: string; quantity: number; special?: boolean; selectedOptions?: SelectedOptionChoice[] }[];
 }
 
-/** A cart line is one menu item in one size */
-const sameLine = (line: CartItem, menuItemId: string, special: boolean) => line.menuItem.id === menuItemId && !!line.special === special;
+function sameOptions(a?: SelectedOptionChoice[], b?: SelectedOptionChoice[]): boolean {
+	const listA = (a ?? []).map((o) => `${o.groupId}:${o.choiceId}`).sort().join('|');
+	const listB = (b ?? []).map((o) => `${o.groupId}:${o.choiceId}`).sort().join('|');
+	return listA === listB;
+}
+
+/** A cart line is one menu item in one size with the same customized options */
+const sameLine = (line: CartItem, menuItemId: string, special: boolean, selectedOptions?: SelectedOptionChoice[]) =>
+	line.menuItem.id === menuItemId && !!line.special === special && sameOptions(line.selectedOptions, selectedOptions);
 
 class CartStore {
 	items = $state<CartItem[]>([]);
@@ -51,10 +58,10 @@ class CartStore {
 			const store = catalog.byId(saved.storeId);
 			if (!store) return;
 			const items = saved.items
-				.map(({ menuItemId, quantity, special }): CartItem | null => {
+				.map(({ menuItemId, quantity, special, selectedOptions }): CartItem | null => {
 					const menuItem = store.menuItems.find((m) => m.id === menuItemId && m.isAvailable);
 					if (!menuItem || quantity <= 0 || (special && !menuItem.specialPrice)) return null;
-					return { menuItem, quantity, special: !!special };
+					return { menuItem, quantity, special: !!special, selectedOptions: selectedOptions ?? [] };
 				})
 				.filter((i): i is CartItem => i !== null);
 			if (items.length) {
@@ -73,16 +80,16 @@ class CartStore {
 		}
 		const data: PersistedCart = {
 			storeId: this.store.id,
-			items: this.items.map((i) => ({ menuItemId: i.menuItem.id, quantity: i.quantity, special: !!i.special }))
+			items: this.items.map((i) => ({ menuItemId: i.menuItem.id, quantity: i.quantity, special: !!i.special, selectedOptions: i.selectedOptions }))
 		};
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 	}
 
 	/** Returns false when nothing was added (sold out, or the cart is full) */
-	add(menuItem: MenuItem, store: Store, special = false): boolean {
+	add(menuItem: MenuItem, store: Store, special = false, selectedOptions: SelectedOptionChoice[] = [], quantity = 1): boolean {
 		if (!menuItem.isAvailable || (special && !menuItem.specialPrice)) return false;
 		const switching = !!this.store && this.store.id !== store.id && this.items.length > 0;
-		if (!switching && this.totalItems >= MAX_ORDER_ITEMS) {
+		if (!switching && this.totalItems + quantity > MAX_ORDER_ITEMS) {
 			toast.show(`สั่งได้สูงสุด ${MAX_ORDER_ITEMS} ชิ้นต่อออเดอร์ (คนหิ้วถือได้เท่านี้)`, 'info');
 			return false;
 		}
@@ -94,18 +101,18 @@ class CartStore {
 		}
 		this.storeId = store.id;
 
-		const existing = this.items.find((c) => sameLine(c, menuItem.id, special));
+		const existing = this.items.find((c) => sameLine(c, menuItem.id, special, selectedOptions));
 		if (existing) {
-			existing.quantity += 1;
+			existing.quantity += quantity;
 		} else {
-			this.items.push({ menuItem, quantity: 1, special });
+			this.items.push({ menuItem, quantity, special, selectedOptions });
 		}
 		this.#persist();
 		return true;
 	}
 
-	decrement(menuItemId: string, special = false) {
-		const existing = this.items.find((c) => sameLine(c, menuItemId, special));
+	decrement(menuItemId: string, special = false, selectedOptions?: SelectedOptionChoice[]) {
+		const existing = this.items.find((c) => sameLine(c, menuItemId, special, selectedOptions));
 		if (!existing) return;
 		if (existing.quantity > 1) {
 			existing.quantity -= 1;
@@ -116,8 +123,13 @@ class CartStore {
 		this.#persist();
 	}
 
-	qty(menuItemId: string, special = false): number {
-		return this.items.find((c) => sameLine(c, menuItemId, special))?.quantity ?? 0;
+	qty(menuItemId: string, special?: boolean, selectedOptions?: SelectedOptionChoice[]): number {
+		if (selectedOptions !== undefined) {
+			return this.items.find((c) => sameLine(c, menuItemId, !!special, selectedOptions))?.quantity ?? 0;
+		}
+		return this.items
+			.filter((c) => c.menuItem.id === menuItemId && (special === undefined || !!c.special === special))
+			.reduce((sum, c) => sum + c.quantity, 0);
 	}
 
 	/**
@@ -134,15 +146,15 @@ class CartStore {
 	}
 
 	/** Refill the cart from a past order; skips items that are sold out now. Returns items added. */
-	reorder(store: Store, lines: { menuItemId: string; quantity: number; special?: boolean }[]): number {
+	reorder(store: Store, lines: { menuItemId: string; quantity: number; special?: boolean; selectedOptions?: SelectedOptionChoice[] }[]): number {
 		let room = MAX_ORDER_ITEMS;
-		const items = lines.flatMap(({ menuItemId, quantity, special }) => {
+		const items = lines.flatMap(({ menuItemId, quantity, special, selectedOptions }) => {
 			const menuItem = store.menuItems.find((m) => m.id === menuItemId && m.isAvailable);
 			if (!menuItem || quantity <= 0 || (special && !menuItem.specialPrice) || room <= 0) return [];
 			// An old order may hold more than a rider carries now
 			const take = Math.min(quantity, room);
 			room -= take;
-			return [{ menuItem, quantity: take, special: !!special }];
+			return [{ menuItem, quantity: take, special: !!special, selectedOptions: selectedOptions ?? [] }];
 		});
 		this.storeId = items.length ? store.id : null;
 		this.items = items;

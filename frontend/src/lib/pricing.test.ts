@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { promoDiscount, quoteDelivery, roundUpTip, type AppliedCode } from './pricing';
+import { lineName, promoDiscount, quoteDelivery, roundUpTip, unitPrice, type AppliedCode } from './pricing';
 import { distanceMeters, PLACES, STORE_ZONE_PLACE } from './routing';
 
 describe('round-up tip', () => {
@@ -58,3 +58,61 @@ describe('promo code discount', () => {
 		expect(promoDiscount(code, 0)).toBe(0);
 	});
 });
+
+describe('cart line options and toppings', () => {
+	const dish = {
+		id: 'dish-1',
+		storeId: 'store-1',
+		name: 'ข้าวกะเพราหมูกรอบ',
+		price: 50,
+		specialPrice: 60,
+		description: '',
+		imageUrl: '',
+		isAvailable: true,
+		category: 'อาหารจานเดียว'
+	};
+
+	it('computes unitPrice with special size and extra options', () => {
+		// Normal size without options
+		expect(unitPrice({ menuItem: dish })).toBe(50);
+		// Special size without options
+		expect(unitPrice({ menuItem: dish, special: true })).toBe(60);
+		// Normal size + ไข่ดาว (10฿) + ไข่เจียว (15฿)
+		expect(
+			unitPrice({
+				menuItem: dish,
+				special: false,
+				selectedOptions: [
+					{ groupId: 'g1', groupName: 'ท็อปปิ้ง', choiceId: 'c1', name: 'ไข่ดาว', price: 10 },
+					{ groupId: 'g1', groupName: 'ท็อปปิ้ง', choiceId: 'c2', name: 'ไข่เจียว', price: 15 }
+				]
+			})
+		).toBe(75);
+		// Special size + ไข่ดาว (10฿)
+		expect(
+			unitPrice({
+				menuItem: dish,
+				special: true,
+				selectedOptions: [
+					{ groupId: 'g1', groupName: 'ท็อปปิ้ง', choiceId: 'c1', name: 'ไข่ดาว', price: 10 }
+				]
+			})
+		).toBe(70);
+	});
+
+	it('formats lineName with size and selected options', () => {
+		expect(lineName({ menuItem: dish })).toBe('ข้าวกะเพราหมูกรอบ');
+		expect(lineName({ menuItem: dish, special: true })).toBe('ข้าวกะเพราหมูกรอบ (พิเศษ)');
+		expect(
+			lineName({
+				menuItem: dish,
+				special: true,
+				selectedOptions: [
+					{ groupId: 'g1', groupName: 'ท็อปปิ้ง', choiceId: 'c1', name: 'ไข่ดาว', price: 10 },
+					{ groupId: 'g2', groupName: 'ความเผ็ด', choiceId: 'c3', name: 'เผ็ดน้อย', price: 0 }
+				]
+			})
+		).toBe('ข้าวกะเพราหมูกรอบ (พิเศษ) (+ไข่ดาว, เผ็ดน้อย)');
+	});
+});
+

@@ -57,7 +57,7 @@ class CheckoutStore {
 				dropoffId: campus.dropoff.id,
 				floor: campus.floor,
 				itemDetails: cart.items.map((i) => `${lineName(i)} ×${i.quantity}`).join(', '),
-				items: cart.items.map((i) => ({ menuItem: i.menuItem, quantity: i.quantity, special: i.special })),
+				items: cart.items.map((i) => ({ menuItem: i.menuItem, quantity: i.quantity, special: i.special, selectedOptions: i.selectedOptions })),
 				foodTotal: cart.subtotal,
 				deliveryFee: this.deliveryFee,
 				codeDiscount: this.codeDiscount,

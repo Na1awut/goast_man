@@ -179,7 +179,8 @@ class CatalogStore {
 				specialPrice: draft.specialPrice,
 				description: draft.description.trim(),
 				imageUrl,
-				isAvailable: draft.isAvailable
+				isAvailable: draft.isAvailable,
+				options: draft.options ?? []
 			};
 			const existing = draft.id ? store.menuItems.find((m) => m.id === draft.id) : undefined;
 			if (existing) Object.assign(existing, fields);

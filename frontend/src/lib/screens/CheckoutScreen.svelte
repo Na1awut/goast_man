@@ -162,13 +162,18 @@
 					<p class="mt-2 text-xs text-slate-500">ครบ {MAX_ORDER_ITEMS} ชิ้นแล้ว (คนหิ้วถือได้เท่านี้)</p>
 				{/if}
 				<ul class="mt-2 divide-y divide-slate-100">
-					{#each cart.items as item (item.menuItem.id + (item.special ? ':special' : ''))}
+					{#each cart.items as item (item.menuItem.id + (item.special ? ':special' : '') + (item.selectedOptions?.map(o => o.choiceId).join(',') ?? ''))}
 						<li class="flex items-center gap-3 py-3" transition:slide={{ duration: 180 }}>
 							<div class="min-w-0 flex-1">
-								<p class="truncate text-sm text-slate-900">{lineName(item)}</p>
+								<p class="text-sm font-medium text-slate-900">{lineName(item)}</p>
+								{#if item.selectedOptions?.length}
+									<p class="text-xs text-slate-500">
+										{item.selectedOptions.map((o) => `${o.name}${o.price > 0 ? ` (+${o.price}฿)` : ''}`).join(', ')}
+									</p>
+								{/if}
 								<p class="text-xs text-slate-500 tabular-nums">{formatBaht(unitPrice(item) * item.quantity)}</p>
 							</div>
-							<QtyStepper qty={item.quantity} label={lineName(item)} onadd={() => { cart.add(item.menuItem, store, !!item.special); haptic(); }} onremove={() => { cart.decrement(item.menuItem.id, !!item.special); haptic(6); }} />
+							<QtyStepper qty={item.quantity} label={lineName(item)} onadd={() => { cart.add(item.menuItem, store, !!item.special, item.selectedOptions); haptic(); }} onremove={() => { cart.decrement(item.menuItem.id, !!item.special, item.selectedOptions); haptic(6); }} />
 						</li>
 					{/each}
 				</ul>

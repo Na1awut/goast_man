@@ -127,6 +127,31 @@ export interface Store {
 	menuItems: MenuItem[];
 }
 
+export interface MenuOptionChoice {
+	id: string;
+	name: string;
+	/** Additional price in Baht (0 for free) */
+	price: number;
+}
+
+export interface MenuOptionGroup {
+	id: string;
+	name: string;
+	/** If true, buyer must select at least 1 choice */
+	required?: boolean;
+	/** 1 = single choice (radio), >1 = multiple choices (checkboxes) */
+	maxChoices?: number;
+	choices: MenuOptionChoice[];
+}
+
+export interface SelectedOptionChoice {
+	groupId: string;
+	groupName: string;
+	choiceId: string;
+	name: string;
+	price: number;
+}
+
 export interface MenuItem {
 	id: string;
 	storeId: string;
@@ -140,6 +165,8 @@ export interface MenuItem {
 	isAvailable: boolean;
 	isPopular?: boolean;
 	category: string;
+	/** Toppings and options configured for this dish */
+	options?: MenuOptionGroup[];
 }
 
 // --- Cart ---
@@ -148,6 +175,8 @@ export interface CartItem {
 	quantity: number;
 	/** พิเศษ size; only for items with a specialPrice */
 	special?: boolean;
+	/** Choices selected by the buyer (e.g. toppings, spiciness) */
+	selectedOptions?: SelectedOptionChoice[];
 }
 
 // --- Rider ---
@@ -208,7 +237,7 @@ export interface RiderJob {
 	pickupName: string;
 	dropoffName: string;
 	itemDetails: string;
-	items: { name: string; price: number; quantity: number }[];
+	items: { name: string; price: number; quantity: number; selectedOptions?: SelectedOptionChoice[] }[];
 	foodTotal: number;
 	deliveryFee: number;
 	totalPrice: number;

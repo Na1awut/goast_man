@@ -187,7 +187,7 @@ class OrdersStore {
 				input.kind === 'STORE' && input.storeId && input.items
 					? await api.placeStoreOrder({
 							storeId: input.storeId,
-							items: input.items.map((i) => ({ menuItemId: i.menuItem.id, quantity: i.quantity, special: !!i.special })),
+							items: input.items.map((i) => ({ menuItemId: i.menuItem.id, quantity: i.quantity, special: !!i.special, selectedOptions: i.selectedOptions })),
 							dropoffId: input.dropoffId,
 							floor: input.floor,
 							note: input.note,

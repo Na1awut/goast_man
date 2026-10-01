@@ -2,10 +2,11 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import Sheet from '$lib/components/Sheet.svelte';
 	import SmartImage from '$lib/components/SmartImage.svelte';
-	import type { MenuItem, Store } from '$lib/types';
+	import type { MenuItem, MenuOptionChoice, MenuOptionGroup, Store } from '$lib/types';
 	import { partnerOps, type StoreOps } from '$lib/storeOps';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { friendlyError } from '$lib/supabase';
+	import { uid } from '$lib/utils';
 
 	/** item: a dish to edit; null = add a new one; undefined = closed */
 	let { store, item, onclose, ops = partnerOps }: { store: Store; item: MenuItem | null | undefined; onclose: () => void; ops?: StoreOps } = $props();
@@ -19,6 +20,7 @@
 	let specialPrice = $state<number | null>(null);
 	let description = $state('');
 	let available = $state(true);
+	let options = $state<MenuOptionGroup[]>([]);
 	let photoFile = $state<File | null | undefined>(undefined);
 	let preview = $state<string | null>(null);
 	let manualUrl = $state('');
@@ -40,6 +42,7 @@
 		specialPrice = item?.specialPrice ?? null;
 		description = item?.description ?? '';
 		available = item?.isAvailable ?? true;
+		options = item?.options ? JSON.parse(JSON.stringify(item.options)) : [];
 		photoFile = undefined;
 		preview = null;
 		manualUrl = item?.imageUrl ?? '';
@@ -68,6 +71,62 @@
 		preview = URL.createObjectURL(file);
 	}
 
+	function addOptionGroup(name = 'ท็อปปิ้ง', required = false, maxChoices = 5, initialChoices?: { name: string; price: number }[]) {
+		const newGroup: MenuOptionGroup = {
+			id: uid('opt'),
+			name,
+			required,
+			maxChoices,
+			choices: initialChoices
+				? initialChoices.map((c) => ({ id: uid('ch'), name: c.name, price: c.price }))
+				: [{ id: uid('ch'), name: '', price: 0 }]
+		};
+		options = [...options, newGroup];
+	}
+
+	function removeOptionGroup(index: number) {
+		options = options.filter((_, i) => i !== index);
+	}
+
+	function addChoice(groupIndex: number) {
+		options[groupIndex].choices = [...options[groupIndex].choices, { id: uid('ch'), name: '', price: 0 }];
+	}
+
+	function removeChoice(groupIndex: number, choiceIndex: number) {
+		options[groupIndex].choices = options[groupIndex].choices.filter((_, i) => i !== choiceIndex);
+	}
+
+	function applyPreset(presetKey: 'toppings' | 'spicy' | 'sweet' | 'meat') {
+		if (presetKey === 'toppings') {
+			addOptionGroup('ท็อปปิ้งเพิ่มเติม', false, 5, [
+				{ name: 'ไข่ดาว', price: 10 },
+				{ name: 'ไข่เจียว', price: 15 },
+				{ name: 'เพิ่มข้าว', price: 10 }
+			]);
+		} else if (presetKey === 'spicy') {
+			addOptionGroup('ระดับความเผ็ด', true, 1, [
+				{ name: 'ไม่เผ็ด', price: 0 },
+				{ name: 'เผ็ดน้อย', price: 0 },
+				{ name: 'เผ็ดปกติ', price: 0 },
+				{ name: 'เผ็ดมาก', price: 0 }
+			]);
+		} else if (presetKey === 'sweet') {
+			addOptionGroup('ระดับความหวาน', true, 1, [
+				{ name: 'หวาน 0%', price: 0 },
+				{ name: 'หวาน 25% (หวานน้อย)', price: 0 },
+				{ name: 'หวาน 50%', price: 0 },
+				{ name: 'หวาน 100% (ปกติ)', price: 0 }
+			]);
+		} else if (presetKey === 'meat') {
+			addOptionGroup('เลือกเนื้อสัตว์', true, 1, [
+				{ name: 'หมูสับ', price: 0 },
+				{ name: 'ไก่', price: 0 },
+				{ name: 'หมูกรอบ', price: 10 },
+				{ name: 'ทะเล', price: 20 }
+			]);
+		}
+	}
+
 	async function save() {
 		if (problems) {
 			error = problems;
@@ -77,6 +136,16 @@
 		error = '';
 		try {
 			const finalUrl = manualUrl.trim() || (item?.imageUrl ?? '');
+			const cleanOptions: MenuOptionGroup[] = options
+				.map((g) => ({
+					...g,
+					name: g.name.trim(),
+					choices: g.choices
+						.map((c) => ({ ...c, name: c.name.trim(), price: Math.max(0, Number(c.price) || 0) }))
+						.filter((c) => c.name.length > 0)
+				}))
+				.filter((g) => g.name.length > 0 && g.choices.length > 0);
+
 			await ops.saveMenuItem(store.id, {
 				id: item?.id,
 				name: name.trim(),
@@ -86,7 +155,8 @@
 				description: description.trim(),
 				imageUrl: finalUrl,
 				photoFile: manualUrl.trim() ? undefined : photoFile,
-				isAvailable: available
+				isAvailable: available,
+				options: cleanOptions
 			});
 			toast.show(item ? `บันทึก ${name.trim()} แล้ว` : `เพิ่ม ${name.trim()} ในเมนูแล้ว`, 'success');
 			onclose();
@@ -198,6 +268,155 @@
 			<span class="mb-1 block text-sm font-medium text-slate-900">รายละเอียด <span class="font-normal text-slate-400">(ไม่บังคับ)</span></span>
 			<input type="text" bind:value={description} maxlength="200" placeholder="เช่น เผ็ดน้อย เพิ่มไข่ดาวได้" class={field} />
 		</label>
+
+		<!-- Options & Toppings -->
+		<div class="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5">
+			<div class="flex items-center justify-between">
+				<div>
+					<h3 class="text-sm font-semibold text-slate-900">ตัวเลือก & ท็อปปิ้ง</h3>
+					<p class="text-xs text-slate-500">เช่น ไข่ดาว, ไข่เจียว, ความหวาน, ความเผ็ด</p>
+				</div>
+				<button
+					type="button"
+					onclick={() => addOptionGroup('ตัวเลือกใหม่', false, 1)}
+					class="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-brand shadow-xs border border-slate-200 hover:bg-slate-50"
+				>
+					<Icon name="plus" class="h-3.5 w-3.5" /> เพิ่มกลุ่ม
+				</button>
+			</div>
+
+			<!-- Quick Preset Buttons -->
+			<div class="flex flex-wrap items-center gap-1.5 pt-1">
+				<span class="text-[11px] text-slate-400">ปุ่มลัด:</span>
+				<button
+					type="button"
+					onclick={() => applyPreset('toppings')}
+					class="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-600 hover:border-brand hover:text-brand"
+				>
+					🍳 ไข่ดาว/เจียว
+				</button>
+				<button
+					type="button"
+					onclick={() => applyPreset('spicy')}
+					class="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-600 hover:border-brand hover:text-brand"
+				>
+					🌶️ ความเผ็ด
+				</button>
+				<button
+					type="button"
+					onclick={() => applyPreset('sweet')}
+					class="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-600 hover:border-brand hover:text-brand"
+				>
+					🧋 ความหวาน
+				</button>
+				<button
+					type="button"
+					onclick={() => applyPreset('meat')}
+					class="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-600 hover:border-brand hover:text-brand"
+				>
+					🥩 เนื้อสัตว์
+				</button>
+			</div>
+
+			{#if options.length === 0}
+				<p class="py-2 text-center text-xs text-slate-400">ยังไม่มีตัวเลือก กดปุ่มลัดด้านบนหรือกด "เพิ่มกลุ่ม" ได้เลย</p>
+			{:else}
+				<div class="space-y-3 pt-1">
+					{#each options as group, gIdx (group.id || gIdx)}
+						<div class="rounded-xl border border-slate-200 bg-white p-3 shadow-xs space-y-2.5">
+							<div class="flex items-center justify-between gap-2">
+								<input
+									type="text"
+									bind:value={group.name}
+									placeholder="ชื่อกลุ่ม เช่น ท็อปปิ้ง, ระดับความเผ็ด"
+									class="flex-1 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-semibold text-slate-900 outline-none focus:ring-1 focus:ring-brand"
+								/>
+								<button
+									type="button"
+									onclick={() => removeOptionGroup(gIdx)}
+									class="p-1 text-slate-400 hover:text-red-600"
+									title="ลบกลุ่มนี้"
+								>
+									<Icon name="x" class="h-4 w-4" />
+								</button>
+							</div>
+
+							<div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+								<div class="flex items-center gap-1.5">
+									<label class="inline-flex items-center gap-1">
+										<input
+											type="radio"
+											name={`type-${group.id || gIdx}`}
+											checked={(group.maxChoices ?? 1) === 1}
+											onchange={() => (group.maxChoices = 1)}
+											class="accent-brand"
+										/>
+										<span class="text-slate-600">เลือกได้ 1 อย่าง</span>
+									</label>
+									<label class="inline-flex items-center gap-1 ml-2">
+										<input
+											type="radio"
+											name={`type-${group.id || gIdx}`}
+											checked={(group.maxChoices ?? 1) > 1}
+											onchange={() => (group.maxChoices = 5)}
+											class="accent-brand"
+										/>
+										<span class="text-slate-600">เลือกได้หลายอย่าง</span>
+									</label>
+								</div>
+								<label class="inline-flex items-center gap-1 text-slate-600">
+									<input type="checkbox" bind:checked={group.required} class="accent-brand rounded" />
+									<span>จำเป็นต้องเลือก</span>
+								</label>
+							</div>
+
+							<!-- Choices List -->
+							<div class="space-y-1.5 pt-1">
+								<span class="text-[11px] font-medium text-slate-500">รายการตัวเลือกย่อย:</span>
+								{#each group.choices as choice, cIdx (choice.id || cIdx)}
+									<div class="flex items-center gap-2">
+										<input
+											type="text"
+											bind:value={choice.name}
+											placeholder="เช่น ไข่ดาว, เผ็ดน้อย"
+											class="flex-1 rounded-lg bg-slate-50 px-2.5 py-1 text-xs text-slate-800 outline-none focus:ring-1 focus:ring-brand"
+										/>
+										<div class="flex items-center gap-1 w-24 shrink-0">
+											<span class="text-[11px] text-slate-400">+</span>
+											<input
+												type="number"
+												inputmode="numeric"
+												min="0"
+												max="999"
+												bind:value={choice.price}
+												placeholder="0"
+												class="w-full rounded-lg bg-slate-50 px-2 py-1 text-right text-xs text-slate-800 outline-none focus:ring-1 focus:ring-brand"
+											/>
+											<span class="text-[11px] text-slate-400">฿</span>
+										</div>
+										<button
+											type="button"
+											onclick={() => removeChoice(gIdx, cIdx)}
+											class="p-1 text-slate-300 hover:text-red-500"
+											title="ลบตัวเลือกนี้"
+										>
+											<Icon name="x" class="h-3.5 w-3.5" />
+										</button>
+									</div>
+								{/each}
+								<button
+									type="button"
+									onclick={() => addChoice(gIdx)}
+									class="mt-1 flex items-center gap-1 text-xs font-medium text-brand hover:underline"
+								>
+									<Icon name="plus" class="h-3 w-3" /> เพิ่มตัวเลือกในกลุ่มนี้
+								</button>
+							</div>
+						</div>
+					{/each}
+				</div>
+			{/if}
+		</div>
 
 		<label class="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3.5 py-3 text-sm">
 			<span class="text-slate-900">มีขายตอนนี้</span>

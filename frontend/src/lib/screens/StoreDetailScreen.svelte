@@ -11,6 +11,8 @@
 	import { storeView } from '$lib/stores/storeView.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { flyToCart, haptic } from '$lib/feedback';
+	import ItemCustomizeSheet from '$lib/components/ItemCustomizeSheet.svelte';
+	import type { MenuItem } from '$lib/types';
 	import { describeBenefit } from '$lib/pricing';
 	import { formatBaht } from '$lib/utils';
 
@@ -24,6 +26,7 @@
 	const categories = $derived([...(menu.some((m) => m.isPopular) ? [POPULAR] : []), ...new Set(menu.map((m) => m.category))]);
 
 	let category = $state<string | null>(null);
+	let customizingItem = $state<MenuItem | null>(null);
 	const items = $derived(
 		category === null ? menu : category === POPULAR ? menu.filter((m) => m.isPopular) : menu.filter((m) => m.category === category)
 	);
@@ -168,7 +171,8 @@
 
 		<ul class="space-y-3">
 			{#each items as item (item.id)}
-				{@const qty = cartIsThisStore ? cart.qty(item.id) + cart.qty(item.id, true) : 0}
+				{@const hasOptions = !!item.options && item.options.length > 0}
+				{@const qty = cartIsThisStore ? cart.qty(item.id) : 0}
 				<li class="flex gap-3 rounded-2xl border bg-white p-3 {qty > 0 ? 'border-brand-200' : 'border-slate-100'} {item.isAvailable ? '' : 'opacity-60'}">
 					<SmartImage src={item.imageUrl} alt={item.name} pending class="h-20 w-20 shrink-0 rounded-xl" />
 					<div class="flex min-w-0 flex-1 flex-col">
@@ -177,7 +181,31 @@
 						{#if item.originalPrice}
 							<span class="mt-1 w-fit rounded-md bg-brand-50 px-1.5 py-0.5 text-[11px] text-brand-700">ลด {item.originalPrice - item.price} ฿ จากหน้าร้าน {item.originalPrice} ฿</span>
 						{/if}
-						{#if item.specialPrice}
+
+						{#if hasOptions}
+							<!-- Customizable dish with options / toppings -->
+							<div class="mt-auto flex items-end justify-between gap-2 pt-2">
+								<div>
+									<span class="text-xs text-slate-500">เริ่มต้น</span>
+									<span class="text-base font-semibold text-slate-900 tabular-nums ml-1">{formatBaht(item.price)}</span>
+								</div>
+								<div class="flex items-center gap-1.5">
+									{#if qty > 0}
+										<span class="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700">
+											ในตะกร้า {qty}
+										</span>
+									{/if}
+									<button
+										type="button"
+										disabled={!item.isAvailable}
+										onclick={() => (customizingItem = item)}
+										class="rounded-xl bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-xs active:bg-brand-600 disabled:opacity-50"
+									>
+										+ {qty > 0 ? 'เลือกเพิ่ม' : 'เลือกตัวเลือก'}
+									</button>
+								</div>
+							</div>
+						{:else if item.specialPrice}
 							<!-- Two sizes: one stepper per size -->
 							<div class="mt-2 space-y-1.5">
 								{#each [{ special: false, label: 'ธรรมดา', price: item.price }, { special: true, label: 'พิเศษ', price: item.specialPrice }] as size (size.label)}
@@ -221,5 +249,12 @@
 			</button>
 		</div>
 	{/if}
+
+	<ItemCustomizeSheet
+		open={customizingItem !== null}
+		item={customizingItem}
+		{store}
+		onclose={() => (customizingItem = null)}
+	/>
 </div>
 {/if}
