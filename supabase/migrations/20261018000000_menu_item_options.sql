@@ -11,31 +11,25 @@ alter table public.menu_items
 alter table public.order_items
 	add column if not exists selected_options jsonb not null default '[]'::jsonb;
 
--- 2. partner_save_menu_item: save dish with options
-create or replace function public.partner_save_menu_item(
-	p_id text,
-	p_name text,
-	p_category text,
-	p_price int,
-	p_special_price int,
-	p_description text,
-	p_image_url text,
-	p_available boolean default true,
+-- 2. Menu Item Saving (with options)
+-- Shared implementation used by partners and team
+create or replace function public.store_save_menu_item(
+	p_store text, p_by text,
+	p_id text, p_name text, p_category text, p_price int, p_special_price int,
+	p_description text, p_image_url text, p_available boolean,
 	p_options jsonb default '[]'::jsonb
 ) returns text
 language plpgsql security definer set search_path = public as $$
 declare
-	v_store text := partner_store();
-	v_store_name text;
 	v_name text := trim(coalesce(p_name, ''));
 	v_category text := trim(coalesce(p_category, ''));
 	v_description text := trim(coalesce(p_description, ''));
 	v_image text := trim(coalesce(p_image_url, ''));
 	v_old menu_items%rowtype;
 	v_id text := nullif(trim(coalesce(p_id, '')), '');
+	v_store_name text;
 	v_opts jsonb := coalesce(p_options, '[]'::jsonb);
 begin
-	if v_store is null then raise exception 'PARTNER_ONLY'; end if;
 	if char_length(v_name) not between 1 and 80 then raise exception 'BAD_ITEM_NAME'; end if;
 	if char_length(v_category) not between 1 and 40 then raise exception 'BAD_CATEGORY'; end if;
 	if p_price is null or p_price not between 1 and 2000 then raise exception 'BAD_PRICE'; end if;
@@ -44,33 +38,65 @@ begin
 	if jsonb_typeof(v_opts) <> 'array' then raise exception 'BAD_OPTIONS'; end if;
 
 	if v_id is not null then
-		select * into v_old from menu_items where id = v_id and store_id = v_store and not archived;
+		select * into v_old from menu_items where id = v_id and store_id = p_store and not archived;
 		if v_old.id is null then raise exception 'ITEM_NOT_FOUND'; end if;
 	end if;
 
 	-- A new photo must be the store's own upload or base64/external; an unchanged one may stay
 	if v_image <> '' and v_image is distinct from v_old.image_url and not (
-		is_store_image(v_image, v_store) or v_image like 'data:image/%' or v_image like 'https://%'
+		is_store_image(v_image, p_store) or v_image like 'data:image/%' or v_image like 'https://%'
 	) then
 		raise exception 'BAD_IMAGE';
 	end if;
 
 	if v_id is null then
-		v_id := v_store || '-' || substr(md5(random()::text || clock_timestamp()::text), 1, 8);
+		v_id := p_store || '-' || substr(md5(random()::text || clock_timestamp()::text), 1, 8);
 		insert into menu_items (id, store_id, name, price, special_price, description, image_url, category, is_available, sort, options)
-		values (v_id, v_store, v_name, p_price, p_special_price, v_description, v_image, v_category, coalesce(p_available, true),
-			(select coalesce(max(sort), 0) + 1 from menu_items where store_id = v_store), v_opts);
+		values (v_id, p_store, v_name, p_price, p_special_price, v_description, v_image, v_category, coalesce(p_available, true),
+			(select coalesce(max(sort), 0) + 1 from menu_items where store_id = p_store), v_opts);
 	else
 		update menu_items set name = v_name, price = p_price, special_price = p_special_price, description = v_description,
 			image_url = v_image, category = v_category, is_available = coalesce(p_available, is_available), options = v_opts
 		where id = v_id;
 	end if;
 
-	select name into v_store_name from stores where id = v_store;
-	perform log_admin(case when v_old.id is null then 'ITEM_ADDED' else 'ITEM_EDITED' end, 'store', v_store, v_store_name,
-		jsonb_build_object('item_id', v_id, 'item', v_name, 'price', p_price, 'was', v_old.price, 'by', 'partner'));
+	select name into v_store_name from stores where id = p_store;
+	perform log_admin(case when v_old.id is null then 'ITEM_ADDED' else 'ITEM_EDITED' end, 'store', p_store, v_store_name,
+		jsonb_build_object('item_id', v_id, 'item', v_name, 'price', p_price, 'was', v_old.price, 'by', p_by));
 	return v_id;
 end $$;
+
+-- Team console: save any store's menu item
+drop function if exists public.admin_save_menu_item(text, text, text, text, int, int, text, text, boolean);
+create or replace function public.admin_save_menu_item(
+	p_store_id text, p_id text, p_name text, p_category text, p_price int, p_special_price int,
+	p_description text, p_image_url text, p_available boolean default true,
+	p_options jsonb default '[]'::jsonb
+) returns text
+language plpgsql security definer set search_path = public as $$
+begin
+	perform require_team();
+	if not exists (select 1 from stores where id = p_store_id) then raise exception 'STORE_NOT_FOUND'; end if;
+	return store_save_menu_item(p_store_id, 'team', p_id, p_name, p_category, p_price, p_special_price, p_description, p_image_url, p_available, p_options);
+end $$;
+
+grant execute on function public.admin_save_menu_item(text, text, text, text, int, int, text, text, boolean, jsonb) to authenticated;
+
+-- Partner portal: save own store's menu item
+drop function if exists public.partner_save_menu_item(text, text, text, int, int, text, text, boolean);
+create or replace function public.partner_save_menu_item(
+	p_id text, p_name text, p_category text, p_price int, p_special_price int,
+	p_description text, p_image_url text, p_available boolean default true,
+	p_options jsonb default '[]'::jsonb
+) returns text
+language plpgsql security definer set search_path = public as $$
+declare v_store text := partner_store();
+begin
+	if v_store is null then raise exception 'PARTNER_ONLY'; end if;
+	return store_save_menu_item(v_store, 'partner', p_id, p_name, p_category, p_price, p_special_price, p_description, p_image_url, p_available, p_options);
+end $$;
+
+grant execute on function public.partner_save_menu_item(text, text, text, int, int, text, text, boolean, jsonb) to authenticated;
 
 -- 3. Update place_order_core to calculate price with selected options
 create or replace function public.place_order_core(

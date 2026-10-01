@@ -44,7 +44,8 @@
 				description: m.description,
 				imageUrl: m.imageUrl,
 				photoFile: null,
-				isAvailable: m.isAvailable
+				isAvailable: m.isAvailable,
+				options: m.options
 			});
 			toast.show(`ลบรูป ${m.name} แล้ว`, 'success');
 			removingPhoto = null;

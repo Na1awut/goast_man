@@ -194,7 +194,8 @@ const liveApi: AdminApi = {
 			p_special_price: m.specialPrice ?? null,
 			p_description: m.description,
 			p_image_url: m.imageUrl,
-			p_available: m.isAvailable
+			p_available: m.isAvailable,
+			p_options: m.options ?? []
 		}),
 	removeMenuItem: (storeId, itemId) => call('admin_remove_menu_item', { p_store_id: storeId, p_id: itemId }),
 	updateStoreInfo: (storeId, i) =>

@@ -9,7 +9,17 @@ export function teamOps(api: AdminApi, current: () => Store | null, reload: () =
 	return {
 		async saveMenuItem(storeId, d) {
 			const imageUrl = d.photoFile ? await api.uploadStoreImage(storeId, d.photoFile, 'menu') : d.photoFile === null ? '' : d.imageUrl;
-			await api.saveMenuItem(storeId, { id: d.id, name: d.name, category: d.category, price: d.price, specialPrice: d.specialPrice, description: d.description, imageUrl, isAvailable: d.isAvailable });
+			await api.saveMenuItem(storeId, {
+				id: d.id,
+				name: d.name,
+				category: d.category,
+				price: d.price,
+				specialPrice: d.specialPrice,
+				description: d.description,
+				imageUrl,
+				isAvailable: d.isAvailable,
+				options: d.options
+			});
 			await reload();
 		},
 		async removeMenuItem(storeId, itemId) {
