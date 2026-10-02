@@ -46,14 +46,8 @@ class CampusStore {
 		}
 	}
 
-	setFloor(floor: number) {
-		const max = this.dropoff.maxFloor ?? MAX_FLOOR;
-		this.floor = Math.min(max, Math.max(1, Math.round(floor) || 1));
-		try {
-			localStorage.setItem(FLOOR_KEY, String(this.floor));
-		} catch {
-			/* storage blocked */
-		}
+	setFloor(_floor?: number) {
+		this.floor = 1;
 	}
 
 	openPicker() {

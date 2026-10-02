@@ -3,7 +3,6 @@
 	import { DROPOFF_POINTS } from '$lib/data/locations';
 	import { campus } from '$lib/stores/campus.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
-	import FloorPicker from './FloorPicker.svelte';
 	import Icon, { type IconName } from './Icon.svelte';
 	import Sheet from './Sheet.svelte';
 
@@ -17,7 +16,7 @@
 </script>
 
 <Sheet open={campus.pickerOpen} title="เลือกจุดรับของใน มจธ." onclose={() => campus.closePicker()}>
-	<FloorPicker class="mb-2 rounded-xl bg-slate-50 px-3 py-2.5" />
+	<p class="mb-3 text-xs text-slate-500">จุดส่งมอบทุกอาคารรับของที่ชั้น 1 (ล็อบบี้ / หน้าตึก)</p>
 	<ul class="divide-y divide-slate-100">
 		{#each DROPOFF_POINTS as point (point.id)}
 			{@const selected = point.id === campus.dropoff.id}
