@@ -53,6 +53,7 @@ export function friendlyError(error: unknown): string {
 		TEST_MODE_OFF: 'ทีมปิดโหมดทดสอบแล้ว ชำระด้วยการโอนจริงแล้วแนบสลิป',
 		STORE_DELETED: 'ร้านนี้ถูกลบแล้ว ติดต่อทีม Goose Man',
 		ITEM_UNAVAILABLE: 'มีเมนูในตะกร้าที่หมดแล้ว ลองเอาออกแล้วสั่งใหม่',
+		NO_RIDERS_ONLINE: 'ขณะนี้ไม่มีคนหิ้วเปิดรับงาน ไม่สามารถสร้าง QR ชำระเงินได้',
 		EMPTY_CART: 'ตะกร้ายังว่างอยู่',
 		PROMO_INVALID: 'โค้ดนี้ใช้ไม่ได้',
 		PROMO_NOT_STARTED: 'โค้ดนี้ยังไม่เริ่มใช้ได้',

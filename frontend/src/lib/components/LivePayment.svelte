@@ -21,12 +21,36 @@
 
 	// QR test mode (switched on by the team for trials): pay without a transfer
 	let testMode = $state(false);
+	let refreshingRiders = $state(false);
+
 	$effect(() => {
 		api.fetchAppFlags().then(
 			(f) => (testMode = f.payment_test_mode),
 			() => (testMode = false)
 		);
+		void api.fetchRidersOnline().then(
+			(n) => (orders.onlineRiders = n),
+			() => {}
+		);
 	});
+
+	async function checkRiders() {
+		if (refreshingRiders) return;
+		refreshingRiders = true;
+		try {
+			const count = await api.fetchRidersOnline();
+			orders.onlineRiders = count;
+			if (count > 0) {
+				toast.show(`มีคนหิ้วเปิดรับงานแล้ว (${count} คน) สร้าง QR Code เรียบร้อย`, 'success');
+			} else {
+				toast.show('ยังไม่มีคนหิ้วเปิดรับงานในขณะนี้', 'info');
+			}
+		} catch {
+			toast.show('ตรวจสอบสถานะไม่สำเร็จ ลองใหม่อีกครั้ง', 'error');
+		} finally {
+			refreshingRiders = false;
+		}
+	}
 
 	async function payTest() {
 		if (!order || checking) return;
@@ -96,10 +120,30 @@
 					<span class="flex -space-x-1"><span class="h-2.5 w-2.5 rounded-full bg-sky-400"></span><span class="h-2.5 w-2.5 rounded-full bg-amber-400"></span></span>
 					PromptPay
 				</span>
-				<div class="mt-4">
-					<PromptPayQr payload={promptPayPayload(order.totalPrice)} filename={`gooseman-${order.orderCode.replace('#', '')}.png`} />
-				</div>
-				{#if promptPayName}<p class="mt-3 text-xs text-slate-500">โอนเข้า {promptPayName}</p>{/if}
+				{#if orders.onlineRiders === 0 && !testMode}
+					<div class="mt-4 rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
+						<div class="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
+							<Icon name="alert" class="h-6 w-6" />
+						</div>
+						<p class="text-base font-bold text-red-900">ไม่สามารถสร้าง QR Code ได้</p>
+						<p class="mt-1 text-xs text-red-700">ขณะนี้ไม่มีคนหิ้วเปิดรับงานในระบบ (0 คน) เพื่อป้องกันการโอนเงินโดยไม่มีคนส่ง ระบบจึงระงับการสร้าง QR Code ชำระเงินชั่วคราว</p>
+						<p class="mt-2 text-[11px] text-slate-500">ระบบจะสร้าง QR Code ให้ทันทีเมื่อมีคนหิ้วเปิดรับงาน</p>
+						<button
+							type="button"
+							onclick={checkRiders}
+							disabled={refreshingRiders}
+							class="mt-4 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm active:bg-slate-50 disabled:opacity-60"
+						>
+							<Icon name="refresh" class="h-3.5 w-3.5 {refreshingRiders ? 'animate-spin' : ''}" />
+							{refreshingRiders ? 'กำลังตรวจสอบ...' : 'ตรวจสอบสถานะคนหิ้วอีกครั้ง'}
+						</button>
+					</div>
+				{:else}
+					<div class="mt-4">
+						<PromptPayQr payload={promptPayPayload(order.totalPrice)} filename={`gooseman-${order.orderCode.replace('#', '')}.png`} />
+					</div>
+					{#if promptPayName}<p class="mt-3 text-xs text-slate-500">โอนเข้า {promptPayName}</p>{/if}
+				{/if}
 				<p class="mt-3 text-xs font-medium text-slate-500">ยอดที่ต้องชำระ · {order.orderCode}</p>
 				<p class="text-3xl font-bold text-brand tabular-nums">{order.totalPrice.toFixed(2)} ฿</p>
 			</section>
@@ -121,9 +165,16 @@
 		</div>
 
 		<BottomBar>
-			<button type="button" onclick={() => slipInput?.click()} disabled={checking} class="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand py-4 text-sm font-semibold text-white active:bg-brand-600 disabled:opacity-80">
+			<button
+				type="button"
+				onclick={() => slipInput?.click()}
+				disabled={checking || (orders.onlineRiders === 0 && !testMode)}
+				class="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand py-4 text-sm font-semibold text-white active:bg-brand-600 disabled:opacity-60 disabled:cursor-not-allowed"
+			>
 				{#if checking}
 					<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span> กำลังตรวจสลิป...
+				{:else if orders.onlineRiders === 0 && !testMode}
+					ไม่มีคนหิ้วเปิดรับงาน (ระงับชำระเงินชั่วคราว)
 				{:else}
 					<Icon name="upload" class="h-4 w-4" /> แนบสลิปการโอน ({order.totalPrice} ฿)
 				{/if}

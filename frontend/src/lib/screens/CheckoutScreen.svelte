@@ -8,6 +8,7 @@
 	import FloorPicker from '$lib/components/FloorPicker.svelte';
 	import QtyStepper from '$lib/components/QtyStepper.svelte';
 	import { DROPOFF_POINTS } from '$lib/data/locations';
+	import * as api from '$lib/api/live';
 	import { promptPayEnabled } from '$lib/payments';
 	import { isLive } from '$lib/supabase';
 	import { describeQuote, lineName, MAX_ORDER_ITEMS, unitPrice } from '$lib/pricing';
@@ -22,7 +23,7 @@
 	import { storeView } from '$lib/stores/storeView.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { haptic } from '$lib/feedback';
-	import { OrderError } from '$lib/stores/orders.svelte';
+	import { orders, OrderError } from '$lib/stores/orders.svelte';
 	import { formatBaht } from '$lib/utils';
 
 	const saved = $derived(checkout.codeDiscount + cart.partnerDiscount);
@@ -30,6 +31,12 @@
 	// The rain fee may have been switched on since the app opened
 	$effect(() => {
 		void flags.load();
+		if (isLive) {
+			api.fetchRidersOnline().then(
+				(n) => (orders.onlineRiders = n),
+				() => {}
+			);
+		}
 	});
 
 	let promoInput = $state('');
@@ -82,6 +89,10 @@
 	async function placeOrder() {
 		// First order: ask for the buyer's details once, then come back here
 		if (!profileGate.ensure()) return;
+		if (orders.onlineRiders === 0) {
+			toast.show('ขณะนี้ไม่มีคนหิ้วเปิดรับงาน ไม่สามารถสร้าง QR ชำระเงินได้', 'error');
+			return;
+		}
 		if (!isLive) {
 			checkout.startPayment();
 			nav.go('PAYMENT');
@@ -260,6 +271,15 @@
 						<span class="block text-xs text-slate-500">เงินพักในระบบจนกว่าจะยืนยัน OTP เมื่อได้รับของครบ</span>
 					</div>
 				</div>
+				{#if orders.onlineRiders === 0}
+					<div class="mt-3 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800" role="alert">
+						<Icon name="alert" class="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+						<div>
+							<p class="font-semibold text-red-900">ขณะนี้ไม่มีคนหิ้วเปิดรับงานในระบบ</p>
+							<p class="mt-0.5 text-red-700">ไม่สามารถสร้าง QR Code ชำระเงินได้ชั่วคราว กรุณารอสักครู่จนกว่าจะมีเพื่อนเปิดรับงาน</p>
+						</div>
+					</div>
+				{/if}
 			</section>
 
 			<!-- Round-up tip: asked last, right before paying -->
@@ -284,8 +304,24 @@
 		</div>
 
 		<BottomBar>
-			<button type="button" onclick={placeOrder} disabled={checkout.placing || cart.overLimit} class="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand py-4 text-sm font-semibold text-white active:bg-brand-600 disabled:opacity-80">
-				{#if checkout.placing}<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span> กำลังส่งออเดอร์...{:else}สั่งอาหารและหาเพื่อนหิ้ว ({formatBaht(checkout.total)}){/if}
+			{#if orders.onlineRiders === 0}
+				<div class="mb-2 flex items-center justify-center gap-1.5 text-xs font-medium text-red-600">
+					<span class="h-2 w-2 rounded-full bg-red-500"></span> ไม่มีคนหิ้วออนไลน์ (เพื่อนพร้อมหิ้ว 0 คน)
+				</div>
+			{/if}
+			<button
+				type="button"
+				onclick={placeOrder}
+				disabled={checkout.placing || cart.overLimit || orders.onlineRiders === 0}
+				class="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand py-4 text-sm font-semibold text-white active:bg-brand-600 disabled:opacity-60 disabled:cursor-not-allowed"
+			>
+				{#if checkout.placing}
+					<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span> กำลังส่งออเดอร์...
+				{:else if orders.onlineRiders === 0}
+					ไม่มีคนหิ้วเปิดรับงานในขณะนี้
+				{:else}
+					สั่งอาหารและหาเพื่อนหิ้ว ({formatBaht(checkout.total)})
+				{/if}
 			</button>
 		</BottomBar>
 	{/if}

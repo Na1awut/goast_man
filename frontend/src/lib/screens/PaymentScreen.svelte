@@ -9,7 +9,7 @@
 	import { checkout } from '$lib/stores/checkout.svelte';
 	import { nav } from '$lib/stores/nav.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
-	import { OrderError } from '$lib/stores/orders.svelte';
+	import { orders, OrderError } from '$lib/stores/orders.svelte';
 	import { formatBaht } from '$lib/utils';
 
 	const PAY_WINDOW_SECONDS = 10 * 60;
@@ -92,17 +92,27 @@
 					<span class="flex -space-x-1"><span class="h-2.5 w-2.5 rounded-full bg-sky-400"></span><span class="h-2.5 w-2.5 rounded-full bg-amber-400"></span></span>
 					PromptPay
 				</span>
-				<div class="mx-auto mt-4 w-fit border border-slate-100 p-2" bind:this={qrBox}>
-					<MockQr seed={`${checkout.reference}-${checkout.total}`} size={184} />
-				</div>
-				<p class="mt-3 text-xs text-slate-500">Goose Man Escrow · อ้างอิง {checkout.reference}</p>
-				<p class="mt-3 text-xs font-medium text-slate-500">ยอดเงินที่ต้องชำระ</p>
-				<p class="text-3xl font-bold text-brand tabular-nums">{checkout.total.toFixed(2)} ฿</p>
-				<div class="mt-4 border-t border-slate-100 pt-4">
-					<button type="button" onclick={saveQr} class="inline-flex items-center gap-1.5 text-sm font-medium text-brand underline underline-offset-4">
-						<Icon name="download" class="h-4 w-4" /> บันทึกภาพ QR Code ลงเครื่อง
-					</button>
-				</div>
+				{#if orders.onlineRiders === 0}
+					<div class="mt-4 rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
+						<div class="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
+							<Icon name="alert" class="h-6 w-6" />
+						</div>
+						<p class="text-base font-bold text-red-900">ไม่สามารถสร้าง QR Code ได้</p>
+						<p class="mt-1 text-xs text-red-700">ขณะนี้ไม่มีคนหิ้วเปิดรับงานในระบบ (0 คน) จึงระงับการสร้าง QR Code ชำระเงินชั่วคราว</p>
+					</div>
+				{:else}
+					<div class="mx-auto mt-4 w-fit border border-slate-100 p-2" bind:this={qrBox}>
+						<MockQr seed={`${checkout.reference}-${checkout.total}`} size={184} />
+					</div>
+					<p class="mt-3 text-xs text-slate-500">Goose Man Escrow · อ้างอิง {checkout.reference}</p>
+					<p class="mt-3 text-xs font-medium text-slate-500">ยอดเงินที่ต้องชำระ</p>
+					<p class="text-3xl font-bold text-brand tabular-nums">{checkout.total.toFixed(2)} ฿</p>
+					<div class="mt-4 border-t border-slate-100 pt-4">
+						<button type="button" onclick={saveQr} class="inline-flex items-center gap-1.5 text-sm font-medium text-brand underline underline-offset-4">
+							<Icon name="download" class="h-4 w-4" /> บันทึกภาพ QR Code ลงเครื่อง
+						</button>
+					</div>
+				{/if}
 			</section>
 
 			<section class="rounded-2xl border border-dashed border-slate-300 p-4">
@@ -119,14 +129,21 @@
 
 			<label class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border border-brand py-3.5 text-sm font-medium text-brand active:bg-brand-50">
 				<Icon name="upload" class="h-4 w-4" /> แนบสลิปการโอนเงิน (หากระบบไม่อัปเดต)
-				<input type="file" accept="image/*" class="sr-only" onchange={onSlip} disabled={verifying} />
+				<input type="file" accept="image/*" class="sr-only" onchange={onSlip} disabled={verifying || orders.onlineRiders === 0} />
 			</label>
 		</div>
 
 		<BottomBar>
-			<button type="button" onclick={confirmPaid} disabled={verifying} class="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand py-4 text-sm font-semibold text-white active:bg-brand-600 disabled:opacity-80">
+			<button
+				type="button"
+				onclick={confirmPaid}
+				disabled={verifying || orders.onlineRiders === 0}
+				class="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand py-4 text-sm font-semibold text-white active:bg-brand-600 disabled:opacity-60 disabled:cursor-not-allowed"
+			>
 				{#if verifying}
 					<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span> กำลังตรวจสอบการชำระเงิน...
+				{:else if orders.onlineRiders === 0}
+					ไม่มีคนหิ้วเปิดรับงานในขณะนี้
 				{:else}
 					ยืนยันการชำระเงินและค้นหาเพื่อนหิ้ว ({formatBaht(checkout.total)})
 				{/if}
