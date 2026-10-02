@@ -123,6 +123,16 @@ class OrdersStore {
 		this.#startRidersTicker();
 	}
 
+	/** The connection came back: read all my orders again, since events may have been missed while offline */
+	async reloadAll() {
+		if (!isLive || !this.#customerId) return;
+		try {
+			this.orders = await api.fetchMyOrders(findMenuItem);
+		} catch {
+			// Still flaky: the next realtime event or reconnect tries again
+		}
+	}
+
 	/** Re-read one order from the server (after a realtime event or our own RPC) */
 	/** Re-read one order from the server (live), e.g. after its slip was verified */
 	async reload(orderId: string): Promise<Order | undefined> {

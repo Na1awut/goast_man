@@ -123,5 +123,7 @@ export function friendlyError(error: unknown): string {
 		'401': 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่'
 	};
 	const code = Object.keys(known).find((k) => text.includes(k));
-	return code ? known[code] : 'เชื่อมต่อไม่สำเร็จ ลองใหม่อีกครั้ง';
+	if (code) return known[code];
+	if (typeof navigator !== 'undefined' && !navigator.onLine) return 'ไม่มีอินเทอร์เน็ต ลองใหม่เมื่อสัญญาณกลับมา';
+	return 'เชื่อมต่อไม่สำเร็จ ลองใหม่อีกครั้ง';
 }

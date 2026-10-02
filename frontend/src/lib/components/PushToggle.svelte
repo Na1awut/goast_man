@@ -34,7 +34,7 @@
 			role="switch"
 			aria-checked={push.state === 'on'}
 			disabled={push.busy}
-			onclick={() => (push.state === 'on' ? push.disable() : push.enable())}
+			onclick={() => (push.state === 'on' ? push.disable() : prompt ? push.openPrompt(context) : push.enable())}
 			class="flex w-full items-center gap-3 rounded-2xl border p-4 text-left transition-colors disabled:opacity-70 {prompt ? 'border-brand/30 bg-brand-50' : 'border-slate-100 bg-white'}"
 		>
 			<Icon name="bell" class="h-5 w-5 shrink-0 {push.state === 'on' || prompt ? 'text-brand' : 'text-slate-400'}" />

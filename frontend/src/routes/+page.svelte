@@ -7,6 +7,8 @@
 	import CallOverlay from '$lib/components/CallOverlay.svelte';
 	import LocationSheet from '$lib/components/LocationSheet.svelte';
 	import NotificationSheet from '$lib/components/NotificationSheet.svelte';
+	import OfflineBanner from '$lib/components/OfflineBanner.svelte';
+	import PushPrompt from '$lib/components/PushPrompt.svelte';
 	import ToastStack from '$lib/components/ToastStack.svelte';
 	import WelcomeSplash from '$lib/components/WelcomeSplash.svelte';
 	import ChatScreen from '$lib/screens/ChatScreen.svelte';
@@ -35,6 +37,7 @@
 	import { toast } from '$lib/stores/toast.svelte';
 	import { AuthError } from '$lib/stores/auth.svelte';
 	import { nav } from '$lib/stores/nav.svelte';
+	import { network } from '$lib/stores/network.svelte';
 	import { orders } from '$lib/stores/orders.svelte';
 	import { push } from '$lib/stores/push.svelte';
 	import { call } from '$lib/stores/call.svelte';
@@ -72,6 +75,13 @@
 		campus.init();
 		void start();
 		void push.init();
+		// Back online after a dead spot: read what changed while the phone couldn't hear it
+		const stopNetwork = network.init(() => {
+			void orders.reloadAll();
+			if (catalog.error) void catalog.load();
+			if (rider.loaded) void rider.refresh();
+			void push.refresh();
+		});
 
 		// When the browser restores from bfcache all WebSocket connections are
 		// dead and the refresh token may have expired in the meantime. Re-check
@@ -88,6 +98,7 @@
 			orders.reset();
 			rider.reset();
 			window.removeEventListener('pageshow', handlePageShow);
+			stopNetwork();
 		};
 	});
 
@@ -131,6 +142,18 @@
 		else call.reset();
 	});
 
+	// Ask for notifications where it matters: a buyer whose order is under way, a rider who just went online.
+	// Once per visit, and "later" is remembered (see push.canAutoAsk).
+	$effect(() => {
+		if (!ready || !auth.isAuthenticated || auth.isPartner || auth.mustOnboardNow || welcome.name || call.state !== 'idle' || push.promptOpen) return;
+		const buyerMoment = nav.screen === 'TRACKING' && !!orders.current && ['PENDING', 'ACCEPTED', 'DELIVERING'].includes(orders.current.status);
+		const riderMoment = nav.screen === 'RIDER' && rider.online;
+		if (!buyerMoment && !riderMoment) return;
+		if (!push.canAutoAsk) return;
+		const timer = setTimeout(() => push.canAutoAsk && push.openPrompt(riderMoment ? 'rider' : 'buyer', true), 1500);
+		return () => clearTimeout(timer);
+	});
+
 	// A tapped notification opens its order, chat or the job board once my orders are in
 	$effect(() => {
 		const tag = push.pendingTag;
@@ -162,6 +185,8 @@
 </script>
 
 <div class="relative mx-auto flex min-h-dvh w-full max-w-md flex-col bg-canvas">
+	<OfflineBanner />
+
 	{#if !ready}
 		<div class="flex min-h-dvh items-center justify-center bg-white">
 			<GooseMark class="h-28 w-28" large />
@@ -180,6 +205,7 @@
 		<LocationSheet />
 		<NotificationSheet />
 		<CallOverlay />
+		<PushPrompt />
 	{/if}
 	<ToastStack />
 	<WelcomeSplash />

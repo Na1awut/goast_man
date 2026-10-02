@@ -9,6 +9,7 @@
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
 	import { DROPOFF_POINTS } from '$lib/data/locations';
 	import { hasReviews, livePromotions } from '$lib/data/stores';
+	import { awaitingPayment } from '$lib/payments';
 	import { describeBenefit } from '$lib/pricing';
 	import type { StoreType } from '$lib/types';
 	import { auth } from '$lib/stores/auth.svelte';
@@ -30,7 +31,14 @@
 	}
 	const greeting = greetingFor(new Date().getHours());
 
-	const activeOrder = $derived(orders.active[0]);
+	/** A PromptPay order still waiting for its slip: the one thing the buyer has to do, so it gets its own card */
+	const unpaidOrder = $derived(orders.active.find(awaitingPayment));
+	const activeOrder = $derived(orders.active.find((o) => !awaitingPayment(o)));
+
+	function openOrder(id: string, screen: 'TRACKING' | 'PAYMENT') {
+		orders.open(id);
+		nav.go(screen);
+	}
 
 	// Broad choices stay compact as new campus locations are added.
 	const pickupTypes: { id: StoreType; label: string; icon: IconName }[] = [
@@ -139,14 +147,25 @@
 			</button>
 		</section>
 
+		<!-- Waiting for payment: one tap to the QR -->
+		{#if unpaidOrder}
+			<section aria-label="ออเดอร์ที่รอชำระเงิน" class="flex items-center gap-3 rounded-2xl border border-brand-200 bg-brand-50 p-3 pl-4">
+				<button type="button" onclick={() => openOrder(unpaidOrder.id, 'TRACKING')} class="flex min-w-0 flex-1 items-center gap-3 text-left">
+					<span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-brand"><Icon name="qr" /></span>
+					<span class="min-w-0 flex-1">
+						<span class="block text-sm font-semibold text-slate-900">รอชำระเงิน <span class="text-brand tabular-nums">{formatBaht(unpaidOrder.totalPrice)}</span></span>
+						<span class="block truncate text-xs text-slate-600">{unpaidOrder.orderCode} · {unpaidOrder.itemDetails}</span>
+					</span>
+				</button>
+				<button type="button" onclick={() => openOrder(unpaidOrder.id, 'PAYMENT')} class="min-h-11 shrink-0 rounded-xl bg-brand px-4 text-sm font-semibold text-white active:bg-brand-600">ชำระเงิน</button>
+			</section>
+		{/if}
+
 		<!-- Active order -->
 		{#if activeOrder}
 			<button
 				type="button"
-				onclick={() => {
-					orders.open(activeOrder.id);
-					nav.go('TRACKING');
-				}}
+				onclick={() => openOrder(activeOrder.id, 'TRACKING')}
 				class="flex w-full items-center gap-3 rounded-2xl border border-brand-200 bg-white p-4 text-left"
 			>
 				<span class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand">
