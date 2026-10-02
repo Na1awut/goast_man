@@ -88,6 +88,8 @@ class OrdersStore {
 	typingOrderId = $state<string | null>(null);
 	/** Riders switched on as ready (live: riders_online(), every minute). null = unknown, so hidden rather than invented */
 	onlineRiders = $state<number | null>(isLive ? null : 42);
+	/** The first load of my orders has finished (or failed) */
+	loaded = $state(false);
 
 	active = $derived(this.orders.filter((o) => ACTIVE_STATUSES.includes(o.status)));
 	history = $derived(this.orders.filter((o) => !ACTIVE_STATUSES.includes(o.status)));
@@ -107,6 +109,7 @@ class OrdersStore {
 		if (!isLive) {
 			this.#seedHistory();
 			this.#startRidersTicker();
+			this.loaded = true;
 			return;
 		}
 		try {
@@ -114,6 +117,7 @@ class OrdersStore {
 		} catch (err) {
 			toast.show(friendlyError(err), 'error');
 		}
+		this.loaded = true;
 		this.#unsubscribeOrders?.();
 		this.#unsubscribeOrders = api.subscribeMyOrders(customerId, (orderId) => void this.#refresh(orderId, true));
 		this.#startRidersTicker();
@@ -368,6 +372,7 @@ class OrdersStore {
 		this.#unsubscribeOrders = this.#unsubscribeChat = null;
 		this.#customerId = null;
 		this.orders = [];
+		this.loaded = false;
 		this.chats = {};
 		this.currentOrderId = null;
 		this.typingOrderId = null;

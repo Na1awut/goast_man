@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PushToggle from '$lib/components/PushToggle.svelte';
 	import AppBar from '$lib/components/AppBar.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import Icon, { type IconName } from '$lib/components/Icon.svelte';
@@ -157,6 +158,8 @@
 					<span class="text-sm font-medium text-brand">เปลี่ยน</span>
 				</button>
 			</section>
+
+			<PushToggle context={user.isRider ? 'rider' : 'buyer'} />
 
 			<section class="divide-y divide-slate-100 rounded-2xl border border-slate-100 bg-white px-4">
 				{#each LEGAL_LINKS as link (link.id)}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PushToggle from '$lib/components/PushToggle.svelte';
 	import { fade, slide } from 'svelte/transition';
 	import AppBar from '$lib/components/AppBar.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
@@ -190,6 +191,10 @@
 				</div>
 			</section>
 
+
+			{#if order.status === 'PENDING' || order.status === 'ACCEPTED' || order.status === 'DELIVERING'}
+				<PushToggle prompt />
+			{/if}
 
 			{#if order.status === 'DELIVERING' && !isLive}
 				<button

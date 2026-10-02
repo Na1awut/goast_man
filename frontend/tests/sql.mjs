@@ -104,6 +104,7 @@ try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20261024000000_require_riders_online.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261025000000_fix_rider_board_and_team_check.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261026000000_phone_privacy_chat_evidence.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261027000000_web_push.sql`, 'utf8'));
 	ok('profile-at-first-order migration applies cleanly', true);
 } catch (e) {
 	ok('profile-at-first-order migration applies cleanly', false, e.message);
@@ -1304,6 +1305,66 @@ await as(rita, async () => {
 	ok('older chat can be cleaned up', Number((await one(`select count(*) n from chat_messages where order_id = '${id}'`)).n) === 0);
 	await db.exec(`select set_config('request.jwt.claim.sub', '', false)`);
 }
+
+// ---------- Web Push (20261027) ----------
+// Stand-ins for Vault and pg_net: record what the trigger would send
+await db.exec(`
+	create schema vault; create table vault.decrypted_secrets (name text, decrypted_secret text);
+	create schema net; create table net.sent (url text, body jsonb, headers jsonb);
+	create function net.http_post(url text, body jsonb, headers jsonb) returns bigint language sql as $$ insert into net.sent values (url, body, headers) returning 1::bigint $$;
+`);
+const outbox = async (uid) => (await db.query(`select title, body, tag from push_outbox where user_id = '${uid}' order by id`)).rows;
+const sub = (n) => `select save_push_subscription('https://push.example/${n}', 'p256-${n}', 'auth-${n}')`;
+await db.exec(`set role anon;`);
+await expectError('a signed-out visitor cannot save a push subscription', sub('anon'), 'permission denied');
+await db.exec(`reset role;`);
+await as(alice, () => db.exec(sub('alice')));
+await as(rita, async () => {
+	await db.exec(sub('rita'));
+	await db.exec(`select set_rider_online(true)`);
+	await db.exec(`select remove_push_subscription('https://push.example/alice')`);
+});
+ok('a user can only remove their own device', Number((await one(`select count(*) n from push_subscriptions where user_id = '${alice}'`)).n) === 1);
+await as(bob, () => db.exec(sub('alice')));
+ok('a device that signs in as someone else moves to them', (await one(`select user_id from push_subscriptions where endpoint = 'https://push.example/alice'`)).user_id === bob);
+await as(alice, () => db.exec(sub('alice')));
+await as(alice, async () => ok('the outbox is not readable from the app', (await db.query(`select * from push_outbox`)).rows.length === 0));
+{
+	await db.exec(`delete from push_outbox`);
+	const id = (await as(alice, () => placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-1', quantity: 1 }]))).id;
+	const ritaGot = await outbox(rita);
+	ok('a rider who is switched on hears about a new job', ritaGot.length === 1 && ritaGot[0].title.startsWith('มีงานใหม่') && ritaGot[0].tag === `job-${id}`, JSON.stringify(ritaGot));
+	ok('the buyer is not told about their own job', (await outbox(alice)).length === 0);
+	ok('nobody without a device gets a row', Number((await one(`select count(*) n from push_outbox where user_id not in ('${alice}', '${rita}')`)).n) === 0);
+	ok('without Vault setup nothing is sent', Number((await one(`select count(*) n from net.sent`)).n) === 0);
+
+	await db.exec(`insert into vault.decrypted_secrets values ('push_hook_url', 'https://x.supabase.co/functions/v1/send-push'), ('push_hook_secret', 's3cret')`);
+	await as(rita, () => db.exec(`select accept_order('${id}')`));
+	const aliceGot = await outbox(alice);
+	ok('the buyer is told the rider took the job', aliceGot.length === 1 && aliceGot[0].title === 'ริต้า รับงานหิ้วแล้ว' && aliceGot[0].tag === `order-${id}`, JSON.stringify(aliceGot));
+	const sent = (await db.query(`select * from net.sent`)).rows;
+	ok('the row goes to send-push with the hook secret', sent.length === 1 && sent[0].url.endsWith('/send-push') && sent[0].headers['x-push-secret'] === 's3cret' && Number.isInteger(sent[0].body.id), JSON.stringify(sent));
+
+	await as(alice, () => db.exec(`insert into chat_messages (order_id, sender_id, sender_role, body) values ('${id}', '${alice}', 'CUSTOMER', 'ฝากซอสเพิ่มด้วย')`));
+	const chatPush = (await outbox(rita)).at(-1);
+	ok('a buyer message reaches the rider', chatPush.title === 'ข้อความจาก Alice (ผู้ซื้อ)' && chatPush.body === 'ฝากซอสเพิ่มด้วย' && chatPush.tag === `chat-${id}`, JSON.stringify(chatPush));
+	await as(rita, () => db.exec(`insert into chat_messages (order_id, sender_id, sender_role, body) values ('${id}', '${rita}', 'RIDER', 'ได้ครับ')`));
+	ok('a rider message reaches the buyer', (await outbox(alice)).at(-1).body === 'ได้ครับ');
+
+	await as(rita, () => db.exec(`select mark_delivering('${id}')`));
+	ok('the buyer is told the food is on its way', (await outbox(alice)).at(-1).title.includes('กำลังไปส่ง'));
+	const otp = (await one(`select otp_code from order_secrets where order_id = '${id}'`)).otp_code;
+	await as(rita, () => db.query(`select confirm_delivery('${id}', '${otp}')`));
+
+	// A buyer who cancels is not told what they just did
+	await db.exec(`delete from push_outbox`);
+	const id2 = (await as(alice, () => placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-1', quantity: 1 }]))).id;
+	await as(alice, () => db.exec(`select cancel_order('${id2}')`));
+	ok('cancelling your own order sends you nothing', (await outbox(alice)).length === 0);
+	const bad = await one(`select count(*) n from push_outbox where error is not null`);
+	ok('dispatch errors are recorded, not raised', Number(bad.n) === 0);
+}
+await db.exec(`drop schema net cascade; drop schema vault cascade;`);
 
 // Anonymous visitors can browse the catalogue
 await db.exec(`set role anon;`);

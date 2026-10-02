@@ -35,6 +35,7 @@
 	import { AuthError } from '$lib/stores/auth.svelte';
 	import { nav } from '$lib/stores/nav.svelte';
 	import { orders } from '$lib/stores/orders.svelte';
+	import { push } from '$lib/stores/push.svelte';
 	import { rider } from '$lib/stores/rider.svelte';
 	import { welcome } from '$lib/stores/welcome.svelte';
 	import { friendlyError, returnedFromSignIn } from '$lib/supabase';
@@ -68,6 +69,7 @@
 		reduceMotion = prefersReducedMotion();
 		campus.init();
 		void start();
+		void push.init();
 
 		// When the browser restores from bfcache all WebSocket connections are
 		// dead and the refresh token may have expired in the meantime. Re-check
@@ -117,6 +119,32 @@
 			if (nav.screen !== 'PARTNER') nav.reset('PARTNER');
 		} else if (auth.isAuthenticated && auth.mustOnboardNow && nav.screen !== 'ONBOARDING') {
 			nav.reset('ONBOARDING');
+		}
+	});
+
+	// A tapped notification opens its order, chat or the job board once my orders are in
+	$effect(() => {
+		const tag = push.pendingTag;
+		if (tag === null || !ready || !auth.isAuthenticated || auth.isPartner || auth.mustOnboardNow || !orders.loaded) return;
+		push.pendingTag = null;
+		const cut = tag.indexOf('-');
+		const kind = tag.slice(0, cut);
+		const id = tag.slice(cut + 1);
+		if (kind === 'job') return nav.reset('RIDER', ['HOME', 'PROFILE']);
+		if (kind !== 'order' && kind !== 'chat') return;
+		if (orders.orders.some((o) => o.id === id)) {
+			// I am the buyer
+			orders.open(id);
+			nav.reset(kind === 'chat' ? 'CHAT' : 'TRACKING', ['HOME', 'ORDERS']);
+		} else if (kind === 'chat') {
+			// I am the rider: load the board first so the chat finds its job
+			void rider.init().then(() => {
+				if (!rider.mine.some((j) => j.id === id)) return nav.reset('RIDER', ['HOME', 'PROFILE']);
+				rider.openChat(id);
+				nav.reset('RIDER_CHAT', ['HOME', 'PROFILE', 'RIDER']);
+			});
+		} else {
+			nav.reset('RIDER', ['HOME', 'PROFILE']);
 		}
 	});
 

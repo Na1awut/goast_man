@@ -1,4 +1,6 @@
 <script lang="ts">
+	import PushToggle from '$lib/components/PushToggle.svelte';
+	import { push } from '$lib/stores/push.svelte';
 	import { onMount } from 'svelte';
 	import type { RiderJob } from '$lib/types';
 	import AppBar from '$lib/components/AppBar.svelte';
@@ -104,13 +106,15 @@
 			<span class="min-w-0 flex-1">
 				<span class="block text-sm font-semibold {rider.online ? '' : 'text-slate-900'}">{rider.online ? 'พร้อมรับงาน' : 'ออฟไลน์อยู่'}</span>
 				<span class="block text-xs {rider.online ? 'text-white/85' : 'text-slate-500'}">
-					{rider.online ? 'มีงานใหม่จะมีเสียงและสั่นเตือน · เปิดหน้านี้ค้างไว้' : 'กดเพื่อพร้อมรับงาน ลูกค้าจะเห็นว่ามีเพื่อนพร้อมหิ้ว'}
+					{rider.online ? (push.state === 'on' ? 'มีงานใหม่จะแจ้งเตือน แม้ปิดแอปอยู่' : 'มีงานใหม่จะมีเสียงและสั่นเตือน · เปิดหน้านี้ค้างไว้') : 'กดเพื่อพร้อมรับงาน ลูกค้าจะเห็นว่ามีเพื่อนพร้อมหิ้ว'}
 				</span>
 			</span>
 			<span class="relative h-7 w-12 shrink-0 rounded-full transition-colors {rider.online ? 'bg-white/30' : 'bg-slate-200'}" aria-hidden="true">
 				<span class="absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all {rider.online ? 'left-6' : 'left-1'}"></span>
 			</span>
 		</button>
+
+		{#if rider.online}<PushToggle context="rider" prompt />{/if}
 
 		<button type="button" onclick={() => nav.go('RIDER_EARNINGS')} class="flex w-full items-center gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3 text-left">
 			<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-fresh-50 text-fresh-700"><Icon name="wallet" class="h-5 w-5" /></span>

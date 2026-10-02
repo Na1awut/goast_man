@@ -1,4 +1,5 @@
 // Auth global store (Svelte 5 runes)
+import { push } from './push.svelte';
 import type { User } from '$lib/types';
 import { isKmuttEmail } from '$lib/utils';
 import { digitsOnly, needsOnboarding, TERMS_VERSION, type ProfileInput } from '$lib/profile';
@@ -228,6 +229,8 @@ class AuthStore {
 
 	async logout() {
 		catalog.resetPartnerStore();
+		// This device stops getting the old account's notifications
+		await push.disable();
 		if (isLive) await api.signOut();
 		this.user = null;
 		this.token = null;
