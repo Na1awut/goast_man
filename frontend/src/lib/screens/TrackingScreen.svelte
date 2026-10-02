@@ -190,11 +190,6 @@
 				</div>
 			</section>
 
-			{#if order.rider && (order.status === 'ACCEPTED' || order.status === 'DELIVERING')}
-				<a href="tel:{order.rider.phone}" class="flex w-full items-center justify-center gap-2 rounded-2xl border border-brand bg-white py-3.5 text-sm font-medium text-brand active:bg-brand-50">
-					<Icon name="phone" class="h-4 w-4" /> โทรหาคนส่ง
-				</a>
-			{/if}
 
 			{#if order.status === 'DELIVERING' && !isLive}
 				<button

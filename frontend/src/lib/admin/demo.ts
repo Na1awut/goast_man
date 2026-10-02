@@ -9,6 +9,7 @@ import type { AdminApi, OrderQuery } from './api';
 import { attentionOf, owedToRider, stageOf } from './rules';
 import { bangkokToday } from './format';
 import type {
+	ChatLogLine,
 	AdminMenuItem,
 	AdminPromo,
 	AdminPromoCode,
@@ -450,6 +451,18 @@ export function createDemoApi(): DemoApi {
 				activity: log.filter((l) => l.target_type === 'order' && l.target_id === o.id).map((l) => ({ at: l.at, by: l.by, action: l.action, detail: l.detail }))
 			};
 			return wait(detail);
+		},
+
+		async orderChat(id) {
+			const o = find(id);
+			if (!o) return fail('ORDER_NOT_FOUND');
+			const line = (n: number, role: ChatLogLine['role'], by: string, body: string, at: string | null): ChatLogLine => ({ id: n, at: at ?? o.created_at, role, by, body, image_path: null });
+			const lines = [line(1, 'SYSTEM', '', 'สร้างออเดอร์แล้ว กำลังหาเพื่อนรับหิ้ว', o.created_at)];
+			if (o.rider && o.accepted_at) {
+				lines.push(line(2, 'RIDER', o.rider.nickname, 'รับงานแล้วนะครับ กำลังไปที่ร้าน', o.accepted_at));
+				lines.push(line(3, 'CUSTOMER', o.customer.nickname, 'ขอบคุณค่ะ รออยู่หน้าตึกนะคะ', o.accepted_at));
+			}
+			return wait(lines);
 		},
 
 		async cancelOrder(id, reason) {

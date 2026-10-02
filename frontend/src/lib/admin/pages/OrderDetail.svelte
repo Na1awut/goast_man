@@ -5,7 +5,7 @@
 	import { consoleState as c } from '../console.svelte';
 	import { ago, baht, clock, dateTime, phone } from '../format';
 	import { ACTION_LABEL, ATTENTION_HELP, CANCEL_REASONS, describeDetail } from '../labels';
-	import type { OrderDetail } from '../types';
+	import type { ChatLogLine, OrderDetail } from '../types';
 	import AttentionChip from '../ui/AttentionChip.svelte';
 	import CopyButton from '../ui/CopyButton.svelte';
 	import Modal from '../ui/Modal.svelte';
@@ -29,6 +29,24 @@
 			})
 			.catch((err) => (loadError = adminError(err)));
 	});
+
+	/** The buyer-rider chat, kept for the team as evidence */
+	let chat = $state<ChatLogLine[] | null>(null);
+	let chatError = $state('');
+	$effect(() => {
+		void c.tick;
+		const want = id;
+		c.api
+			?.orderChat(want)
+			.then((lines) => {
+				if (want === id) {
+					chat = lines;
+					chatError = '';
+				}
+			})
+			.catch((err) => (chatError = adminError(err)));
+	});
+	const CHAT_WHO: Record<ChatLogLine['role'], string> = { CUSTOMER: 'ผู้ซื้อ', RIDER: 'คนหิ้ว', SYSTEM: 'ระบบ' };
 
 	type Dialog = 'cancel' | 'pay' | 'refund' | 'requeue' | 'unlock' | null;
 	let dialog = $state<Dialog>(null);
@@ -190,6 +208,30 @@
 					{/if}
 					<p class="flex justify-between"><span>OTP</span><span class={order.otp_failed >= 5 ? 'font-medium text-red-600' : ''}>กรอกผิด {order.otp_failed}/5 ครั้ง</span></p>
 				</div>
+			</section>
+
+			<section>
+				<p class="mb-2 text-xs font-medium text-slate-500">แชทผู้ซื้อกับคนหิ้ว <span class="font-normal">· เก็บไว้เป็นหลักฐานอย่างน้อย 10 วัน</span></p>
+				{#if chatError}
+					<p class="text-sm text-red-600">{chatError}</p>
+				{:else if !chat}
+					<p class="text-sm text-slate-500">กำลังโหลดแชท...</p>
+				{:else if !chat.some((m) => m.role !== 'SYSTEM')}
+					<p class="text-sm text-slate-500">ยังไม่มีข้อความจากผู้ซื้อหรือคนหิ้ว</p>
+				{:else}
+					<ul class="max-h-80 space-y-1.5 overflow-y-auto rounded-xl bg-slate-50 p-3 text-sm">
+						{#each chat as m (m.id)}
+							<li class="flex gap-2 {m.role === 'SYSTEM' ? 'text-slate-500' : ''}">
+								<span class="shrink-0 text-slate-500 tabular-nums">{clock(m.at)}</span>
+								<span class="min-w-0">
+									{#if m.role !== 'SYSTEM'}<span class="font-medium {m.role === 'RIDER' ? 'text-brand' : 'text-slate-900'}">{CHAT_WHO[m.role]}{m.by ? ` ${m.by}` : ''}:</span>{/if}
+									{#if m.body}<span class="break-words whitespace-pre-wrap"> {m.body}</span>{/if}
+									{#if m.image_url}<a href={m.image_url} target="_blank" rel="noopener noreferrer" class="mt-1 block"><img src={m.image_url} alt="รูปในแชท" class="max-h-40 rounded-lg" /></a>{:else if m.image_path}<span class="text-slate-500"> [รูปภาพ]</span>{/if}
+								</span>
+							</li>
+						{/each}
+					</ul>
+				{/if}
 			</section>
 
 			{#if order.activity.length}

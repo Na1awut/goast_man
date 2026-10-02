@@ -390,6 +390,18 @@ export interface RiderApplicationRow {
 	orders_as_buyer: number;
 }
 
+/** One chat message as the team reads it back (admin_order_chat) */
+export interface ChatLogLine {
+	id: number | string;
+	at: string;
+	role: 'CUSTOMER' | 'RIDER' | 'SYSTEM';
+	by: string;
+	body: string | null;
+	image_path: string | null;
+	/** Signed link to the photo, filled in by the API */
+	image_url?: string;
+}
+
 export interface Badges {
 	errors: number;
 	rider_applications: number;

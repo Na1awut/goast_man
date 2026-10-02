@@ -62,9 +62,6 @@
 						{#if riderTyping}กำลังพิมพ์...{:else if canChat}{order.status === 'DELIVERING' ? `กำลังไปส่งที่ ${campus.dropoff.shortName}` : STATUS_META[order.status].label}{:else}ออเดอร์ปิดแล้ว{/if}
 					</p>
 				</div>
-				<a href="tel:{order.rider.phone}" aria-label="โทรหา {order.rider.name}" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-white">
-					<Icon name="phone" class="h-4 w-4" />
-				</a>
 			{:else}
 				<p class="flex-1 text-sm font-semibold text-slate-900">แชท</p>
 			{/if}

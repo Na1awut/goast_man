@@ -104,7 +104,7 @@ await check('no emoji in UI (home)', await page.evaluate(() => !/[\u{1F300}-\u{1
 await sleep(3600);
 await shot('02-home');
 
-await check('home groups pickup locations into three types', await page.evaluate(() => document.querySelector('[aria-label="ประเภทจุดซื้อ"]')?.querySelectorAll('button').length === 3));
+await check('home groups pickup locations into two types (7-Eleven tile removed in 036be47)', await page.evaluate(() => document.querySelector('[aria-label="ประเภทจุดซื้อ"]')?.querySelectorAll('button').length === 2));
 await clickIn('[aria-label="ประเภทจุดซื้อ"]', 'โรงอาหาร');
 await check('canteen shortcut opens the stores with its type selected', await page.$eval('main select', (s) => s.value === 'canteen'));
 const zoneSelect = (await page.$$('main select'))[1];
@@ -279,20 +279,7 @@ await clickIn('nav', 'แชท');
 await check('chat tab empty state', await bodyHas('ยังไม่มีแชทที่เปิดอยู่'));
 await clickSel('button[aria-label="ย้อนกลับ"]');
 
-// Custom order
-await clickIn('nav', 'หน้าแรก');
-await clickIn('[aria-label="ประเภทจุดซื้อ"]', 'เซเว่น');
-await check('pickup preselected to 7-Eleven', await page.$eval('select', (s) => s.value === '7eleven-dorm'));
-await click('ยืนยันและหาเพื่อนหิ้ว');
-await check('custom validation shown', await bodyHas('ระบุรายการที่ต้องการ'));
-await page.type('#items', 'นมจืด 2 กล่อง');
-await page.type('#price', '45');
-await sleep(200);
-await check('custom total 65', await bodyHas('65 ฿'));
-await shot('14-custom-order');
-await click('ยืนยันและหาเพื่อนหิ้ว');
-await sleep(600);
-await check('custom → tracking', await bodyHas('กำลังหาเพื่อนรับหิ้ว'));
+// Custom order: the home tile is gone (036be47); ฝากซื้อ is now reached from a home banner, and its rules are covered in tests/sql.mjs
 
 // Profile
 await clickIn('nav', 'โปรไฟล์').catch(async () => {
@@ -431,10 +418,7 @@ await page.reload({ waitUntil: 'networkidle0' });
 await sleep(600);
 await clickSel('button.partner-button');
 await waitWelcomeGone();
-await check('partner onboarding asks contact only', (await bodyHas('กรอกข้อมูลติดต่อของร้าน')) && !(await bodyHas('รหัสนักศึกษา')));
-await page.type('input[autocomplete="tel-national"]', '0890001234');
-await page.click('main input[type=checkbox]');
-await click('เริ่มใช้งาน Goose Man');
+// Partners skip onboarding since 7ae7f53 and land on their store straight away
 await sleep(600);
 await check('partner lands on store management', await bodyHas('จัดการร้านของฉัน'));
 await sleep(400);

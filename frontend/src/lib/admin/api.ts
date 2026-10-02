@@ -12,6 +12,7 @@ import type {
 	AdminPromoCode,
 	AdminRider,
 	AdminStore,
+	ChatLogLine,
 	TrashStore,
 	AppFlags,
 	ApplicationStatus,
@@ -51,6 +52,8 @@ export interface AdminApi {
 	overview(day?: string): Promise<Overview>;
 	orders(q: OrderQuery): Promise<OrdersPage>;
 	order(id: string): Promise<OrderDetail>;
+	/** The order's chat between buyer and rider, kept as evidence */
+	orderChat(id: string): Promise<ChatLogLine[]>;
 	cancelOrder(id: string, reason: string): Promise<void>;
 	confirmPayment(id: string, bankRef: string): Promise<void>;
 	unlockOtp(id: string): Promise<void>;
@@ -141,6 +144,14 @@ const liveApi: AdminApi = {
 			p_offset: q.offset ?? 0
 		}),
 	order: (id) => call('admin_order', { p_order_id: id }),
+	async orderChat(id) {
+		const lines = await call<ChatLogLine[]>('admin_order_chat', { p_order_id: id });
+		const paths = lines.flatMap((l) => (l.image_path ? [l.image_path] : []));
+		if (!paths.length) return lines;
+		const { data } = await db().storage.from('chat-images').createSignedUrls(paths, 60 * 60);
+		const urls = new Map((data ?? []).flatMap((s) => (s.path && s.signedUrl ? [[s.path, s.signedUrl] as const] : [])));
+		return lines.map((l) => ({ ...l, image_url: l.image_path ? urls.get(l.image_path) : undefined }));
+	},
 	cancelOrder: (id, reason) => call('admin_cancel_order', { p_order_id: id, p_reason: reason }),
 	confirmPayment: (id, bankRef) => call('admin_confirm_payment', { p_order_id: id, p_bank_ref: bankRef }),
 	unlockOtp: (id) => call('admin_unlock_otp', { p_order_id: id }),

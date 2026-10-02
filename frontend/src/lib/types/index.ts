@@ -210,7 +210,6 @@ export interface Rider {
 	faculty: string;
 	rating: number;
 	jobs: number;
-	phone: string;
 }
 
 // --- Order ---

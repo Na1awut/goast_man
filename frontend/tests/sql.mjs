@@ -94,6 +94,16 @@ try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20261014000000_payment_test_mode.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261015000000_delivery_fees.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261016000000_promo_codes.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261017000000_fix_image_permissions_and_bypass.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261018000000_menu_item_options.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261019000000_store_operating_hours.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261020000000_home_banners.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261021000000_change_store_owner.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261022000000_fix_promo_code_regression.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261023000000_support_microsoft_auth.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261024000000_require_riders_online.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261025000000_fix_rider_board_and_team_check.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261026000000_phone_privacy_chat_evidence.sql`, 'utf8'));
 	ok('profile-at-first-order migration applies cleanly', true);
 } catch (e) {
 	ok('profile-at-first-order migration applies cleanly', false, e.message);
@@ -124,6 +134,8 @@ const carl = await newUser('carl@mail.kmutt.ac.th', 'Carl Other');
 ok('student profile created', (await one(`select role, nickname from profiles where id = '${alice}'`)).role === 'STUDENT');
 // Bob and Carl run errands in the lifecycle tests below
 await db.exec(`insert into rider_roster (email) values ('bob@kmutt.ac.th'), ('carl@mail.kmutt.ac.th')`);
+// Orders need a rider online (NO_RIDERS_ONLINE): Bob is ready from the start
+await db.exec(`insert into rider_presence (rider_id, online) values ('${bob}', true)`);
 await expectError('non-KMUTT email rejected', `insert into auth.users (email) values ('eve@gmail.com')`, 'KMUTT_ONLY');
 
 await db.exec(`insert into partner_invites (email, store_id) values ('panee.shop@example.com', 'kfc-05')`);
@@ -178,14 +190,14 @@ await as(alice, async () => {
 	ok('พิเศษ line named and priced as พิเศษ', lines.length === 2 && lines[1].special === true && lines[1].price === 50 && lines[1].name === 'ข้าวมันไก่ทอด (พิเศษ)' && lines[0].name === 'ข้าวมันไก่ทอด');
 	ok('order text says พิเศษ', o4.item_details.includes('ข้าวมันไก่ทอด (พิเศษ) ×2'));
 	await expectError('พิเศษ refused for a one-size item', `select place_order_at('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":1,"special":true}]', 'sit', 1, '', 'CASH', null)`, 'ITEM_UNAVAILABLE');
-	await expectError('duplicate พิเศษ lines refused', `select place_order_at('kfc-05', '[{"menu_item_id":"kfc-05-4","quantity":1,"special":true},{"menu_item_id":"kfc-05-4","quantity":1,"special":true}]', 'sit', 1, '', 'CASH', null)`, 'ITEM_UNAVAILABLE');
+	await expectError('duplicate พิเศษ lines refused', `select place_order_at('kfc-05', '[{"menu_item_id":"kfc-05-4","quantity":1,"special":true},{"menu_item_id":"kfc-05-4","quantity":1,"special":true}]', 'sit', 1, '', 'CASH', null)`, 'order_items_one_line');
 	const mine = (await one(`select my_orders('${o4.id}') as j`)).j[0];
 	ok('my_orders reports the size', mine.items.some((i) => i.special === true) && mine.items.some((i) => i.special === false));
 
 	// Prices come from the database, whatever the client believes
 	await expectError('sold-out item refused', `select place_order_at('kfc-04', '[{"menu_item_id":"kfc-04-8","quantity":1}]', 'sit', 1, '', 'CASH', null)`, 'ITEM_UNAVAILABLE');
 	await expectError('item from another store refused', `select place_order_at('kfc-10', '[{"menu_item_id":"kfc-05-4","quantity":1}]', 'sit', 1, '', 'CASH', null)`, 'ITEM_UNAVAILABLE');
-	await expectError('duplicate lines refused', `select place_order_at('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":1},{"menu_item_id":"kfc-10-1","quantity":1}]', 'sit', 1, '', 'CASH', null)`, 'ITEM_UNAVAILABLE');
+	await expectError('duplicate lines refused', `select place_order_at('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":1},{"menu_item_id":"kfc-10-1","quantity":1}]', 'sit', 1, '', 'CASH', null)`, 'order_items_one_line');
 	await expectError('quantity 0 refused', `select place_order_at('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":0}]', 'sit', 1, '', 'CASH', null)`, 'BAD_QUANTITY');
 	await expectError('unknown promo code refused', `select place_order_at('kfc-10', '[{"menu_item_id":"kfc-10-1","quantity":1}]', 'sit', 1, '', 'CASH', 'FREEMONEY')`, 'PROMO_INVALID');
 
@@ -617,7 +629,10 @@ await as(tina, async () => {
 	ok('the console lists store deals as live', (await rpc(`admin_promotions()`)).find((x) => x.id === coPromo)?.state === 'LIVE');
 	await db.exec(`select admin_set_promo_active('${coPromo}', false)`);
 	ok('admin can switch a promo off', (await rpc(`admin_promotions()`)).find((x) => x.id === coPromo)?.state === 'OFF');
-	await expectError('a store with an owner cannot be invited again', `select admin_invite_partner('other@example.com', 'kfc-05')`, 'STORE_HAS_OWNER');
+	await db.exec(`select admin_invite_partner('other@example.com', 'kfc-05')`);
+	ok('handing an owned store to a new email unlinks the old owner', (await one(`select owner_id from stores where id = 'kfc-05'`)).owner_id === null);
+	await db.exec(`select admin_invite_partner('panee.shop@example.com', 'kfc-05')`);
+	ok('handing it back to an existing account links at once', (await one(`select owner_id from stores where id = 'kfc-05'`)).owner_id === panee);
 	await db.exec(`select admin_invite_partner('Owner.One@example.com', 'kfc-01')`);
 	const partners = await rpc(`admin_partners()`);
 	ok('partners list owners and pending invites', partners.partners.some((x) => x.store_id === 'kfc-05') && partners.invites.some((x) => x.email === 'owner.one@example.com'));
@@ -709,7 +724,7 @@ ok('switching off drops out at once', (await rpc(`riders_online()`)) === 0);
 await db.exec(`delete from rider_roster where email = 'bob@kmutt.ac.th'`);
 await db.exec(`update rider_presence set online = true, last_seen = now() where rider_id = '${bob}'`);
 ok('someone taken off the roster is never counted', (await rpc(`riders_online()`)) === 0);
-await db.exec(`insert into rider_roster (email) values ('bob@kmutt.ac.th'); update rider_presence set online = false where rider_id = '${bob}'`);
+await db.exec(`insert into rider_roster (email) values ('bob@kmutt.ac.th'); update rider_presence set online = true, last_seen = now() where rider_id = '${bob}'`);
 
 // Applications
 const hana = await newUser('hana@mail.kmutt.ac.th', 'Hana Student');
@@ -1225,6 +1240,70 @@ await as(tina, async () => {
 await db.exec(`set role anon;`);
 await expectError('a signed-out visitor has no grant to check a code', `select check_promo_code('WELCOME10')`, 'permission denied');
 await db.exec(`reset role;`);
+
+// ---------- Regressions from 20261017-24 (fixed in 20261025) ----------
+// A fresh rider, since Bob still has jobs in hand from earlier sections
+const rita = await newUser('rita@mail.kmutt.ac.th', 'Rita Rider');
+await ready(rita, 'ริต้า', '0867777777', '66070501777');
+await db.exec(`insert into rider_roster (email) values ('rita@mail.kmutt.ac.th')`);
+await db.exec(`set role anon;`);
+ok('a signed-out visitor is not team', (await one(`select is_team() as t`)).t === false);
+await expectError('a signed-out visitor cannot add a home banner', `insert into home_banners (id, image_url, title) values ('x', 'https://x/y.png', 'x')`, 'row-level security');
+await expectError('a signed-out visitor cannot unlink a store owner', `select admin_unlink_store_owner('kfc-05')`, 'permission denied');
+await expectError('a signed-out visitor cannot hand a store over', `select admin_invite_partner('evil@example.com', 'kfc-05')`, 'permission denied');
+await expectError('a signed-out visitor cannot save a menu item directly', `select store_save_menu_item('kfc-05', 'team', null, 'x', 'x', 10, null, '', null, true, '[]')`, 'permission denied');
+await db.exec(`reset role;`);
+await as(alice, () => expectError('a signed-in buyer cannot call the menu helper either', `select store_save_menu_item('kfc-05', 'team', null, 'x', 'x', 10, null, '', null, true, '[]')`, 'permission denied'));
+await as(rita, async () => {
+	await db.exec(`select set_rider_online(true)`);
+	const board = await rpc(`rider_board()`);
+	ok('the rider board says the rider is online again', board.online === true);
+	ok('board jobs carry tip and store discount again', board.open.concat(board.mine).every((j) => 'tip' in j && 'store_discount' in j));
+});
+{
+	const id = (await as(alice, () => placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-1', quantity: 1 }]))).id;
+	await db.exec(`insert into order_items (order_id, menu_item_id, special, name, price, quantity, selected_options)
+		values ('${id}', 'kfc-10-1', false, 'x', 18, 1, '[{"group":"ท็อปปิ้ง","choice":"ไข่มุก"}]')`);
+	ok('the same item with different options is two lines', Number((await one(`select count(*) n from order_items where order_id = '${id}'`)).n) === 2);
+	await as(alice, () => db.exec(`select cancel_order('${id}')`));
+}
+
+// ---------- Phone privacy + chat as evidence (20261026) ----------
+{
+	const id = (await as(alice, () => placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-1', quantity: 1 }]))).id;
+	await as(rita, () => db.exec(`select accept_order('${id}')`));
+	await as(alice, async () => {
+		const o = (await rpc(`my_orders('${id}')`))[0];
+		ok('the buyer sees their rider but never the rider\'s phone', o.rider?.name && !('phone' in o.rider), JSON.stringify(o.rider));
+		await db.exec(`insert into chat_messages (order_id, sender_id, sender_role, body) values ('${id}', '${alice}', 'CUSTOMER', 'อยู่หน้าตึกนะ')`);
+	});
+	await as(rita, async () => {
+		const job = (await rpc(`rider_board()`)).mine.find((j) => j.id === id);
+		ok('the rider sees the buyer\'s phone while the job is in hand', job?.customer?.phone === '0811111111', JSON.stringify(job?.customer));
+		await db.exec(`select mark_delivering('${id}')`);
+	});
+	const otp = (await one(`select otp_code from order_secrets where order_id = '${id}'`)).otp_code;
+	await as(rita, async () => {
+		await db.query(`select confirm_delivery('${id}', '${otp}')`);
+		const board = await rpc(`rider_board()`);
+		ok('once delivered the buyer and their phone leave the rider\'s board', !board.mine.some((j) => j.id === id) && !JSON.stringify(board).includes('0811111111'));
+		ok('the rider can still read the chat after delivery', (await db.query(`select body from chat_messages where order_id = '${id}'`)).rows.some((m) => m.body === 'อยู่หน้าตึกนะ'));
+		await expectError('but cannot send into a finished order', `insert into chat_messages (order_id, sender_id, sender_role, body) values ('${id}', '${rita}', 'RIDER', 'x')`, 'row-level security');
+	});
+	await as(alice, async () => ok('the buyer can still read the chat after delivery', (await db.query(`select 1 from chat_messages where order_id = '${id}'`)).rows.length > 0));
+	await as(tina, async () => {
+		const chat = await rpc(`admin_order_chat('${id}')`);
+		ok('the team reads an order\'s whole chat with who sent it', chat.some((m) => m.body === 'อยู่หน้าตึกนะ' && m.role === 'CUSTOMER' && m.by === 'Alice'), JSON.stringify(chat));
+	});
+	await as(alice, () => expectError('a buyer cannot read the team chat log', `select admin_order_chat('${id}')`, 'TEAM_ONLY'));
+	// A signed-in path that bypasses RLS (a SECURITY DEFINER function, an order delete cascade) still can't erase recent chat
+	await db.exec(`select set_config('request.jwt.claim.sub', '${tina}', false)`);
+	await expectError('chat younger than 10 days cannot be deleted', `delete from chat_messages where order_id = '${id}'`, 'CHAT_KEPT');
+	await db.exec(`update chat_messages set created_at = now() - interval '11 days' where order_id = '${id}'`);
+	await db.exec(`delete from chat_messages where order_id = '${id}'`);
+	ok('older chat can be cleaned up', Number((await one(`select count(*) n from chat_messages where order_id = '${id}'`)).n) === 0);
+	await db.exec(`select set_config('request.jwt.claim.sub', '', false)`);
+}
 
 // Anonymous visitors can browse the catalogue
 await db.exec(`set role anon;`);

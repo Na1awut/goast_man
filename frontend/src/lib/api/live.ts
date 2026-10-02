@@ -104,8 +104,7 @@ function mapRider(r: Row | null): Rider | undefined {
 		fullName: r.full_name,
 		faculty: r.faculty,
 		rating: Number(r.rating),
-		jobs: Number(r.jobs),
-		phone: r.phone
+		jobs: Number(r.jobs)
 	};
 }
 
