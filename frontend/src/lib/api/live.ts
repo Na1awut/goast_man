@@ -198,6 +198,21 @@ export async function signInWithGoogle(asPartner: boolean): Promise<void> {
 }
 
 /**
+ * Signs in with a Microsoft account (Office 365 / KMUTT student mail).
+ */
+export async function signInWithMicrosoft(asPartner: boolean = false): Promise<void> {
+	const { error } = await db().auth.signInWithOAuth({
+		provider: 'azure',
+		options: {
+			scopes: 'email profile offline_access openid',
+			redirectTo: window.location.origin + base + '/',
+			queryParams: { prompt: 'select_account' }
+		}
+	});
+	if (error) throw error;
+}
+
+/**
  * Sends the transfer slip of a PromptPay order to the verify-slip Edge Function,
  * which checks it with SlipOK and marks the order paid. Throws the error code.
  */

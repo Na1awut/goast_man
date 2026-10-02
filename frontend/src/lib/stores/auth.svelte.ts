@@ -159,6 +159,27 @@ class AuthStore {
 		return user;
 	}
 
+	/**
+	 * Live: redirects to Microsoft Azure OAuth. Demo: signs in as the demo student, partner or rider.
+	 */
+	async signInWithMicrosoft(options: { asPartner?: boolean; asRider?: boolean } = {}): Promise<User> {
+		if (isLive) {
+			await api.signInWithMicrosoft(!!options.asPartner);
+			return new Promise<User>(() => {});
+		}
+		await new Promise((r) => setTimeout(r, 900));
+		const user = options.asPartner ? DEMO_PARTNER : options.asRider ? DEMO_RIDER : DEMO_USER;
+		if (user.role !== 'PARTNER' && !isKmuttEmail(user.email)) {
+			throw new AuthError('ใช้ได้เฉพาะอีเมล @kmutt.ac.th หรือ @mail.kmutt.ac.th เท่านั้น');
+		}
+		this.user = user;
+		this.token = `demo-token-${Date.now()}`;
+		if (user.partnerStoreId) catalog.markDemoPartner(user.partnerStoreId);
+		localStorage.setItem(USER_KEY, JSON.stringify(user));
+		localStorage.setItem(TOKEN_KEY, this.token);
+		return user;
+	}
+
 	/** Save the onboarding / edit-profile form. Throws AuthError with a message ready to show. */
 	async completeProfile(input: ProfileInput): Promise<User> {
 		if (!this.user) throw new AuthError('กรุณาเข้าสู่ระบบก่อน');

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import goose from '$lib/assets/goose-stand.webp';
 	import GoogleIcon from '$lib/components/GoogleIcon.svelte';
+	import MicrosoftIcon from '$lib/components/MicrosoftIcon.svelte';
 	import LegalSheet from '$lib/components/LegalSheet.svelte';
 	import type { LegalPage } from '$lib/data/legal';
 	import Icon, { type IconName } from '$lib/components/Icon.svelte';
@@ -10,17 +11,19 @@
 	import { orders } from '$lib/stores/orders.svelte';
 	import { isLive } from '$lib/supabase';
 
-	let loading = $state<'student' | 'partner' | 'rider' | null>(null);
+	let loading = $state<'google' | 'microsoft' | 'partner' | 'rider' | null>(null);
 	/** Shown on the page, not only as a toast: this is the one thing a rejected student needs to read */
 	let error = $state(auth.signInError);
 	let legal = $state<LegalPage | null>(null);
 
-	async function signIn(as: 'student' | 'partner' | 'rider' = 'student') {
+	async function signIn(as: 'student' | 'partner' | 'rider' = 'student', provider: 'google' | 'microsoft' = 'google') {
 		if (loading) return;
-		loading = as;
+		loading = as === 'partner' ? 'partner' : as === 'rider' ? 'rider' : provider;
 		error = '';
 		try {
-			const user = await auth.signInWithGoogle({ asPartner: as === 'partner', asRider: as === 'rider' });
+			const user = provider === 'microsoft'
+				? await auth.signInWithMicrosoft({ asPartner: as === 'partner', asRider: as === 'rider' })
+				: await auth.signInWithGoogle({ asPartner: as === 'partner', asRider: as === 'rider' });
 			nav.reset(auth.isPartner ? 'PARTNER' : auth.mustOnboardNow ? 'ONBOARDING' : 'HOME');
 			void orders.init(user.id);
 			welcome.show(auth.displayName);
@@ -76,13 +79,13 @@
 					{/if}
 					<button
 						type="button"
-						onclick={() => signIn()}
+						onclick={() => signIn('student', 'google')}
 						disabled={loading !== null}
-						aria-busy={loading === 'student'}
+						aria-busy={loading === 'google'}
 						aria-describedby={error ? 'account-help sign-in-error' : 'account-help'}
 						class="google-button"
 					>
-						{#if loading === 'student'}
+						{#if loading === 'google'}
 							<span class="spinner" aria-hidden="true"></span>
 							กำลังยืนยันบัญชี...
 						{:else}
@@ -90,11 +93,27 @@
 							เข้าสู่ระบบด้วย Google
 						{/if}
 					</button>
+					<button
+						type="button"
+						onclick={() => signIn('student', 'microsoft')}
+						disabled={loading !== null}
+						aria-busy={loading === 'microsoft'}
+						aria-describedby={error ? 'account-help sign-in-error' : 'account-help'}
+						class="google-button microsoft-button"
+					>
+						{#if loading === 'microsoft'}
+							<span class="spinner" aria-hidden="true"></span>
+							กำลังยืนยันบัญชี...
+						{:else}
+							<MicrosoftIcon />
+							เข้าสู่ระบบด้วย Microsoft (มจธ.)
+						{/if}
+					</button>
 					<p id="account-help" class="account-help">
 						<Icon name="lock" class="mt-0.5 h-3.5 w-3.5" />
 						<span>ใช้ได้เฉพาะอีเมลมหาวิทยาลัย<br /><span class="email-domain">@kmutt.ac.th</span> และ <span class="email-domain">@mail.kmutt.ac.th</span></span>
 					</p>
-					<p class="sr-only" role="status">{loading === 'student' ? 'กำลังยืนยันบัญชี Google' : loading === 'partner' ? 'กำลังเข้าสู่ระบบร้านค้า' : ''}</p>
+					<p class="sr-only" role="status">{loading === 'google' ? 'กำลังยืนยันบัญชี Google' : loading === 'microsoft' ? 'กำลังยืนยันบัญชี Microsoft' : loading === 'partner' ? 'กำลังเข้าสู่ระบบร้านค้า' : ''}</p>
 				</div>
 				<div class="partner-entry">
 					<p>สำหรับร้านค้า Partner</p>
@@ -275,6 +294,9 @@
 	}
 	.google-button:active:not(:disabled) {
 		background: var(--color-brand-100);
+	}
+	.microsoft-button {
+		margin-top: 10px;
 	}
 	button:disabled {
 		cursor: wait;
