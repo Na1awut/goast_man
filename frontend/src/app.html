@@ -6,6 +6,7 @@
 		<link rel="apple-touch-icon" href="%sveltekit.assets%/apple-touch-icon.png" />
 		<link rel="manifest" href="%sveltekit.assets%/manifest.json" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+		<!--seo-->
 		<meta name="theme-color" content="#FA4616" />
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -48,6 +49,10 @@
 					var noop = function() {};
 					['log', 'debug', 'info', 'warn', 'error', 'table', 'trace', 'dir', 'dirxml'].forEach(function(m) { console[m] = noop; });
 				} catch (e) {}
+				// Search engines and speed tests render pages with Chrome and DevTools attached: the two traps below
+				// would pause or blank the page for them, so they are only for people.
+				var isCrawler = /googlebot|google-inspectiontool|googleother|bingbot|bingpreview|adsbot|duckduckbot|baiduspider|yandex|facebookexternalhit|twitterbot|linkedinbot|slackbot|whatsapp|line-poker|chrome-lighthouse|pagespeed|gtmetrix|pingdom|headlesschrome/i.test(navigator.userAgent || '');
+				if (isCrawler) return;
 				// Anti-DevTools Debugger Trap
 				setInterval(function() {
 					try { (function() { return false; }['constructor']('debugger')['call']()); } catch (e) {}

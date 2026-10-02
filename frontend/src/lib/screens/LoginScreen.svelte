@@ -37,7 +37,7 @@
 	const points: { icon: IconName; title: string; body: string }[] = [
 		{ icon: 'walk', title: 'เพื่อนในมอหิ้วให้', body: 'ส่งถึงหน้าตึกเรียนหรือหอพัก' },
 		{ icon: 'key', title: 'รับของด้วยรหัส OTP', body: 'บอกรหัสให้เพื่อนเมื่อได้ของครบเท่านั้น' },
-		{ icon: 'cash', title: 'ค่าหิ้วเริ่มต้น 15 บาท', body: 'จ่ายผ่าน PromptPay หรือเงินสด' }
+		{ icon: 'cash', title: 'ค่าหิ้วเริ่มต้น 15 บาท', body: 'จ่ายผ่าน PromptPay แล้วแนบสลิป' }
 	];
 </script>
 
@@ -53,6 +53,7 @@
 			</header>
 
 			<h1 id="welcome-title">ขี้เกียจเดินฝ่าแดด?<br /><span>ให้ห่านบางมดหิ้วให้</span></h1>
+			<p class="intro-lead">ฝากหิ้วอาหารและของใน มจธ. บางมด จากโรงอาหาร KFC หอพัก และร้านรอบมอ ส่งถึงหน้าตึกเรียนหรือหอพัก</p>
 			<ul class="benefits">
 				{#each points as p (p.title)}
 					<li>
@@ -136,6 +137,12 @@
 					{/if}
 				</div>
 			</div>
+			<nav class="about-links" aria-label="ข้อมูลเกี่ยวกับ Goose Man">
+				<a href="/about/">ใช้งานยังไง</a>
+				<a href="/areas/">จุดส่งใน มจธ.</a>
+				<a href="/rider/">สมัครเป็นคนหิ้ว</a>
+				<a href="/partner/">สำหรับร้านค้า</a>
+			</nav>
 			<footer class="legal-links">
 				<button type="button" onclick={() => (legal = 'terms')}>เงื่อนไขการใช้งาน</button>
 				<span aria-hidden="true">·</span>
@@ -199,6 +206,14 @@
 	}
 	h1 span {
 		color: var(--color-brand-700);
+	}
+	.intro-lead {
+		max-width: 360px;
+		margin: 12px auto 0;
+		color: var(--color-slate-600);
+		font-size: 14px;
+		line-height: 1.6;
+		text-align: center;
 	}
 	.benefits {
 		display: grid;
@@ -345,6 +360,25 @@
 	}
 	.partner-button:active:not(:disabled) {
 		background: var(--color-brand-100);
+	}
+	.about-links {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 0 16px;
+		margin-top: 16px;
+		font-size: 12px;
+	}
+	.about-links a {
+		display: inline-flex;
+		min-height: 44px;
+		align-items: center;
+		color: var(--color-slate-600);
+		text-underline-offset: 4px;
+	}
+	.about-links a:hover {
+		color: var(--color-brand-700);
+		text-decoration: underline;
 	}
 	.legal-links {
 		display: flex;
