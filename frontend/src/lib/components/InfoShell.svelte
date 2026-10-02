@@ -3,6 +3,7 @@
 	// between the pages (internal links are how search engines find and weigh them).
 	import type { Snippet } from 'svelte';
 	import logo from '$lib/assets/logo.webp';
+	import { UPDATED, UPDATED_TEXT } from '$lib/seo';
 
 	let { title, lead, children }: { title: string; lead: string; children: Snippet } = $props();
 
@@ -31,6 +32,7 @@
 	<main class="mx-auto max-w-3xl px-4 py-8 sm:py-12">
 		<h1 class="text-2xl leading-snug font-bold text-balance sm:text-3xl">{title}</h1>
 		<p class="mt-3 max-w-prose text-base leading-relaxed text-slate-600">{lead}</p>
+		<p class="mt-3 text-xs text-slate-500">อัปเดตล่าสุด <time datetime={UPDATED}>{UPDATED_TEXT}</time> · โดยทีม Goose Man</p>
 		<div class="mt-8 space-y-10">{@render children()}</div>
 	</main>
 

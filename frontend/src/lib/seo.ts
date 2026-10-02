@@ -8,6 +8,9 @@
 import { FAQ } from '$lib/seoContent';
 
 export const SITE = 'https://goose-man.tech';
+/** When the public copy was last checked against the app (shown on the pages and in JSON-LD): update it when you edit the copy */
+export const UPDATED = '2026-10-03';
+export const UPDATED_TEXT = '3 ต.ค. 2569';
 export const BRAND = 'Goose Man (ห่านบางมด)';
 const OG_IMAGE = `${SITE}/og-image.png`;
 
@@ -46,6 +49,8 @@ const SERVICE = {
 	availableChannel: { '@type': 'ServiceChannel', serviceUrl: `${SITE}/` },
 	offers: { '@type': 'Offer', price: '15', priceCurrency: 'THB', description: 'ค่าหิ้วเริ่มต้น 15 บาทต่อออเดอร์' }
 };
+
+const webPage = (path: string) => ({ '@type': 'WebPage', '@id': `${SITE}${path}#page`, url: `${SITE}${path}`, inLanguage: 'th', isPartOf: { '@id': `${SITE}/#website` }, about: { '@id': `${SITE}/#org` }, dateModified: UPDATED });
 
 const crumbs = (...items: { name: string; path: string }[]) => ({
 	'@type': 'BreadcrumbList',
@@ -96,6 +101,7 @@ export const PAGES: PageSeo[] = [
 		keywords: ['แอปส่งอาหาร มจธ.', 'แอพส่งอาหาร มจธ.', 'ฝากหิ้วอาหาร มจธ.', 'สั่งอาหารส่งหน้าตึก มจธ.', 'ค่าหิ้ว 15 บาท', 'ฝากซื้อข้าว มจธ.', 'delivery ในมหาวิทยาลัย', 'KMUTT food delivery'],
 		ld: [
 			crumbs({ name: 'ใช้งานยังไง', path: '/about/' }),
+			webPage('/about/'),
 			{ '@type': 'FAQPage', mainEntity: FAQ.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }
 		],
 		priority: 0.9
@@ -106,7 +112,8 @@ export const PAGES: PageSeo[] = [
 		description:
 			'รับของได้ที่ไหนใน มจธ. บางมด: จุดส่งหน้าตึก LX, CB2, CB3, SIT, ตึกวิศวะ 12 ชั้น, หอสมุด, หอพักชาย S5, หอพักหญิง S6 และร้านที่หิ้วได้ จากโรงอาหาร KFC, โรงอาหารหอพัก, CB1, Green Canteen 190 ปี, เซเว่นหน้าหอใน',
 		keywords: ['โรงอาหาร KFC มจธ.', 'King Mongkut\'s Food Center', 'หอพักชาย S5', 'หอพักหญิง S6', 'ตึก LX มจธ.', 'CB3 มจธ.', 'Green Canteen มจธ.', 'เซเว่นหน้าหอใน มจธ.', 'ซอยประชาอุทิศ 45'],
-		ld: [crumbs({ name: 'จุดส่งและจุดรับใน มจธ.', path: '/areas/' })],
+		ld: [crumbs({ name: 'จุดส่งและจุดรับใน มจธ.', path: '/areas/' }),
+			webPage('/areas/')],
 		priority: 0.8
 	},
 	{
@@ -115,7 +122,8 @@ export const PAGES: PageSeo[] = [
 		description:
 			'นักศึกษา มจธ. หิ้วอาหารให้เพื่อนในมอ ได้ค่าหิ้วเริ่มต้นงานละ 15 บาท + ทิป ทีมโอนเข้า PromptPay หลังส่งสำเร็จ เลือกวันและเวลาว่างเองได้ ถือได้ครั้งละไม่เกิน 4 งาน',
 		keywords: ['งานพิเศษ นักศึกษา มจธ.', 'หารายได้พิเศษ มจธ.', 'สมัครคนหิ้ว', 'รับจ้างหิ้วอาหาร มจธ.', 'งานพาร์ทไทม์ บางมด'],
-		ld: [crumbs({ name: 'สมัครเป็นคนหิ้ว', path: '/rider/' })],
+		ld: [crumbs({ name: 'สมัครเป็นคนหิ้ว', path: '/rider/' }),
+			webPage('/rider/')],
 		priority: 0.7
 	},
 	{
@@ -124,7 +132,8 @@ export const PAGES: PageSeo[] = [
 		description:
 			'ร้านค้าใน มจธ. และรอบมหาวิทยาลัย: รับออเดอร์จากนักศึกษาผ่านแอป จัดการเมนู ราคา รูป ตั้งเวลาเปิด-ปิดร้านอัตโนมัติ และดูยอดขาย โดยไม่ต้องมีหน้าร้านออนไลน์เอง',
 		keywords: ['ลงร้านขายอาหาร มจธ.', 'ร้านค้า มจธ.', 'ร้านอาหารรอบ มจธ.', 'ระบบรับออเดอร์ร้านอาหาร', 'แอปส่งอาหาร ร้านค้า'],
-		ld: [crumbs({ name: 'สำหรับร้านค้า', path: '/partner/' })],
+		ld: [crumbs({ name: 'สำหรับร้านค้า', path: '/partner/' }),
+			webPage('/partner/')],
 		priority: 0.6
 	}
 ];
@@ -165,6 +174,29 @@ export function headTags(page: PageSeo | undefined): string {
 		`<meta name="twitter:image" content="${OG_IMAGE}" />`,
 		`<script type="application/ld+json">${json({ '@context': 'https://schema.org', '@graph': page.ld })}</script>`
 	].join('\n\t\t');
+}
+
+/**
+ * What a visitor without JavaScript sees on the home page. Many AI crawlers (and some search ones) read the raw
+ * HTML only, and the app itself needs JavaScript. It says what the login screen says: facts, plain words.
+ */
+export function bodyFallback(pathname: string): string {
+	if (seoFor(pathname)?.path !== '/') return '';
+	return `<noscript>
+	<main style="max-width:720px;margin:0 auto;padding:24px;font-family:sans-serif;line-height:1.6">
+		<h1>Goose Man (ห่านบางมด): แอปส่งอาหารและฝากหิ้วใน มจธ. บางมด</h1>
+		<p>Goose Man คือแอปส่งอาหารและฝากหิ้วของในมหาวิทยาลัยเทคโนโลยีพระจอมเกล้าธนบุรี (มจธ. / KMUTT) วิทยาเขตบางมด นักศึกษาสั่งอาหารจากโรงอาหารหรือร้านรอบมอ แล้วเพื่อนนักศึกษาที่อยู่ใกล้ร้านหิ้วมาส่งถึงหน้าตึกเรียนหรือหอพัก</p>
+		<ul>
+			<li>ค่าหิ้วเริ่มต้น 15 บาทต่อออเดอร์ ชำระด้วย PromptPay</li>
+			<li>รับของด้วยรหัส OTP 4 หลัก บอกคนหิ้วเมื่อได้ของครบเท่านั้น</li>
+			<li>ใช้ได้เฉพาะนักศึกษาและบุคลากร มจธ. ที่เข้าสู่ระบบด้วยอีเมล @kmutt.ac.th หรือ @mail.kmutt.ac.th</li>
+			<li>ส่งถึงอาคาร LX, CB2, CB3, SIT, ตึกวิศวะ 12 ชั้น, หอสมุด, หอพักชาย S5 และหอพักหญิง S6</li>
+		</ul>
+		<p>แอปนี้ต้องเปิดด้วยเบราว์เซอร์ที่เปิด JavaScript ไว้ อ่านรายละเอียดเพิ่มเติมได้ที่หน้า
+			<a href="/about/">ใช้งานยังไง</a>, <a href="/areas/">จุดส่งและจุดรับใน มจธ.</a>,
+			<a href="/rider/">สมัครเป็นคนหิ้ว</a> และ <a href="/partner/">สำหรับร้านค้า</a></p>
+	</main>
+</noscript>`;
 }
 
 /** sitemap.xml for the pages above */

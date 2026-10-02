@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { FAQ } from './seoContent';
-import { headTags, PAGES, SITE, seoFor, sitemapXml } from './seo';
+import { bodyFallback, headTags, PAGES, SITE, seoFor, sitemapXml } from './seo';
 
 describe('search metadata', () => {
 	it('every page has its own title and description, within what search results show', () => {
@@ -52,6 +52,21 @@ describe('search metadata', () => {
 		const urls = [...file.matchAll(/<loc>(.*?)<\/loc>/g)].map((m) => m[1]);
 		expect(urls).toEqual(PAGES.map((p) => `${SITE}${p.path}`));
 		expect(sitemapXml('2026-10-03')).toContain(`<loc>${SITE}/rider/</loc>`);
+	});
+
+	it('the home page says what it is even without JavaScript, and only the home page does', () => {
+		const html = bodyFallback('/');
+		expect(html).toContain('<noscript>');
+		expect(html).toContain('<h1>');
+		expect(html).toContain('15 บาท');
+		expect(html).toContain('href="/about/"');
+		expect(bodyFallback('/about/')).toBe('');
+		expect(bodyFallback('/admin')).toBe('');
+	});
+
+	it('info pages say when they were last updated', () => {
+		const html = headTags(seoFor('/areas/'));
+		expect(html).toContain('"dateModified":"2026-10-03"');
 	});
 
 	it('the FAQ is stated in plain words, with no invented numbers', () => {
