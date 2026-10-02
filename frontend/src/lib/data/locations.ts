@@ -8,9 +8,9 @@ export const DROPOFF_POINTS: DropoffPoint[] = [
 	{ id: 'cb3', name: 'อาคารเรียนรวม CB3', shortName: 'CB3', note: 'ชั้น 1: ใต้ถุนตึกข้างลิฟต์', zone: 'ACADEMIC' },
 	{ id: 'sit', name: 'อาคาร SIT', shortName: 'SIT', note: 'คณะเทคโนโลยีสารสนเทศ', zone: 'ACADEMIC' },
 	{ id: 'eng12', name: 'ตึกวิศวะ 12 ชั้น', shortName: 'ตึก 12 ชั้น', note: 'ชั้น 1: ล็อบบี้หน้าลิฟต์', zone: 'ACADEMIC' },
-	{ id: 'lib', name: 'หอสมุด มจธ. (KMUTT Library)', shortName: 'หอสมุด', note: 'ทางเข้าหน้าประตูกระจก', zone: 'OFFICE' },
-	{ id: 'dorm-s5', name: 'หอพักชาย S5', shortName: 'หอ S5', note: 'ล็อบบี้หน้าหอ', zone: 'DORM' },
-	{ id: 'dorm-s6', name: 'หอพักหญิง S6', shortName: 'หอ S6', note: 'ล็อบบี้หน้าหอ', zone: 'DORM' }
+	{ id: 'lib', name: 'หอสมุด มจธ. (KMUTT Library)', shortName: 'หอสมุด', note: 'ทางเข้าหน้าประตูกระจก (เฉพาะชั้น 1)', zone: 'OFFICE', maxFloor: 1 },
+	{ id: 'dorm-s5', name: 'หอพักชาย S5', shortName: 'หอ S5', note: 'ล็อบบี้หน้าหอ (เฉพาะชั้น 1)', zone: 'DORM', maxFloor: 1 },
+	{ id: 'dorm-s6', name: 'หอพักหญิง S6', shortName: 'หอ S6', note: 'ล็อบบี้หน้าหอ (เฉพาะชั้น 1)', zone: 'DORM', maxFloor: 1 }
 ];
 
 export const PICKUP_HUBS: PickupHub[] = [

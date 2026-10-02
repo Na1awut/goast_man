@@ -18,13 +18,16 @@ class CampusStore {
 	/** Short form for headers: "SIT ชั้น 5" */
 	label = $derived(`${this.dropoff.shortName} ชั้น ${this.floor}`);
 
+	/** Maximum allowed floor for the currently selected location */
+	maxFloor = $derived(this.dropoff.maxFloor ?? MAX_FLOOR);
+
 	init() {
 		try {
 			const saved = localStorage.getItem(STORAGE_KEY);
 			const found = DROPOFF_POINTS.find((p) => p.id === saved);
 			if (found) this.dropoff = found;
-			const floor = Number(localStorage.getItem(FLOOR_KEY));
-			if (Number.isInteger(floor) && floor >= 1 && floor <= MAX_FLOOR) this.floor = floor;
+			// Always default to floor 1
+			this.floor = 1;
 		} catch {
 			/* storage blocked */
 		}
@@ -32,16 +35,20 @@ class CampusStore {
 
 	select(point: DropoffPoint) {
 		this.dropoff = point;
+		// Always reset to floor 1 when picking a location
+		this.floor = 1;
 		this.pickerOpen = false;
 		try {
 			localStorage.setItem(STORAGE_KEY, point.id);
+			localStorage.setItem(FLOOR_KEY, '1');
 		} catch {
 			/* storage blocked */
 		}
 	}
 
 	setFloor(floor: number) {
-		this.floor = Math.min(MAX_FLOOR, Math.max(1, Math.round(floor) || 1));
+		const max = this.dropoff.maxFloor ?? MAX_FLOOR;
+		this.floor = Math.min(max, Math.max(1, Math.round(floor) || 1));
 		try {
 			localStorage.setItem(FLOOR_KEY, String(this.floor));
 		} catch {

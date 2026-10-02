@@ -62,6 +62,7 @@ export interface DropoffPoint {
 	shortName: string;
 	note: string;
 	zone: HubZone;
+	maxFloor?: number;
 }
 
 export interface PickupHub {
