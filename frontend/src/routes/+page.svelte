@@ -4,6 +4,7 @@
 	import type { Screen } from '$lib/types';
 	import BottomNav from '$lib/components/BottomNav.svelte';
 	import GooseMark from '$lib/components/GooseMark.svelte';
+	import CallOverlay from '$lib/components/CallOverlay.svelte';
 	import LocationSheet from '$lib/components/LocationSheet.svelte';
 	import NotificationSheet from '$lib/components/NotificationSheet.svelte';
 	import ToastStack from '$lib/components/ToastStack.svelte';
@@ -36,6 +37,7 @@
 	import { nav } from '$lib/stores/nav.svelte';
 	import { orders } from '$lib/stores/orders.svelte';
 	import { push } from '$lib/stores/push.svelte';
+	import { call } from '$lib/stores/call.svelte';
 	import { rider } from '$lib/stores/rider.svelte';
 	import { welcome } from '$lib/stores/welcome.svelte';
 	import { friendlyError, returnedFromSignIn } from '$lib/supabase';
@@ -122,6 +124,13 @@
 		}
 	});
 
+	// Calls to me ring while I'm signed in (buyer or rider; partners don't take calls)
+	$effect(() => {
+		const id = auth.user?.id;
+		if (ready && id && !auth.isPartner) call.watch(id);
+		else call.reset();
+	});
+
 	// A tapped notification opens its order, chat or the job board once my orders are in
 	$effect(() => {
 		const tag = push.pendingTag;
@@ -131,6 +140,7 @@
 		const kind = tag.slice(0, cut);
 		const id = tag.slice(cut + 1);
 		if (kind === 'job') return nav.reset('RIDER', ['HOME', 'PROFILE']);
+		if (kind === 'call') return void call.checkRinging();
 		if (kind !== 'order' && kind !== 'chat') return;
 		if (orders.orders.some((o) => o.id === id)) {
 			// I am the buyer
@@ -169,6 +179,7 @@
 		{#if nav.showBottomNav && !auth.isPartner}<BottomNav />{/if}
 		<LocationSheet />
 		<NotificationSheet />
+		<CallOverlay />
 	{/if}
 	<ToastStack />
 	<WelcomeSplash />

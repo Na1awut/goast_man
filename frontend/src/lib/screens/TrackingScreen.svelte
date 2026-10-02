@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { call } from '$lib/stores/call.svelte';
 	import PushToggle from '$lib/components/PushToggle.svelte';
 	import { fade, slide } from 'svelte/transition';
 	import AppBar from '$lib/components/AppBar.svelte';
@@ -191,6 +192,12 @@
 				</div>
 			</section>
 
+
+			{#if call.available && order.rider && (order.status === 'ACCEPTED' || order.status === 'DELIVERING')}
+				<button type="button" onclick={() => call.start(order.id, order.rider!.name, 'RIDER', order.orderCode)} class="flex w-full items-center justify-center gap-2 rounded-2xl border border-brand bg-white py-3.5 text-sm font-medium text-brand active:bg-brand-50">
+					<Icon name="phone" class="h-4 w-4" /> โทรหาคนส่งผ่านแอป
+				</button>
+			{/if}
 
 			{#if order.status === 'PENDING' || order.status === 'ACCEPTED' || order.status === 'DELIVERING'}
 				<PushToggle prompt />

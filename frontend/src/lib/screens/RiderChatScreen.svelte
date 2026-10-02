@@ -1,6 +1,7 @@
 <script lang="ts">
 	// The rider's side of an order's chat: talk to the buyer of a job in hand.
 	// Same messages as the buyer's chat screen, seen from the other side.
+	import { call } from '$lib/stores/call.svelte';
 	import { tick } from 'svelte';
 	import { fly } from 'svelte/transition';
 	import Avatar from '$lib/components/Avatar.svelte';
@@ -60,7 +61,11 @@
 						{job.orderCode} · {job.status === 'DELIVERING' ? 'กำลังไปส่ง' : 'รับงานแล้ว'}
 					</p>
 				</div>
-				{#if job.customer?.phone}
+				{#if call.available}
+					<button type="button" onclick={() => call.start(job.id, job.customer?.nickname ?? 'ลูกค้า', 'CUSTOMER', job.orderCode)} aria-label="โทรหา {job.customer?.nickname ?? 'ลูกค้า'} ผ่านแอป" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-white">
+						<Icon name="phone" class="h-4 w-4" />
+					</button>
+				{:else if job.customer?.phone}
 					<a href="tel:{job.customer.phone}" aria-label="โทรหา {job.customer.nickname}" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-white">
 						<Icon name="phone" class="h-4 w-4" />
 					</a>

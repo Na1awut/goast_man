@@ -105,6 +105,7 @@ try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20261025000000_fix_rider_board_and_team_check.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261026000000_phone_privacy_chat_evidence.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261027000000_web_push.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261028000000_in_app_calls.sql`, 'utf8'));
 	ok('profile-at-first-order migration applies cleanly', true);
 } catch (e) {
 	ok('profile-at-first-order migration applies cleanly', false, e.message);
@@ -1365,6 +1366,59 @@ await as(alice, async () => ok('the outbox is not readable from the app', (await
 	ok('dispatch errors are recorded, not raised', Number(bad.n) === 0);
 }
 await db.exec(`drop schema net cascade; drop schema vault cascade;`);
+
+// ---------- In-app calls (20261028) ----------
+{
+	const id = (await as(alice, () => placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-1', quantity: 1 }]))).id;
+	await as(alice, () => expectError('no call before a rider takes the job', `select start_call('${id}')`, 'CALL_NOT_ALLOWED'));
+	await as(rita, () => db.exec(`select accept_order('${id}')`));
+	await db.exec(`delete from push_outbox`);
+	const callId = await as(alice, async () => (await one(`select start_call('${id}') as c`)).c);
+	await as(alice, () => expectError('one call at a time', `select start_call('${id}')`, 'CALL_BUSY'));
+	await as(rita, async () => {
+		const ring = await rpc(`my_ringing_call()`);
+		ok('the rider sees the ring with who is calling', ring?.id === callId && ring.caller_name === 'Alice' && ring.caller_role === 'CUSTOMER', JSON.stringify(ring));
+	});
+	const ringPush = (await outbox(rita)).at(-1);
+	ok('the ring goes out as a push too', ringPush?.title === 'สายเรียกเข้าจาก Alice (ผู้ซื้อ)' && ringPush.tag === `call-${id}`, JSON.stringify(ringPush));
+	await as(bob, async () => {
+		await expectError('an outsider cannot ring on the order', `select start_call('${id}')`, 'ORDER_NOT_FOUND');
+		await expectError('an outsider cannot pick up', `select answer_call('${callId}')`, 'CALL_GONE');
+		ok('an outsider cannot see the call', (await db.query(`select * from calls`)).rows.length === 0);
+		ok('an outsider cannot join the signalling channel', (await one(`select can_join_call_topic('call:${id}') as ok`)).ok === false);
+	});
+	await as(alice, async () => {
+		ok('the buyer may join the signalling channel', (await one(`select can_join_call_topic('call:${id}') as ok`)).ok === true);
+		ok('a malformed topic is refused', (await one(`select can_join_call_topic('call:${id}'' or true') as ok`)).ok === false);
+		await expectError('the caller cannot answer their own call', `select answer_call('${callId}')`, 'CALL_GONE');
+	});
+	await as(rita, () => db.exec(`select answer_call('${callId}')`));
+	ok('picking up makes the call active', (await one(`select status from calls where id = '${callId}'`)).status === 'ACTIVE');
+	await as(alice, () => db.exec(`select end_call('${callId}')`));
+	const chatLines = async () => (await db.query(`select body from chat_messages where order_id = '${id}' and sender_role = 'SYSTEM' order by created_at`)).rows.map((r) => r.body);
+	ok('hanging up leaves the length in the chat', (await chatLines()).includes('ผู้ซื้อ โทรผ่านแอป 0:00 นาที'), JSON.stringify(await chatLines()));
+
+	const second = await as(rita, async () => (await one(`select start_call('${id}') as c`)).c);
+	await as(alice, () => db.exec(`select end_call('${second}')`));
+	ok('declining is recorded', (await one(`select status from calls where id = '${second}'`)).status === 'DECLINED' && (await chatLines()).includes('คนหิ้ว ไม่ได้รับสาย (ปฏิเสธ)'));
+
+	const third = await as(alice, async () => (await one(`select start_call('${id}') as c`)).c);
+	await as(rita, () => db.exec(`select mark_delivering('${id}')`));
+	ok('a call can ring while the food is on its way', (await one(`select status from calls where id = '${third}'`)).status === 'RINGING');
+	const otp = (await one(`select otp_code from order_secrets where order_id = '${id}'`)).otp_code;
+	await as(rita, () => db.query(`select confirm_delivery('${id}', '${otp}')`));
+	ok('delivering ends a ring nobody answered', (await one(`select status from calls where id = '${third}'`)).status === 'MISSED');
+	await as(alice, async () => {
+		await expectError('no calls once the order is done', `select start_call('${id}')`, 'CALL_NOT_ALLOWED');
+		ok('nor the signalling channel', (await one(`select can_join_call_topic('call:${id}') as ok`)).ok === false);
+		ok('the buyer still sees their call history', (await db.query(`select * from calls where order_id = '${id}'`)).rows.length === 3);
+	});
+	await as(tina, async () => {
+		const log = await rpc(`admin_order_calls('${id}')`);
+		ok('the team sees every call on the order', log.length === 3 && log[0].status === 'ENDED' && log[0].seconds === 0 && log[1].status === 'DECLINED', JSON.stringify(log));
+	});
+	await as(alice, () => expectError('a buyer cannot read the team call log', `select admin_order_calls('${id}')`, 'TEAM_ONLY'));
+}
 
 // Anonymous visitors can browse the catalogue
 await db.exec(`set role anon;`);

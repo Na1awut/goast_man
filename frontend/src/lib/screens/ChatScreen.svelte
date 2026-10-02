@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { call } from '$lib/stores/call.svelte';
 	import { tick } from 'svelte';
 	import { fade, fly } from 'svelte/transition';
 	import Avatar from '$lib/components/Avatar.svelte';
@@ -62,6 +63,11 @@
 						{#if riderTyping}กำลังพิมพ์...{:else if canChat}{order.status === 'DELIVERING' ? `กำลังไปส่งที่ ${campus.dropoff.shortName}` : STATUS_META[order.status].label}{:else}ออเดอร์ปิดแล้ว{/if}
 					</p>
 				</div>
+				{#if call.available && canChat}
+					<button type="button" onclick={() => call.start(order.id, order.rider!.name, 'RIDER', order.orderCode)} aria-label="โทรหา {order.rider.name} ผ่านแอป" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-white">
+						<Icon name="phone" class="h-4 w-4" />
+					</button>
+				{/if}
 			{:else}
 				<p class="flex-1 text-sm font-semibold text-slate-900">แชท</p>
 			{/if}

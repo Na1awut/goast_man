@@ -106,6 +106,9 @@ export function friendlyError(error: unknown): string {
 		ALREADY_PAID: 'ออเดอร์นี้ชำระแล้ว',
 		ORDER_NOT_PAYABLE: 'ออเดอร์นี้ชำระด้วย PromptPay ไม่ได้แล้ว',
 		ORDER_NOT_FOUND: 'ไม่พบออเดอร์นี้',
+		CALL_NOT_ALLOWED: 'โทรผ่านแอปได้เฉพาะตอนออเดอร์กำลังดำเนินการ',
+		CALL_BUSY: 'มีสายที่กำลังโทรอยู่แล้ว ลองใหม่อีกครั้ง',
+		CALL_GONE: 'สายนี้จบไปแล้ว',
 		// Auth / session errors from Supabase (refresh token failure, JWT expired)
 		'JWT expired': 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่',
 		'Invalid Refresh Token': 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่',

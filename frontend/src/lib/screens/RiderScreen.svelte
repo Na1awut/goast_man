@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { call } from '$lib/stores/call.svelte';
 	import PushToggle from '$lib/components/PushToggle.svelte';
 	import { push } from '$lib/stores/push.svelte';
 	import { onMount } from 'svelte';
@@ -216,7 +217,10 @@
 												<Icon name="message" class="h-4 w-4" />แชท
 												{#if rider.unread[job.id]}<span class="ml-0.5 rounded-full bg-red-600 px-1.5 text-[11px] leading-5 font-semibold text-white tabular-nums">{rider.unread[job.id]}</span>{/if}
 											</button>
-											{#if job.customer?.phone}
+											{#if call.available}
+												<button type="button" onclick={() => call.start(job.id, job.customer?.nickname ?? 'ลูกค้า', 'CUSTOMER', job.orderCode)} class="flex items-center gap-1 text-sm font-medium text-brand"><Icon name="phone" class="h-4 w-4" />โทร</button>
+												{#if job.customer?.phone}<a href="tel:{job.customer.phone}" class="text-xs text-slate-500 tabular-nums">{job.customer.phone}</a>{/if}
+											{:else if job.customer?.phone}
 												<a href="tel:{job.customer.phone}" class="flex items-center gap-1 text-sm font-medium text-brand"><Icon name="phone" class="h-4 w-4" />โทร</a>
 											{/if}
 										</div>

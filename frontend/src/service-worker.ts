@@ -34,6 +34,8 @@ sw.addEventListener('push', (event) => {
 			// A newer notification about the same order or chat replaces the older one
 			tag: data.tag ?? undefined,
 			renotify: !!data.tag,
+			requireInteraction: data.tag?.startsWith('call-') ?? false,
+			vibrate: data.tag?.startsWith('call-') ? [400, 200, 400, 200, 400] : [120],
 			data: { tag: data.tag ?? '' }
 		} as NotificationOptions)
 	);
