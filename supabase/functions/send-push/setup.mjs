@@ -10,7 +10,9 @@
 // devices subscribe again by themselves the next time the app opens.
 import { execFileSync } from 'node:child_process';
 import { generateKeyPairSync, randomBytes } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 
 const subject = process.argv[2];
 if (!/^mailto:\S+@\S+$/.test(subject ?? '')) {
@@ -43,7 +45,15 @@ const sql = `do $$ declare v_id uuid; begin
 	if v_id is null then perform vault.create_secret('${hookSecret}', 'push_hook_secret');
 	else perform vault.update_secret(v_id, '${hookSecret}'); end if;
 end $$;`;
-supabase(['db', 'query', '--linked', sql]);
+// Through a file: Windows' shell mangles "$$" and newlines in an argument.
+// It holds the hook secret, so it lives only for this one call.
+const sqlFile = join(mkdtempSync(join(tmpdir(), 'goose-push-')), 'vault.sql');
+writeFileSync(sqlFile, sql, { mode: 0o600 });
+try {
+	supabase(['db', 'query', '--linked', '-f', sqlFile]);
+} finally {
+	rmSync(dirname(sqlFile), { recursive: true, force: true });
+}
 
 console.log('3/3 Deploying send-push');
 supabase(['functions', 'deploy', 'send-push', '--no-verify-jwt']);
