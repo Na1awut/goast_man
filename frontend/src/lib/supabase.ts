@@ -44,7 +44,8 @@ export function friendlyError(error: unknown): string {
 	const known: Record<string, string> = {
 		KMUTT_ONLY: 'ใช้ได้เฉพาะอีเมล @kmutt.ac.th / @mail.kmutt.ac.th หรือร้าน Partner ที่ได้รับเชิญเท่านั้น',
 		// Supabase Auth hides the sign-up trigger's reason; the only thing that trigger rejects is a non-KMUTT email
-		'saving new user': 'ใช้ได้เฉพาะอีเมล @kmutt.ac.th / @mail.kmutt.ac.th กรุณาเลือกบัญชี มจธ.',
+		// (it also refuses unverified emails and sign-up floods: see 20261030_signup_guard.sql)
+		'saving new user': 'สมัครไม่สำเร็จ ใช้ได้เฉพาะบัญชี มจธ. (@kmutt.ac.th / @mail.kmutt.ac.th) ผ่าน Google หรือ Microsoft ถ้าใช้บัญชี มจธ. อยู่แล้ว ลองใหม่อีกครั้งในอีก 1 นาที',
 		AUTH_REQUIRED: 'กรุณาเข้าสู่ระบบก่อน',
 		STORE_UNAVAILABLE: 'ร้านนี้ปิดรับออเดอร์อยู่ตอนนี้',
 		TOO_MANY_ITEMS: 'สั่งได้สูงสุด 5 ชิ้นต่อออเดอร์ (คนหิ้วถือได้เท่านี้)',

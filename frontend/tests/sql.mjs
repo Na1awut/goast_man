@@ -26,7 +26,7 @@ const one = async (sql) => (await db.query(sql)).rows[0];
 await db.exec(`
 	create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
 	create schema auth; create schema storage;
-	create table auth.users (id uuid primary key default gen_random_uuid(), email text, raw_user_meta_data jsonb default '{}');
+	create table auth.users (id uuid primary key default gen_random_uuid(), email text, raw_user_meta_data jsonb default '{}', raw_app_meta_data jsonb default '{"provider":"google"}', created_at timestamptz not null default now());
 	create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 	grant usage on schema auth to anon, authenticated; grant execute on function auth.uid() to anon, authenticated;
 	create table storage.buckets (id text primary key, name text, public boolean);
@@ -107,6 +107,9 @@ try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20261027000000_web_push.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261028000000_in_app_calls.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261029000000_security_review_fixes.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261030000000_signup_guard.sql`, 'utf8'));
+	// The suite signs up dozens of users in seconds; the limit gets its own test below
+	await db.exec(`update app_settings set value = '1000' where key = 'signup_limit_per_minute'`);
 	ok('profile-at-first-order migration applies cleanly', true);
 } catch (e) {
 	ok('profile-at-first-order migration applies cleanly', false, e.message);
@@ -129,7 +132,7 @@ await db.exec(`
 
 // ---------- Sign-up rules ----------
 const newUser = async (email, name = 'Test User') =>
-	(await one(`insert into auth.users (email, raw_user_meta_data) values ('${email}', '{"full_name":"${name}"}') returning id`)).id;
+	(await one(`insert into auth.users (email, raw_user_meta_data) values ('${email}', '{"full_name":"${name}","email_verified":"true"}') returning id`)).id;
 
 const alice = await newUser('alice@mail.kmutt.ac.th', 'Alice Wong');
 const bob = await newUser('bob@kmutt.ac.th', 'Bob Rider');
@@ -1477,6 +1480,32 @@ ok('the ownerless store stays ownerless', (await one(`select owner_id from store
 		for (const [label, options] of tries) await expectError(label, `select place_order_at('kfc-10', '${JSON.stringify(line(options))}'::jsonb, 'sit', 1, '', 'CASH', null)`, 'OPTION_CHANGED');
 	});
 	await db.exec(`update menu_items set options = '[]' where id = 'kfc-10-1'`);
+}
+
+// ---------- Sign-up guard (20261030) ----------
+{
+	const signUp = (email, user, app) =>
+		`insert into auth.users (email, raw_user_meta_data, raw_app_meta_data) values ('${email}', '${JSON.stringify(user)}', '${JSON.stringify(app)}')`;
+	const TENANT = '6f4432dc-20d2-441d-b1db-ac3380ba633d';
+	await expectError('email + password sign-up is refused even with a KMUTT address', signUp('fake1@kmutt.ac.th', { email_verified: false }, { provider: 'email' }), 'OAUTH_ONLY');
+	await expectError('a provider that did not verify the email is refused', signUp('fake2@kmutt.ac.th', { email_verified: false }, { provider: 'google' }), 'EMAIL_UNVERIFIED');
+	await expectError('Microsoft from another tenant is refused', signUp('fake3@kmutt.ac.th', { email_verified: true, custom_claims: { tid: '00000000-0000-0000-0000-000000000000' } }, { provider: 'azure' }), 'KMUTT_TENANT_ONLY');
+	await expectError('a KMUTT name in an unverified claim no longer counts', `insert into auth.users (email, raw_user_meta_data, raw_app_meta_data) values ('', '{"email":"fake4@kmutt.ac.th","email_verified":true}', '{"provider":"azure"}')`, 'KMUTT_ONLY');
+	await db.exec(signUp('real.ms@kmutt.ac.th', { email_verified: true, custom_claims: { tid: TENANT } }, { provider: 'azure' }));
+	ok('Microsoft from the KMUTT tenant signs up', (await one(`select p.role from profiles p join auth.users u on u.id = p.id where u.email = 'real.ms@kmutt.ac.th'`))?.role === 'STUDENT');
+	ok('nothing was created for the refused ones', Number((await one(`select count(*) n from profiles where email like 'fake%'`)).n) === 0);
+
+	// Flood: 3 per minute for this test
+	await db.exec(`update app_settings set value = '3' where key = 'signup_limit_per_minute'; update auth.users set created_at = now() - interval '2 hours'`);
+	for (let i = 1; i <= 3; i++) await db.exec(signUp(`burst${i}@mail.kmutt.ac.th`, { email_verified: true }, { provider: 'google' }));
+	await expectError('the 4th new account within a minute is refused', signUp('burst4@mail.kmutt.ac.th', { email_verified: true }, { provider: 'google' }), 'SIGNUP_BUSY');
+	await db.exec(`insert into team_members (email, role) values ('helper.team@gmail.com', 'STAFF')`);
+	await db.exec(signUp('helper.team@gmail.com', { email_verified: true }, { provider: 'google' }));
+	ok('a team member still gets in during a flood', Number((await one(`select count(*) n from profiles where email = 'helper.team@gmail.com'`)).n) === 1);
+	await db.exec(`update auth.users set created_at = now() - interval '2 minutes' where email like 'burst%'`);
+	await db.exec(signUp('burst4@mail.kmutt.ac.th', { email_verified: true }, { provider: 'google' }));
+	ok('a minute later sign-ups open again', Number((await one(`select count(*) n from profiles where email = 'burst4@mail.kmutt.ac.th'`)).n) === 1);
+	await db.exec(`update app_settings set value = '1000' where key = 'signup_limit_per_minute'`);
 }
 
 // Anonymous visitors can browse the catalogue
