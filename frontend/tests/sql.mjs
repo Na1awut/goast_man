@@ -106,6 +106,7 @@ try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20261026000000_phone_privacy_chat_evidence.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261027000000_web_push.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261028000000_in_app_calls.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261029000000_security_review_fixes.sql`, 'utf8'));
 	ok('profile-at-first-order migration applies cleanly', true);
 } catch (e) {
 	ok('profile-at-first-order migration applies cleanly', false, e.message);
@@ -857,7 +858,11 @@ await as(kai, async () => {
 	await expectError('and the profile role alone approves nothing', `select admin_review_promo('${coPromo}', true, null)`, 'ADMIN_ONLY');
 });
 await as(tina, () => db.exec(`select admin_remove_member('kai.team@gmail.com')`));
-await as(kai, async () => ok('taken off the team, the console closes', (await rpc(`team_me()`)) === null));
+await as(kai, async () => {
+	ok('taken off the team, the console closes', (await rpc(`team_me()`)) === null);
+	ok('and the leftover profile role is not team either', (await one(`select is_team() as t`)).t === false);
+	await expectError('so home banners are closed to them', `insert into home_banners (id, image_url, title) values ('kai', 'https://x/y.png', 'x')`, 'row-level security');
+});
 
 // ---------- Partners run their own menu and store details ----------
 const PHOTO = 'https://proj.supabase.co/storage/v1/object/public/store-banners/kfc-05/menu-1.jpg';
@@ -1264,8 +1269,10 @@ await as(rita, async () => {
 });
 {
 	const id = (await as(alice, () => placeOrder('kfc-10', [{ menu_item_id: 'kfc-10-1', quantity: 1 }]))).id;
+	await db.exec(`update menu_items set options = '[{"id":"g1","name":"ท็อปปิ้ง","choices":[{"id":"c1","name":"ไข่มุก","price":5}]}]' where id = 'kfc-10-1'`);
 	await db.exec(`insert into order_items (order_id, menu_item_id, special, name, price, quantity, selected_options)
-		values ('${id}', 'kfc-10-1', false, 'x', 18, 1, '[{"group":"ท็อปปิ้ง","choice":"ไข่มุก"}]')`);
+		values ('${id}', 'kfc-10-1', false, 'x', 23, 1, '[{"groupId":"g1","groupName":"ท็อปปิ้ง","choiceId":"c1","name":"ไข่มุก","price":5}]')`);
+	await db.exec(`update menu_items set options = '[]' where id = 'kfc-10-1'`);
 	ok('the same item with different options is two lines', Number((await one(`select count(*) n from order_items where order_id = '${id}'`)).n) === 2);
 	await as(alice, () => db.exec(`select cancel_order('${id}')`));
 }
@@ -1418,6 +1425,58 @@ await db.exec(`drop schema net cascade; drop schema vault cascade;`);
 		ok('the team sees every call on the order', log.length === 3 && log[0].status === 'ENDED' && log[0].seconds === 0 && log[1].status === 'DECLINED', JSON.stringify(log));
 	});
 	await as(alice, () => expectError('a buyer cannot read the team call log', `select admin_order_calls('${id}')`, 'TEAM_ONLY'));
+}
+
+// ---------- Security review fixes (20261029) ----------
+await as(alice, async () => {
+	await expectError('a student cannot unlink a store owner', `select admin_unlink_store_owner('kfc-05')`, 'TEAM_ONLY');
+	await expectError('nor hand a store to someone', `select admin_invite_partner('alice@kmutt.ac.th', 'kfc-05')`, 'TEAM_ONLY');
+	await expectError('a student cannot claim a store without an invite', `select partner_claim_store('kfc-03')`, 'CLAIM_NEEDS_INVITE');
+	await expectError('nor one that has an owner', `select partner_claim_store('kfc-05')`, 'STORE_ALREADY_OWNED');
+});
+ok('the ownerless store stays ownerless', (await one(`select owner_id from stores where id = 'kfc-03'`)).owner_id === null);
+{
+	const owner = await newUser('stall.owner@mail.kmutt.ac.th', 'Stall Owner');
+	await db.exec(`insert into partner_invites (email, store_id) values ('stall.owner@mail.kmutt.ac.th', 'kfc-03')`);
+	await as(owner, () => db.exec(`select partner_claim_store('kfc-03')`));
+	ok('an invited owner claims their store', (await one(`select owner_id from stores where id = 'kfc-03'`)).owner_id === owner && Number((await one(`select count(*) n from partner_invites where email = 'stall.owner@mail.kmutt.ac.th'`)).n) === 0);
+	await as(tina, () => db.exec(`select admin_unlink_store_owner('kfc-03')`));
+}
+{
+	const shop = await newUser('new.shop@mail.kmutt.ac.th', 'New Shop');
+	const sid = await as(shop, async () => (await one(`select partner_register_store('ร้านใหม่ทดสอบ', 'อาหารตามสั่ง', 'no-such-zone', '') as id`)).id);
+	const row = await one(`select hidden, is_open from stores where id = '${sid}'`);
+	ok('a self-registered store starts hidden and closed', row.hidden === true && row.is_open === false);
+	await as(shop, () => expectError('and its owner cannot open it before the team looks', `select partner_set_store_open(true)`, 'STORE_PENDING_REVIEW'));
+	await as(alice, async () => ok('buyers do not see it', (await db.query(`select 1 from stores where id = '${sid}'`)).rows.length === 0));
+	await db.exec(`update stores set is_open = true where id = '${sid}'`);
+	ok('a hidden store can never be open, whoever tries', (await one(`select is_open from stores where id = '${sid}'`)).is_open === false);
+	await as(tina, () => db.exec(`select admin_set_store_hidden('${sid}', false)`));
+	await as(shop, () => db.exec(`select partner_set_store_open(true)`));
+	ok('once the team shows it, the owner can open it', (await one(`select is_open from stores where id = '${sid}'`)).is_open === true);
+	await as(tina, () => db.exec(`select admin_set_store_hidden('${sid}', true)`));
+}
+{
+	// kfc-10-1 gets a topping group: one choice at most, 5 baht
+	await db.exec(`update menu_items set options = '[{"id":"g1","name":"ท็อปปิ้ง","maxChoices":1,"choices":[{"id":"c1","name":"ไข่มุก","price":5},{"id":"c2","name":"วุ้น","price":0}]},{"id":"g2","name":"ความหวาน","required":true,"choices":[{"id":"s1","name":"หวานน้อย","price":0}]}]' where id = 'kfc-10-1'`);
+	const opt = (choiceId, name, price, groupId = 'g1') => ({ groupId, groupName: 'x', choiceId, name, price });
+	const sweet = opt('s1', 'หวานน้อย', 0, 'g2');
+	const line = (options) => [{ menu_item_id: 'kfc-10-1', quantity: 1, selected_options: options }];
+	await as(alice, async () => {
+		const good = await orderRow((await placeOrder('kfc-10', line([opt('c1', 'ไข่มุก', 5), sweet]))).id);
+		ok('a real option is charged at the menu price', good.food_total === 23, String(good.food_total));
+		await db.exec(`select cancel_order('${good.id}')`);
+		const tries = [
+			['a paid option sent as free is refused', [opt('c1', 'ไข่มุก', 0), sweet]],
+			['a made-up option name is refused', [opt('c2', 'ไข่ดาว x3, หมูกรอบ', 0), sweet]],
+			['an option that is not on the menu is refused', [opt('zz', 'ชีส', 0), sweet]],
+			['two choices in a pick-one group are refused', [opt('c1', 'ไข่มุก', 5), opt('c2', 'วุ้น', 0), sweet]],
+			['the same choice twice is refused', [opt('c2', 'วุ้น', 0), opt('c2', 'วุ้น', 0), sweet]],
+			['a required group left empty is refused', [opt('c1', 'ไข่มุก', 5)]]
+		];
+		for (const [label, options] of tries) await expectError(label, `select place_order_at('kfc-10', '${JSON.stringify(line(options))}'::jsonb, 'sit', 1, '', 'CASH', null)`, 'OPTION_CHANGED');
+	});
+	await db.exec(`update menu_items set options = '[]' where id = 'kfc-10-1'`);
 }
 
 // Anonymous visitors can browse the catalogue

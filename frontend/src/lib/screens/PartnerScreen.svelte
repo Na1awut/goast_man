@@ -45,7 +45,7 @@
 			}
 			auth.assignPartnerStore(id);
 			await catalog.loadPartnerStore(id);
-			toast.show('สร้างร้านสำเร็จแล้ว! คุณสามารถใส่รูปและเพิ่มเมนูได้ทันที', 'success');
+			toast.show('สร้างร้านแล้ว ใส่รูปและเมนูได้เลย ทีม Goose Man จะตรวจแล้วเปิดให้ลูกค้าเห็น', 'success', { duration: 6000 });
 		} catch (err) {
 			setupError = friendlyError(err);
 		} finally {
@@ -293,7 +293,7 @@
 							</select>
 						</label>
 
-						<p class="text-xs text-slate-500">หากร้านของคุณอยู่ในระบบอยู่แล้ว (เช่น ร้าน KFC ล็อคต่างๆ) สามารถกดเลือกเพื่อเป็นผู้จัดการร้านและใส่รูปภาพเองได้ทันที</p>
+						<p class="text-xs text-slate-500">ร้านที่อยู่ในระบบแล้ว (เช่น ร้าน KFC ล็อคต่างๆ) ต้องให้ทีม Goose Man ส่งคำเชิญถึงอีเมลนี้ก่อน แล้วค่อยกดเชื่อมต่อ</p>
 
 						<button type="submit" disabled={!claimStoreId.trim() || busySetup} class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-3.5 text-sm font-semibold text-white shadow-md shadow-brand/20 active:bg-brand-600 disabled:opacity-50">
 							{#if busySetup}<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></span>{/if}
