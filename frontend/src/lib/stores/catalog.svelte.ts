@@ -1,8 +1,9 @@
 // The store catalogue every screen reads (Svelte 5 runes).
 // Demo mode: the in-memory STORE_CATALOGUE. Live mode: Supabase, reloaded on demand.
-import type { MenuItem, OperatingHours, Promotion, Store } from '$lib/types';
+import type { MenuItem, OperatingHours, Promotion, Store, StoreOpenStatus } from '$lib/types';
 import { findStore, livePromotions, STORE_CATALOGUE, sortForBrowsing } from '$lib/data/stores';
 import * as api from '$lib/api/live';
+import * as demoOpen from '$lib/storeOpenDemo';
 import { friendlyError, isLive } from '$lib/supabase';
 import { uid } from '$lib/utils';
 import { toast } from './toast.svelte';
@@ -41,6 +42,8 @@ class CatalogStore {
 		)
 	);
 
+	#stopWatching: (() => void) | null = null;
+
 	constructor() {
 		if (!isLive && typeof localStorage !== 'undefined') {
 			for (const store of this.stores) {
@@ -49,6 +52,51 @@ class CatalogStore {
 					if (raw) store.operatingHours = JSON.parse(raw);
 				} catch {}
 			}
+		}
+		// Demo: nobody runs the database's clock job, so tick here
+		if (!isLive && typeof window !== 'undefined') {
+			setInterval(() => demoOpen.refreshAll(this.#everyStore()), 30_000);
+		}
+	}
+
+	#everyStore(): Store[] {
+		return this.partnerStore && !this.stores.some((s) => s.id === this.partnerStore!.id) ? [...this.stores, this.partnerStore] : this.stores;
+	}
+
+	/**
+	 * Live: hear every store's open flag / hours / visibility change as it happens
+	 * (the database flips stores on schedule, the team locks them, owners switch them).
+	 * Call once the user is signed in; safe to call again.
+	 */
+	watch() {
+		if (!isLive || this.#stopWatching) return;
+		this.#stopWatching = api.subscribeStores((row) => {
+			const fields = api.storeLiveFields(row);
+			const known = this.stores.some((s) => s.id === row.id);
+			if (fields.hidden) {
+				this.stores = this.stores.filter((s) => s.id !== row.id);
+			} else if (known) {
+				this.#patch(row.id, (store) => Object.assign(store, fields));
+			} else {
+				// A store that just became visible: fetch it whole
+				void this.#reloadStore(row.id).catch(() => {});
+			}
+		});
+	}
+
+	unwatch() {
+		this.#stopWatching?.();
+		this.#stopWatching = null;
+	}
+
+	/** Reload the catalogue without the loading skeleton (after the connection comes back) */
+	async refresh() {
+		if (!isLive) return;
+		try {
+			this.stores = (await api.fetchCatalog()).filter((s) => !s.hidden);
+			this.error = null;
+		} catch {
+			// Keep what is on screen; the next event or reconnect tries again
 		}
 	}
 
@@ -127,27 +175,68 @@ class CatalogStore {
 
 	// ---------- Partner actions ----------
 
-	/** The partner opens or closes their store to app orders; buyers see it at once */
-	async setStoreOpen(storeId: string, open: boolean) {
-		if (isLive) await api.setMyStoreOpen(open);
-		this.#patch(storeId, (store) => (store.isOpen = open));
+	/** Why the owner's store is open or closed right now (live: the database's answer) */
+	async openStatus(storeId: string): Promise<StoreOpenStatus> {
+		if (isLive) return this.#adopt(storeId, await api.fetchMyStoreOpenStatus());
+		const store = this.byId(storeId);
+		if (!store) throw new Error('STORE_NOT_FOUND');
+		store.isOpen = demoOpen.decide(store);
+		return demoOpen.statusOf(store, false);
 	}
 
-	/** Save automated operating hours schedule for store */
-	async saveOperatingHours(storeId: string, hours: OperatingHours) {
-		if (isLive) {
-			await api.setMyOperatingHours(hours);
-			await this.#reloadStore(storeId);
-			return;
-		}
+	/**
+	 * The owner presses open or closed. The database decides what that means (a team lock refuses it,
+	 * with a schedule it lasts until the next change) and answers with the new status, which is what we show.
+	 * Throws STORE_LOCKED / STORE_STATE_CHANGED etc.
+	 */
+	async setStoreOpen(storeId: string, open: boolean, opts: { hours?: number; rev?: number; name?: string } = {}): Promise<StoreOpenStatus> {
+		if (isLive) return this.#adopt(storeId, await api.setMyStoreOpen(open, { hours: opts.hours, rev: opts.rev }));
+		const store = this.#demoStore(storeId);
+		return this.#demoSaved(store, demoOpen.ownerSetOpen(store, open, opts.name ?? 'ร้านค้า', opts.hours, opts.rev));
+	}
+
+	/** Drop the hand switch: the schedule runs the store again */
+	async followSchedule(storeId: string, rev?: number): Promise<StoreOpenStatus> {
+		if (isLive) return this.#adopt(storeId, await api.followMySchedule(rev));
+		const store = this.#demoStore(storeId);
+		return this.#demoSaved(store, demoOpen.ownerFollowSchedule(store, rev));
+	}
+
+	/** Save the weekly schedule */
+	async saveOperatingHours(storeId: string, hours: OperatingHours, opts: { rev?: number; name?: string } = {}): Promise<StoreOpenStatus> {
+		if (isLive) return this.#adopt(storeId, await api.setMyOperatingHours(hours, opts.rev));
+		const store = this.#demoStore(storeId);
+		const status = demoOpen.saveHours(store, hours, 'OWNER', opts.name ?? 'ร้านค้า', opts.rev);
 		if (typeof localStorage !== 'undefined') {
 			try {
-				localStorage.setItem('gm_store_hours_' + storeId, JSON.stringify(hours));
+				localStorage.setItem('gm_store_hours_' + storeId, JSON.stringify(store.operatingHours));
 			} catch {}
 		}
-		this.#patch(storeId, (store) => {
-			store.operatingHours = { ...hours };
+		return this.#demoSaved(store, status);
+	}
+
+	#demoStore(storeId: string): Store {
+		const store = this.byId(storeId);
+		if (!store) throw new Error('STORE_NOT_FOUND');
+		return store;
+	}
+
+	/** Demo: keep the other copy of the same store (partner view vs catalogue) in step */
+	#demoSaved(store: Store, status: StoreOpenStatus): StoreOpenStatus {
+		this.#patch(store.id, (s) => {
+			s.isOpen = status.is_open;
+			s.operatingHours = store.operatingHours;
 		});
+		return status;
+	}
+
+	/** A status from the database is also the truth about the store's flag and hours */
+	#adopt(storeId: string, status: StoreOpenStatus): StoreOpenStatus {
+		this.#patch(storeId, (store) => {
+			store.isOpen = status.is_open;
+			store.operatingHours = status.schedule ?? undefined;
+		});
+		return status;
 	}
 
 	/** The partner marks a dish sold out (or back on) */

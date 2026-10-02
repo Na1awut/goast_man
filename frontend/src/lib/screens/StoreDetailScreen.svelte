@@ -15,12 +15,13 @@
 	import type { MenuItem } from '$lib/types';
 	import { describeBenefit } from '$lib/pricing';
 	import { formatBaht } from '$lib/utils';
-	import { formatDaysText, isWithinHours } from '$lib/operatingHours';
+	import { formatDaysText } from '$lib/operatingHours';
 
 	const POPULAR = 'เมนูยอดฮิต';
 
 	const store = $derived(storeView.selected);
-	const storeOpen = $derived(!!store && store.isOpen && (!store.operatingHours?.enabled || isWithinHours(store.operatingHours)));
+	// The database decides (schedule, team lock, owner switch) and realtime keeps it current
+	const storeOpen = $derived(!!store && store.isOpen);
 	const cartIsThisStore = $derived(!!store && cart.store?.id === store.id);
 	const favorite = $derived(!!store && storeView.favorites.includes(store.id));
 	const menu = $derived(store?.menuItems ?? []);

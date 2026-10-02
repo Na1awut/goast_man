@@ -78,7 +78,9 @@
 		// Back online after a dead spot: read what changed while the phone couldn't hear it
 		const stopNetwork = network.init(() => {
 			void orders.reloadAll();
+			// Stores may have opened or closed while the phone couldn't hear it
 			if (catalog.error) void catalog.load();
+			else void catalog.refresh();
 			if (rider.loaded) void rider.refresh();
 			void push.refresh();
 		});
@@ -99,6 +101,7 @@
 			rider.reset();
 			window.removeEventListener('pageshow', handlePageShow);
 			stopNetwork();
+			catalog.unwatch();
 		};
 	});
 
@@ -112,6 +115,8 @@
 			if (await withTimeout(auth.init(), AUTH_TIMEOUT_MS)) {
 				nav.reset(auth.isPartner ? 'PARTNER' : auth.mustOnboardNow ? 'ONBOARDING' : 'HOME');
 				void orders.init(auth.user!.id);
+				// Stores open and close on their own (schedule, team lock, owner): hear it as it happens
+				catalog.watch();
 				// Say hello only after a fresh sign-in, not when a saved session is restored
 				if (returnedFromSignIn) welcome.show(auth.displayName);
 			}

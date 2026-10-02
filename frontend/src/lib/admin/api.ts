@@ -3,7 +3,7 @@
 // same interface on sample data in memory (./demo.ts).
 import { db, friendlyError, isLive } from '$lib/supabase';
 import * as app from '$lib/api/live';
-import type { HomeBanner, Store } from '$lib/types';
+import type { HomeBanner, OperatingHours, Store, StoreOpenStatus } from '$lib/types';
 import type { StoreInfo } from '$lib/storeOps';
 import { ADMIN_ERRORS } from './labels';
 import type {
@@ -12,6 +12,7 @@ import type {
 	AdminPromoCode,
 	AdminRider,
 	AdminStore,
+	StoreOpenState,
 	ChatLogLine,
 	TrashStore,
 	AppFlags,
@@ -65,7 +66,14 @@ export interface AdminApi {
 	moneyHistory(from?: string, to?: string): Promise<MoneyEntry[]>;
 	stores(): Promise<AdminStore[]>;
 	storeMenu(storeId: string): Promise<AdminMenuItem[]>;
-	setStoreOpen(storeId: string, open: boolean): Promise<void>;
+	/** Why each store is open or closed (list view) */
+	storeOpenStates(): Promise<StoreOpenState[]>;
+	storeOpenStatus(storeId: string): Promise<StoreOpenStatus>;
+	/** Closing = a team lock (the owner cannot reopen it); opening clears the lock and opens the store */
+	setStoreOpen(storeId: string, open: boolean, opts?: { reason?: string; until?: string | null; hours?: number; rev?: number }): Promise<StoreOpenStatus>;
+	/** Lift the lock; with `followSchedule` also drop a hand switch so the schedule runs the store */
+	releaseStoreOpen(storeId: string, followSchedule: boolean, rev?: number): Promise<StoreOpenStatus>;
+	setStoreHours(storeId: string, hours: OperatingHours, rev?: number): Promise<StoreOpenStatus>;
 	setItemAvailable(itemId: string, available: boolean): Promise<void>;
 	riders(): Promise<AdminRider[]>;
 	addRider(email: string, note: string): Promise<void>;
@@ -163,7 +171,12 @@ const liveApi: AdminApi = {
 	moneyHistory: (from, to) => call('admin_money_history', { p_from: from ?? null, p_to: to ?? null }),
 	stores: () => call('admin_stores'),
 	storeMenu: (storeId) => call('admin_store_menu', { p_store_id: storeId }),
-	setStoreOpen: (storeId, open) => call('admin_set_store_open', { p_store_id: storeId, p_open: open }),
+	storeOpenStates: () => call('admin_store_open_states'),
+	storeOpenStatus: (storeId) => call('admin_store_open_status', { p_store_id: storeId }),
+	setStoreOpen: (storeId, open, o = {}) =>
+		call('admin_set_store_open', { p_store_id: storeId, p_open: open, p_reason: o.reason ?? null, p_until: o.until ?? null, p_hours: o.hours ?? null, p_rev: o.rev ?? null }),
+	releaseStoreOpen: (storeId, followSchedule, rev) => call('admin_release_store_open', { p_store_id: storeId, p_follow_schedule: followSchedule, p_rev: rev ?? null }),
+	setStoreHours: (storeId, hours, rev) => call('admin_set_store_hours', { p_store_id: storeId, p_hours: hours, p_rev: rev ?? null }),
 	setItemAvailable: (itemId, available) => call('admin_set_item_available', { p_item_id: itemId, p_available: available }),
 	riders: () => call('admin_riders'),
 	addRider: (email, note) => call('admin_add_rider', { p_email: email, p_note: note }),

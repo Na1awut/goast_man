@@ -5,7 +5,8 @@
 	import { adminError } from '../api';
 	import { consoleState as c } from '../console.svelte';
 	import { thaiDate } from '../format';
-	import type { AdminStore, NewStore, TrashStore } from '../types';
+	import { formatWhen } from '$lib/operatingHours';
+	import type { AdminStore, NewStore, StoreOpenState, TrashStore } from '../types';
 	import Empty from '../ui/Empty.svelte';
 	import Modal from '../ui/Modal.svelte';
 	import Tabs from '../ui/Tabs.svelte';
@@ -17,6 +18,8 @@
 	let query = $state('');
 	let filter = $state<'all' | 'open' | 'closed' | 'hidden' | 'trash'>('all');
 	let trash = $state<TrashStore[] | null>(null);
+	/** Why each store is open or closed: the owner's switch, the schedule or a team lock */
+	let openStates = $state<Record<string, StoreOpenState>>({});
 
 	$effect(() => {
 		void c.tick;
@@ -28,6 +31,10 @@
 				error = '';
 			})
 			.catch((err) => (error = adminError(err)));
+		c.api
+			?.storeOpenStates()
+			.then((rows) => (openStates = Object.fromEntries(rows.map((r) => [r.store_id, r]))))
+			.catch(() => {});
 		// The recycle bin is ADMIN's (opening it also erases stores past their 60 days)
 		if (c.isAdmin) c.api?.trash().then((t) => (trash = t)).catch(() => (trash = []));
 	});
@@ -45,20 +52,32 @@
 	let busy = $state(false);
 	let dialogError = $state('');
 
+	let lockReason = $state('');
+	let lockHours = $state<number | null>(null);
+	const LOCK_LENGTHS: { label: string; hours: number | null }[] = [
+		{ label: 'จนกว่าจะปลดล็อก', hours: null },
+		{ label: '1 ชม.', hours: 1 },
+		{ label: '3 ชม.', hours: 3 },
+		{ label: '12 ชม.', hours: 12 }
+	];
+
 	async function setOpen(s: AdminStore, open: boolean) {
 		if (!open) {
 			closing = s;
+			lockReason = '';
+			lockHours = null;
 			dialogError = '';
 			return;
 		}
+		// Opening clears a team lock too (and a store with a schedule goes outside its hours for 4 hours)
 		await c.act(() => c.api!.setStoreOpen(s.id, true), `เปิดรับออเดอร์ร้าน ${s.name} แล้ว`);
 	}
 	async function confirmClose() {
 		if (!closing) return;
 		busy = true;
 		try {
-			await c.api!.setStoreOpen(closing.id, false);
-			c.done(`ปิดรับออเดอร์ร้าน ${closing.name} แล้ว`);
+			await c.api!.setStoreOpen(closing.id, false, { reason: lockReason.trim(), until: lockHours ? new Date(Date.now() + lockHours * 3600_000).toISOString() : null });
+			c.done(`ล็อกปิดร้าน ${closing.name} แล้ว ร้านเปิดเองไม่ได้จนกว่าจะปลดล็อก`);
 			closing = null;
 		} catch (err) {
 			dialogError = adminError(err);
@@ -197,7 +216,17 @@
 								<p class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
 									{#if s.hidden}<span class="font-medium text-slate-600">ซ่อนจากแอป</span>{:else}<span class="text-slate-600">ออเดอร์วันนี้ <span class="font-semibold tabular-nums">{s.orders_today}</span></span>{/if}
 									{#if s.items_off}<span class="font-medium text-amber-700">เมนูหมด {s.items_off}</span>{/if}
-									{#if !s.hidden && !s.is_open}<span class="font-medium text-red-600">ปิดรับออเดอร์</span>{/if}
+									{#if !s.hidden && !s.is_open && openStates[s.id]?.source !== 'TEAM_LOCK'}<span class="font-medium text-red-600">ปิดรับออเดอร์</span>{/if}
+									{#if !s.hidden && openStates[s.id]}
+										{@const o = openStates[s.id]}
+										{#if o.source === 'TEAM_LOCK'}
+											<span class="font-medium text-red-600">ล็อกปิดโดยทีมงาน{o.lock_reason ? ` · ${o.lock_reason}` : ''}{o.lock_until ? ` · ถึง ${formatWhen(o.lock_until)}` : ''}</span>
+										{:else if o.source === 'OVERRIDE' && o.override_until}
+											<span class="font-medium text-amber-700">{o.override === 'OPEN' ? 'เปิดพิเศษ' : 'ปิดชั่วคราว'}ถึง {formatWhen(o.override_until)}</span>
+										{:else if o.source === 'SCHEDULE'}
+											<span class="text-slate-600">ตามเวลาอัตโนมัติ{o.next_change ? ` · ${s.is_open ? 'ปิด' : 'เปิด'} ${formatWhen(o.next_change)}` : ''}</span>
+										{/if}
+									{/if}
 									{#if !s.owner_email}<span class="text-slate-500">{s.invite_email ? 'รอร้าน login' : 'ยังไม่มีเมลร้าน'}</span>{/if}
 								</p>
 							</div>
@@ -215,8 +244,22 @@
 	</div>
 {/if}
 
-<Modal open={!!closing} title="ปิดรับออเดอร์ร้าน {closing?.name ?? ''}?" onclose={() => (closing = null)} confirmLabel="ปิดร้าน" danger {busy} error={dialogError} onconfirm={confirmClose}>
-	<p>ผู้ซื้อจะสั่งร้านนี้ไม่ได้จนกว่าจะเปิดอีกครั้ง ออเดอร์ที่สั่งไปแล้วยังดำเนินต่อตามปกติ</p>
+<Modal open={!!closing} title="ล็อกปิดร้าน {closing?.name ?? ''}?" onclose={() => (closing = null)} confirmLabel="ล็อกปิดร้าน" danger {busy} error={dialogError} onconfirm={confirmClose}>
+	<p>ผู้ซื้อจะสั่งร้านนี้ไม่ได้ และ<strong>ร้านเปิดเองไม่ได้</strong> (แม้ถึงเวลาเปิดอัตโนมัติ) จนกว่าจะปลดล็อกหรือครบเวลา ออเดอร์ที่สั่งไปแล้วยังดำเนินต่อตามปกติ</p>
+	<label class="mt-4 block">
+		<span class="mb-1 block font-medium text-slate-900">เหตุผล <span class="font-normal text-slate-400">(ร้านเห็นข้อความนี้)</span></span>
+		<input bind:value={lockReason} maxlength="200" placeholder="เช่น ติดต่อร้านไม่ได้" class={field} />
+	</label>
+	<fieldset class="mt-4">
+		<legend class="mb-2 font-medium text-slate-900">ปิดนานแค่ไหน</legend>
+		<div class="grid grid-cols-2 gap-2">
+			{#each LOCK_LENGTHS as l (l.label)}
+				<label class="flex h-11 cursor-pointer items-center gap-3 rounded-xl border px-3.5 {lockHours === l.hours ? 'border-brand bg-brand-50' : 'border-slate-200'}">
+					<input type="radio" name="lock-hours" value={l.hours} bind:group={lockHours} class="accent-brand" />{l.label}
+				</label>
+			{/each}
+		</div>
+	</fieldset>
 </Modal>
 
 <Modal open={!!purging} title="ลบ {purging?.name ?? ''} ถาวร?" onclose={() => (purging = null)} confirmLabel="ลบถาวร" danger {busy} error={dialogError} onconfirm={purge}>

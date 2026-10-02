@@ -200,6 +200,19 @@ export interface AdminStore {
 	items_off: number;
 }
 
+/** One store's open/closed state in the console list (admin_store_open_states) */
+export interface StoreOpenState {
+	store_id: string;
+	source: 'HIDDEN' | 'TEAM_LOCK' | 'OVERRIDE' | 'SCHEDULE' | 'MANUAL';
+	lock_reason: string | null;
+	lock_until: string | null;
+	override: 'OPEN' | 'CLOSED' | null;
+	override_by: 'OWNER' | 'TEAM' | null;
+	override_until: string | null;
+	schedule_enabled: boolean;
+	next_change: string | null;
+}
+
 /** Switches set from the console (QR test mode) */
 export interface AppFlags {
 	payment_test_mode: boolean;

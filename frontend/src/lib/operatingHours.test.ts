@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { isWithinHours, formatDaysText, describeSchedule } from './operatingHours';
+import cases from '../../tests/open-hours-cases.json';
+import { isWithinHours, formatDaysText, describeSchedule, nextScheduleChange, formatWhen } from './operatingHours';
 import type { OperatingHours } from './types';
 
 describe('operatingHours', () => {
@@ -93,5 +94,24 @@ describe('operatingHours', () => {
 		const descClosed = describeSchedule(hours, closedTime);
 		expect(descClosed.isOpenNow).toBe(false);
 		expect(descClosed.label).toBe('อยู่นอกเวลาทำการ');
+	});
+
+	// The same cases the database runs (tests/sql.mjs): the app and the server must agree
+	describe('same answers as the database', () => {
+		for (const c of cases) {
+			it(c.name, () => {
+				const at = new Date(c.at);
+				const hours = c.hours as OperatingHours | null;
+				expect(isWithinHours(hours, at)).toBe(c.open);
+				expect(nextScheduleChange(hours, at)?.toISOString().replace('.000Z', 'Z') ?? null).toBe(c.next);
+			});
+		}
+	});
+
+	it('says when in words', () => {
+		const now = new Date('2026-10-02T03:00:00.000Z'); // Friday 10:00 Bangkok
+		expect(formatWhen(new Date('2026-10-02T10:00:00.000Z'), now)).toBe('17:00 น.');
+		expect(formatWhen(new Date('2026-10-03T01:00:00.000Z'), now)).toBe('พรุ่งนี้ 08:00 น.');
+		expect(formatWhen(new Date('2026-10-05T01:00:00.000Z'), now)).toBe('วันจันทร์ 08:00 น.');
 	});
 });

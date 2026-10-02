@@ -66,6 +66,10 @@ export const ACTION_LABEL: Record<string, string> = {
 	PAYOUT_PAID: 'บันทึกโอนคนหิ้ว',
 	STORE_OPENED: 'เปิดรับออเดอร์',
 	STORE_CLOSED: 'ปิดรับออเดอร์',
+	STORE_LOCKED: 'ล็อกปิดร้าน (ร้านเปิดเองไม่ได้)',
+	STORE_UNLOCKED: 'ปลดล็อกร้าน',
+	STORE_FOLLOW_SCHEDULE: 'ให้ร้านเปิด-ปิดตามเวลา',
+	STORE_OPERATING_HOURS_UPDATED: 'แก้เวลาเปิด-ปิดร้าน',
 	STORE_CREATED: 'สร้างร้าน',
 	STORE_IMPORTED: 'นำเข้าร้านและเมนู',
 	STORE_EDITED: 'แก้ข้อมูลร้าน',
@@ -111,6 +115,9 @@ export function describeDetail(detail: Record<string, unknown>): string {
 	if (detail.role) parts.push(String(detail.role));
 	if (detail.email) parts.push(String(detail.email));
 	if (detail.reason) parts.push(`เหตุผล: ${detail.reason}`);
+	if (typeof detail.until === 'string') parts.push(`ถึง ${new Date(detail.until).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} น.`);
+	const hours = detail.hours as { enabled?: boolean; openTime?: string; closeTime?: string } | undefined;
+	if (hours) parts.push(hours.enabled ? `เปิด ${hours.openTime}-${hours.closeTime} น.` : 'ปิดระบบตั้งเวลา');
 	if (detail.note) parts.push(String(detail.note));
 	if (detail.ref) parts.push(`อ้างอิง ${detail.ref}`);
 	return parts.join(' · ');
@@ -146,5 +153,10 @@ export const ADMIN_ERRORS: Record<string, string> = {
 	BAD_KIND: 'เลือกประเภทส่วนลดใหม่อีกครั้ง',
 	BAD_AMOUNT: 'ใส่ส่วนลด 1-500 บาท (ฟรีค่าหิ้วไม่ต้องใส่จำนวนเงิน)',
 	BAD_MAX_USES: 'จำนวนครั้งที่ใช้ได้ต้องอยู่ระหว่าง 1-100,000',
-	CODE_TAKEN: 'มีโค้ดนี้อยู่แล้ว ตั้งชื่ออื่น'
+	CODE_TAKEN: 'มีโค้ดนี้อยู่แล้ว ตั้งชื่ออื่น',
+	STORE_STATE_CHANGED: 'มีคนเพิ่งเปลี่ยนสถานะร้านนี้ (เช่น ร้านเองหรือทีมอีกคน) อัปเดตหน้าจอให้แล้ว ตรวจดูแล้วลองอีกครั้ง',
+	BAD_HOURS: 'เวลาเปิด-ปิดไม่ถูกต้อง (เวลาเปิดต้องไม่เท่าเวลาปิด และเลือกวันอย่างน้อย 1 วัน)',
+	BAD_UNTIL: 'เวลาสิ้นสุดต้องเป็นเวลาในอนาคต',
+	STORE_HIDDEN: 'ร้านนี้ซ่อนอยู่ กด "แสดงร้านในแอป" ก่อนแล้วค่อยเปิดรับออเดอร์',
+	NO_SCHEDULE: 'ร้านนี้ยังไม่ได้ตั้งเวลาเปิด-ปิดอัตโนมัติ'
 };

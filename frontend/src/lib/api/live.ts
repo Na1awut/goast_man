@@ -1,7 +1,7 @@
 // Every Supabase call the app makes lives here, so stores stay mode-agnostic and
 // the row ↔ type mapping has exactly one home. Only imported on live paths.
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import type { CartItem, ChatMessage, HomeBanner, MenuItem, MenuOptionGroup, OperatingHours, Order, OrderStatus, PaymentMethod, PartnerDashboard, Promotion, Rider, RiderEarning, RiderJob, SelectedOptionChoice, Store, User } from '$lib/types';
+import type { CartItem, ChatMessage, HomeBanner, MenuItem, MenuOptionGroup, OperatingHours, Order, OrderStatus, PaymentMethod, PartnerDashboard, Promotion, StoreOpenStatus, Rider, RiderEarning, RiderJob, SelectedOptionChoice, Store, User } from '$lib/types';
 import { owedToRider } from '$lib/admin/rules';
 import { base } from '$app/paths';
 import { verifySlipUrl } from '$lib/payments';
@@ -708,8 +708,34 @@ export async function fetchPartnerDashboard(days: 7 | 30): Promise<PartnerDashbo
 }
 
 /** The partner opens or closes their own store to app orders */
-export async function setMyStoreOpen(open: boolean): Promise<void> {
-	check(await db().rpc('partner_set_store_open', { p_open: open }));
+export async function setMyStoreOpen(open: boolean, opts: { hours?: number; rev?: number } = {}): Promise<StoreOpenStatus> {
+	return check(await db().rpc('partner_set_store_open', { p_open: open, p_hours: opts.hours ?? null, p_rev: opts.rev ?? null })) as StoreOpenStatus;
+}
+
+/** Why the partner's store is open or closed right now, as the database sees it */
+export async function fetchMyStoreOpenStatus(): Promise<StoreOpenStatus> {
+	return check(await db().rpc('partner_store_open_status')) as StoreOpenStatus;
+}
+
+/** Drop the hand switch and let the schedule run the store again */
+export async function followMySchedule(rev?: number): Promise<StoreOpenStatus> {
+	return check(await db().rpc('partner_follow_schedule', { p_rev: rev ?? null })) as StoreOpenStatus;
+}
+
+/** A store's open flag, hours or visibility changed (buyers, owner and team all hear it) */
+export function subscribeStores(onChange: (row: Row) => void): () => void {
+	const channel = db()
+		.channel('stores-open')
+		.on('postgres_changes', { event: '*', schema: 'public', table: 'stores' }, (payload) => {
+			if (payload.new && 'id' in payload.new) onChange(payload.new as Row);
+		})
+		.subscribe();
+	return () => void db().removeChannel(channel);
+}
+
+/** Just the fields buyers act on, from a stores row */
+export function storeLiveFields(r: Row): Pick<Store, 'isOpen' | 'operatingHours' | 'hidden'> {
+	return { isOpen: !!r.is_open, operatingHours: r.operating_hours ?? undefined, hidden: r.hidden ?? false };
 }
 
 /** The partner marks one of their dishes available or sold out */
@@ -718,8 +744,8 @@ export async function setMyItemAvailable(itemId: string, available: boolean): Pr
 }
 
 /** The partner saves automated operating hours for their store */
-export async function setMyOperatingHours(hours: OperatingHours): Promise<void> {
-	check(await db().rpc('partner_set_operating_hours', { p_hours: hours }));
+export async function setMyOperatingHours(hours: OperatingHours, rev?: number): Promise<StoreOpenStatus> {
+	return check(await db().rpc('partner_set_operating_hours', { p_hours: hours, p_rev: rev ?? null })) as StoreOpenStatus;
 }
 
 // ---------- Home Banners ----------

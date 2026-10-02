@@ -109,6 +109,27 @@ export interface OperatingHours {
 	days?: number[];
 }
 
+/** Why a store is open or closed right now (the database decides; see store_open_status) */
+export type StoreOpenSource = 'HIDDEN' | 'TEAM_LOCK' | 'OVERRIDE' | 'SCHEDULE' | 'MANUAL';
+
+export interface StoreOpenStatus {
+	is_open: boolean;
+	source: StoreOpenSource;
+	schedule: OperatingHours | null;
+	/** What the schedule alone says right now (null without a schedule) */
+	schedule_open: boolean | null;
+	/** When the schedule next flips between open and closed */
+	next_change: string | null;
+	/** The team closed the store: the owner cannot reopen it. `by` is only sent to the team */
+	lock: { reason: string; by?: string; at: string | null; until: string | null } | null;
+	/** Someone pressed open or closed by hand; it ends at `until` (null = until changed) */
+	override: { value: 'OPEN' | 'CLOSED'; by: 'OWNER' | 'TEAM'; by_name: string; at: string | null; until: string | null } | null;
+	/** Changes on every edit; send it back so a screen that is out of date is refused */
+	rev: number;
+	/** The server's clock */
+	now: string;
+}
+
 export interface HomeBanner {
 	id: string;
 	imageUrl: string;

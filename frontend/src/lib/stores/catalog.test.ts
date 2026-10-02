@@ -26,8 +26,11 @@ describe('merchant catalogue', () => {
 		await catalog.loadPartnerStore(shop.id);
 		expect(catalog.byId(shop.id)?.id).toBe(shop.id);
 		expect(catalog.stores).toEqual([]);
-		await catalog.setStoreOpen(shop.id, false);
-		expect(api.setMyStoreOpen).toHaveBeenCalledWith(false);
+		// The database answers with the new status, and that is what the store shows
+		vi.mocked(api.setMyStoreOpen).mockResolvedValue({ is_open: false, source: 'OVERRIDE', schedule: null, schedule_open: null, next_change: null, lock: null, override: null, rev: 1, now: new Date().toISOString() });
+		const status = await catalog.setStoreOpen(shop.id, false);
+		expect(api.setMyStoreOpen).toHaveBeenCalledWith(false, { hours: undefined, rev: undefined });
+		expect(status.is_open).toBe(false);
 		expect(catalog.partnerStore?.isOpen).toBe(false);
 	});
 

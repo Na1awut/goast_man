@@ -1,0 +1,18 @@
+[
+	{ "name": "every day 08-17: just before opening", "hours": { "enabled": true, "openTime": "08:00", "closeTime": "17:00" }, "at": "2026-10-02T00:59:00Z", "open": false, "next": "2026-10-02T01:00:00Z" },
+	{ "name": "every day 08-17: at opening", "hours": { "enabled": true, "openTime": "08:00", "closeTime": "17:00" }, "at": "2026-10-02T01:00:00Z", "open": true, "next": "2026-10-02T10:00:00Z" },
+	{ "name": "every day 08-17: at closing", "hours": { "enabled": true, "openTime": "08:00", "closeTime": "17:00" }, "at": "2026-10-02T10:00:00Z", "open": false, "next": "2026-10-03T01:00:00Z" },
+	{ "name": "weekdays: Friday evening waits for Monday", "hours": { "enabled": true, "openTime": "08:00", "closeTime": "17:00", "days": [1, 2, 3, 4, 5] }, "at": "2026-10-02T10:00:00Z", "open": false, "next": "2026-10-05T01:00:00Z" },
+	{ "name": "weekdays: Saturday noon", "hours": { "enabled": true, "openTime": "08:00", "closeTime": "17:00", "days": [1, 2, 3, 4, 5] }, "at": "2026-10-03T05:00:00Z", "open": false, "next": "2026-10-05T01:00:00Z" },
+	{ "name": "overnight 18-02: the tail of Friday on Saturday 01:00", "hours": { "enabled": true, "openTime": "18:00", "closeTime": "02:00" }, "at": "2026-10-02T18:00:00Z", "open": true, "next": "2026-10-02T19:00:00Z" },
+	{ "name": "overnight 18-02: Saturday 02:00 is closed", "hours": { "enabled": true, "openTime": "18:00", "closeTime": "02:00" }, "at": "2026-10-02T19:00:00Z", "open": false, "next": "2026-10-03T11:00:00Z" },
+	{ "name": "overnight 18-02: Friday 17:59", "hours": { "enabled": true, "openTime": "18:00", "closeTime": "02:00" }, "at": "2026-10-02T10:59:00Z", "open": false, "next": "2026-10-02T11:00:00Z" },
+	{ "name": "overnight Friday only: Saturday 01:00 is still Friday's session", "hours": { "enabled": true, "openTime": "18:00", "closeTime": "02:00", "days": [5] }, "at": "2026-10-02T18:00:00Z", "open": true, "next": "2026-10-02T19:00:00Z" },
+	{ "name": "overnight Friday only: Saturday evening is closed until next Friday", "hours": { "enabled": true, "openTime": "18:00", "closeTime": "02:00", "days": [5] }, "at": "2026-10-03T12:00:00Z", "open": false, "next": "2026-10-09T11:00:00Z" },
+	{ "name": "overnight Friday only: Sunday 01:00 has no session", "hours": { "enabled": true, "openTime": "18:00", "closeTime": "02:00", "days": [5] }, "at": "2026-10-03T18:00:00Z", "open": false, "next": "2026-10-09T11:00:00Z" },
+	{ "name": "closing at midnight", "hours": { "enabled": true, "openTime": "18:00", "closeTime": "00:00" }, "at": "2026-10-02T16:30:00Z", "open": true, "next": "2026-10-02T17:00:00Z" },
+	{ "name": "Sunday only", "hours": { "enabled": true, "openTime": "10:00", "closeTime": "12:00", "days": [0] }, "at": "2026-10-02T12:00:00Z", "open": false, "next": "2026-10-04T03:00:00Z" },
+	{ "name": "almost all day", "hours": { "enabled": true, "openTime": "00:00", "closeTime": "23:59" }, "at": "2026-10-02T05:00:00Z", "open": true, "next": "2026-10-02T16:59:00Z" },
+	{ "name": "schedule off means no schedule", "hours": { "enabled": false, "openTime": "08:00", "closeTime": "17:00" }, "at": "2026-10-02T20:00:00Z", "open": true, "next": null },
+	{ "name": "no hours at all", "hours": null, "at": "2026-10-02T20:00:00Z", "open": true, "next": null }
+]

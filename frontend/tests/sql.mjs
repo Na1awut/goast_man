@@ -2,6 +2,7 @@
 // stand-ins for Supabase's auth/storage schemas, then exercises the rules.
 import { PGlite } from '@electric-sql/pglite';
 import { readFileSync } from 'node:fs';
+const OPEN_CASES = JSON.parse(readFileSync(new URL('./open-hours-cases.json', import.meta.url), 'utf8'));
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('../../supabase', import.meta.url));
@@ -108,6 +109,7 @@ try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20261028000000_in_app_calls.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261029000000_security_review_fixes.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261030000000_signup_guard.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261031000000_store_open_control.sql`, 'utf8'));
 	// The suite signs up dozens of users in seconds; the limit gets its own test below
 	await db.exec(`update app_settings set value = '1000' where key = 'signup_limit_per_minute'`);
 	ok('profile-at-first-order migration applies cleanly', true);
@@ -660,7 +662,7 @@ await as(sam, async () => {
 await as(tina, async () => {
 	const log = await rpc(`admin_activity()`);
 	const actions = new Set(log.map((l) => l.action));
-	const expected = ['PAYMENT_CONFIRMED', 'OTP_UNLOCKED', 'ORDER_REQUEUED', 'ORDER_CANCELLED', 'REFUNDED', 'PAYOUT_PAID', 'STORE_CLOSED', 'ITEM_OFF', 'RIDER_ADDED', 'PROMO_OFF', 'PARTNER_INVITED', 'MEMBER_ADDED'];
+	const expected = ['PAYMENT_CONFIRMED', 'OTP_UNLOCKED', 'ORDER_REQUEUED', 'ORDER_CANCELLED', 'REFUNDED', 'PAYOUT_PAID', 'STORE_LOCKED', 'ITEM_OFF', 'RIDER_ADDED', 'PROMO_OFF', 'PARTNER_INVITED', 'MEMBER_ADDED'];
 	ok('activity log records the team actions', expected.every((a) => actions.has(a)), [...actions].join(','));
 	ok('activity log names who acted', log.find((l) => l.action === 'MEMBER_ADDED')?.by === 'ทีน่า');
 });
@@ -1506,6 +1508,137 @@ ok('the ownerless store stays ownerless', (await one(`select owner_id from store
 	await db.exec(signUp('burst4@mail.kmutt.ac.th', { email_verified: true }, { provider: 'google' }));
 	ok('a minute later sign-ups open again', Number((await one(`select count(*) n from profiles where email = 'burst4@mail.kmutt.ac.th'`)).n) === 1);
 	await db.exec(`update app_settings set value = '1000' where key = 'signup_limit_per_minute'`);
+}
+
+// ---------- Store open / closed (20261031) ----------
+{
+	// 1. The weekly schedule: the same cases the app's unit test runs (src/lib/operatingHours.test.ts)
+	for (const c of OPEN_CASES) {
+		const h = c.hours ? `'${JSON.stringify(c.hours)}'::jsonb` : 'null::jsonb';
+		const r = await one(`select store_schedule_open(${h}, '${c.at}') o, to_char(store_schedule_next(${h}, '${c.at}') at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') n`);
+		ok(`schedule: ${c.name}`, r.o === c.open && r.n === c.next, JSON.stringify(r));
+	}
+
+	// 2. What a screen may send
+	const bad = (label, hours) => expectError(label, `select store_hours_normalize('${JSON.stringify(hours)}'::jsonb)`, 'BAD_HOURS');
+	await bad('hours: opening = closing is refused', { enabled: true, openTime: '08:00', closeTime: '08:00' });
+	await bad('hours: 25:00 is not a time', { enabled: true, openTime: '25:00', closeTime: '08:00' });
+	await bad('hours: "8:00" without a leading zero is refused', { enabled: true, openTime: '8:00', closeTime: '17:00' });
+	await bad('hours: day 7 does not exist', { enabled: true, openTime: '08:00', closeTime: '17:00', days: [1, 7] });
+	await bad('hours: enabled with no days is refused', { enabled: true, openTime: '08:00', closeTime: '17:00', days: [] });
+	await bad('hours: "enabled" must be true or false', { enabled: 'yes', openTime: '08:00', closeTime: '17:00' });
+	ok('hours: all seven days are stored as "every day", sorted and unique',
+		JSON.stringify(await rpc(`store_hours_normalize('{"enabled":true,"openTime":"08:00","closeTime":"17:00","days":[6,5,4,3,2,1,0,0]}'::jsonb)`)) === JSON.stringify({ enabled: true, openTime: '08:00', closeTime: '17:00' }));
+
+	// 3. Both sides drive the same store: Panee (owner of kfc-05), Sam (STAFF), Tina (ADMIN)
+	const bkk = new Date(Date.now() + 7 * 3600_000);
+	const at = (mins) => new Date(bkk.getTime() + mins * 60_000).toISOString().slice(11, 16);
+	const inside = { enabled: true, openTime: at(-30), closeTime: at(30) };
+	const outside = { enabled: true, openTime: at(120), closeTime: at(180) };
+	const status = (who) => as(who, () => rpc(who === panee ? `partner_store_open_status()` : `admin_store_open_status('kfc-05')`));
+	const saveHours = (who, h, rev = 'null') => as(who, () => rpc(who === panee ? `partner_set_operating_hours('${JSON.stringify(h)}'::jsonb, ${rev})` : `admin_set_store_hours('kfc-05', '${JSON.stringify(h)}'::jsonb, ${rev})`));
+	const isOpen = async () => (await one(`select is_open from stores where id = 'kfc-05'`)).is_open;
+	const order = () => `select place_order_at('kfc-05', '[{"menu_item_id":"kfc-05-1","quantity":1}]'::jsonb, 'sit', 1, null, 'CASH', null)`;
+
+	let st = await status(panee);
+	ok('the owner starts with a hand-switched store that is open', st.is_open === true && st.source === 'OVERRIDE' && st.override.value === 'OPEN' && st.override.until === null, JSON.stringify(st));
+
+	st = await saveHours(panee, outside);
+	ok('the owner turns a schedule on outside the hours: the clock takes over and closes it', st.is_open === false && st.source === 'SCHEDULE' && st.override === null && st.schedule_open === false && !!st.next_change, JSON.stringify(st));
+	ok('the stored flag followed', (await isOpen()) === false);
+	await as(alice, () => expectError('and a buyer cannot order', order(), 'STORE_UNAVAILABLE'));
+
+	st = await as(panee, () => rpc(`partner_set_store_open(true)`));
+	const until = Date.parse(st.override?.until);
+	ok('opening outside the hours is allowed for 4 hours, then it ends', st.is_open === true && st.source === 'OVERRIDE' && until > Date.now() + 3.9 * 3600_000 && until < Date.now() + 4.1 * 3600_000, JSON.stringify(st.override));
+	const placed = await as(alice, async () => {
+		const o = await one(`${order()} as id`);
+		await db.exec(`select cancel_order('${o.id}')`);
+		return true;
+	});
+	ok('the buyer can order now', placed === true);
+
+	// The team locks it: the owner's page cannot undo that
+	st = await as(sam, () => rpc(`admin_set_store_open('kfc-05', false, 'ร้านไม่ตอบ โทรไม่ติด')`));
+	ok('the team closes it: locked, with the reason', st.is_open === false && st.source === 'TEAM_LOCK' && st.lock.reason === 'ร้านไม่ตอบ โทรไม่ติด' && st.lock.by === 'แซม', JSON.stringify(st.lock));
+	await as(panee, () => expectError('the owner cannot reopen a store the team locked', `select partner_set_store_open(true)`, 'STORE_LOCKED'));
+	st = await status(panee);
+	ok('the owner is told why, but not by whom', st.lock?.reason === 'ร้านไม่ตอบ โทรไม่ติด' && !('by' in st.lock), JSON.stringify(st.lock));
+	ok('and the schedule keeps working underneath', st.schedule_open === false);
+	st = await saveHours(panee, inside);
+	ok('the owner may still edit the schedule while locked, and stays closed', st.is_open === false && st.source === 'TEAM_LOCK');
+	await as(alice, () => expectError('a locked store takes no orders', order(), 'STORE_UNAVAILABLE'));
+
+	st = await as(sam, () => rpc(`admin_release_store_open('kfc-05', true)`));
+	ok('the team releases the lock and the store follows its schedule (now inside the hours)', st.is_open === true && st.source === 'SCHEDULE' && st.lock === null && st.override === null, JSON.stringify(st));
+
+	// Inside the hours the owner closes by hand: until the schedule next changes, then back to normal
+	st = await as(panee, () => rpc(`partner_set_store_open(false)`));
+	const closeAt = Date.parse(st.override?.until);
+	ok('the owner closes during the hours: closed until the closing time', st.is_open === false && st.source === 'OVERRIDE' && closeAt > Date.now() + 25 * 60_000 && closeAt < Date.now() + 35 * 60_000, JSON.stringify(st.override));
+	ok('tomorrow the same override no longer applies (the schedule opens it again)',
+		(await one(`select store_open_calc('kfc-05', false, null, '${JSON.stringify(inside)}'::jsonb, false, now() + interval '1 day') as o`)).o === true);
+	st = await as(panee, () => rpc(`partner_follow_schedule()`));
+	ok('"follow the schedule" drops the hand switch', st.is_open === true && st.source === 'SCHEDULE' && st.override === null);
+
+	// Two screens at once: a stale rev is refused, not applied over the top
+	const stale = (await status(panee)).rev;
+	await as(sam, () => rpc(`admin_set_store_hours('kfc-05', '${JSON.stringify(inside)}'::jsonb, ${stale})`));
+	await as(panee, () => expectError('a screen that missed the team\'s change is told so', `select partner_set_store_open(false, null, ${stale})`, 'STORE_STATE_CHANGED'));
+	await as(sam, () => expectError('the team too', `select admin_set_store_hours('kfc-05', '${JSON.stringify(outside)}'::jsonb, ${stale})`, 'STORE_STATE_CHANGED'));
+
+	// Turning the schedule off keeps the store exactly as it is at that moment
+	st = await saveHours(panee, { ...inside, enabled: false });
+	ok('switching the schedule off freezes the current state', st.is_open === true && st.source === 'OVERRIDE' && st.override.until === null && st.schedule.enabled === false, JSON.stringify(st));
+	ok('and it does not flip a day later', (await one(`select store_open_calc('kfc-05', false, null, null, true, now() + interval '3 days') as o`)).o === true);
+	await as(sam, () => expectError('the team cannot set impossible hours', `select admin_set_store_hours('kfc-05', '{"enabled":true,"openTime":"09:00","closeTime":"09:00"}'::jsonb)`, 'BAD_HOURS'));
+
+	// The log shows who did what
+	await as(tina, async () => {
+		const log = (await rpc(`admin_activity()`)).filter((l) => l.target_id === 'kfc-05');
+		const has = (action, by) => log.some((l) => l.action === action && (by === undefined || l.detail?.by === by));
+		ok('the activity log records the lock, the release, the hours and the hand switches',
+			has('STORE_LOCKED') && has('STORE_UNLOCKED') && has('STORE_OPERATING_HOURS_UPDATED', 'team') && has('STORE_OPERATING_HOURS_UPDATED', 'partner') && has('STORE_OPENED', 'partner') && has('STORE_CLOSED', 'partner') && has('STORE_FOLLOW_SCHEDULE'));
+	});
+
+	// Locks that run out, and a stored flag that fell behind
+	await as(sam, () => rpc(`admin_set_store_open('kfc-05', false, 'พักร้าน', now() + interval '1 hour')`));
+	ok('a lock with an end time closes the store', (await isOpen()) === false);
+	await db.exec(`update store_open_control set lock_until = now() - interval '1 minute' where store_id = 'kfc-05'`);
+	ok('once it has run out the store is open again even before the clock job runs (orders ask fresh)', (await one(`select store_open_now('kfc-05') as o`)).o === true);
+	ok('the clock job brings the stored flag and the record up to date', Number((await one(`select refresh_all_store_open() as n`)).n) >= 1 && (await isOpen()) === true && (await one(`select locked from store_open_control where store_id = 'kfc-05'`)).locked === false);
+	await as(sam, () => expectError('a lock must end in the future', `select admin_set_store_open('kfc-05', false, 'x', now() - interval '1 hour')`, 'BAD_UNTIL'));
+	await as(sam, () => rpc(`admin_release_store_open('kfc-05')`));
+
+	// A stale stored flag never lets an order through
+	await db.exec(`update store_open_control set locked = true, lock_until = null where store_id = 'kfc-05'`);
+	ok('(the flag still says open)', (await isOpen()) === true);
+	await as(alice, () => expectError('an order checks the decision itself, not the stored flag', order(), 'STORE_UNAVAILABLE'));
+	await db.exec(`update store_open_control set locked = false where store_id = 'kfc-05'; select refresh_store_open('kfc-05')`);
+
+	// Hand-run SQL on is_open is kept, as a team override, not silently undone
+	await db.exec(`update stores set is_open = false where id = 'kfc-05'`);
+	let row = await one(`select s.is_open, c.override, c.override_by_name from stores s join store_open_control c on c.store_id = s.id where s.id = 'kfc-05'`);
+	ok('UPDATE stores SET is_open = false sticks, recorded as a team override', row.is_open === false && row.override === 'CLOSED' && row.override_by_name === 'SQL', JSON.stringify(row));
+	await db.exec(`update stores set is_open = true where id = 'kfc-05'`);
+	ok('and true opens it again', (await isOpen()) === true);
+
+	// Who may do what
+	await as(alice, () => expectError('a buyer cannot use the team controls', `select admin_set_store_open('kfc-05', false)`, 'TEAM_ONLY'));
+	await as(alice, () => expectError('nor the owner ones', `select partner_set_store_open(true)`, 'PARTNER_ONLY'));
+	await as(sam, () => expectError('a team member is not the owner', `select partner_follow_schedule()`, 'PARTNER_ONLY'));
+	await db.exec(`set role anon;`);
+	await expectError('a signed-out visitor cannot read the open state of a store', `select store_open_status('kfc-05')`, 'permission denied');
+	await expectError('nor change it', `select admin_set_store_open('kfc-05', false)`, 'permission denied');
+	await db.exec(`reset role;`);
+	await as(panee, () => expectError('the owner cannot read the team list', `select admin_store_open_states()`, 'TEAM_ONLY'));
+	await as(sam, async () => {
+		const states = await rpc(`admin_store_open_states()`);
+		ok('the team list covers every live store with its source', states.length >= 12 && states.every((x) => x.source) && states.find((x) => x.store_id === 'kfc-05').source === 'OVERRIDE');
+	});
+	await as(panee, () => expectError('a schedule for a store that has none cannot be "followed"', `select partner_follow_schedule()`, 'NO_SCHEDULE'));
+	const hid = (await one(`select id from stores where hidden and deleted_at is null limit 1`))?.id;
+	await as(tina, () => expectError('opening a hidden store is refused', `select admin_set_store_open('${hid}', true)`, 'STORE_HIDDEN'));
 }
 
 // Anonymous visitors can browse the catalogue

@@ -4,12 +4,14 @@
 import { DROPOFF_POINTS } from '$lib/data/locations';
 import { STORE_CATALOGUE } from '$lib/data/stores';
 import { catalog } from '$lib/stores/catalog.svelte';
-import type { HomeBanner, Store } from '$lib/types';
+import * as demoOpen from '$lib/storeOpenDemo';
+import type { HomeBanner, OperatingHours, Store } from '$lib/types';
 import type { AdminApi, OrderQuery } from './api';
 import { attentionOf, owedToRider, stageOf } from './rules';
 import { bangkokToday } from './format';
 import type {
 	ChatLogLine,
+	StoreOpenState,
 	AdminMenuItem,
 	AdminPromo,
 	AdminPromoCode,
@@ -330,6 +332,20 @@ export function createDemoApi(): DemoApi {
 		attention: attentionOf(ruleView(o), now())
 	});
 	const find = (id: string) => orders.find((o) => o.id === id);
+
+	/** The catalogue's copy of a store, with the console's "hidden" switch applied (the open rules need it) */
+	const openStore = (id: string): Store => {
+		const live = catalog.byId(id);
+		const row = stores.find((x) => x.id === id);
+		if (!live || !row) throw new Error('STORE_NOT_FOUND');
+		live.hidden = row.hidden;
+		return live;
+	};
+	/** After an open/closed change: the console list and the catalogue agree */
+	const settle = (id: string, live: Store) => {
+		const row = stores.find((x) => x.id === id);
+		if (row) row.is_open = live.isOpen;
+	};
 	const isToday = (iso: string, day: string) => new Date(iso).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }) === day;
 	const liveOf = (r: DemoPerson) => orders.filter((o) => o.rider?.id === r.id && (o.status === 'ACCEPTED' || o.status === 'DELIVERING'));
 	const due = () =>
@@ -575,14 +591,46 @@ export function createDemoApi(): DemoApi {
 				})
 			),
 		storeMenu: (id) => wait(menu.get(id) ?? []),
-		async setStoreOpen(id, open) {
-			const s = stores.find((x) => x.id === id);
-			if (!s) return fail('STORE_NOT_FOUND');
-			s.is_open = open;
-			const live = catalog.byId(id);
-			if (live) live.isOpen = open;
-			record(open ? 'STORE_OPENED' : 'STORE_CLOSED', 'store', s.id, s.name);
-			return wait(undefined);
+		// ---- Open / closed: the same rules as the database (see lib/storeOpenDemo.ts) ----
+		storeOpenStates() {
+			const rows: StoreOpenState[] = stores.map((s) => {
+				const st = demoOpen.statusOf(openStore(s.id), true);
+				s.is_open = st.is_open;
+				return {
+					store_id: s.id,
+					source: st.source,
+					lock_reason: st.lock?.reason ?? null,
+					lock_until: st.lock?.until ?? null,
+					override: st.override?.value ?? null,
+					override_by: st.override?.by ?? null,
+					override_until: st.override?.until ?? null,
+					schedule_enabled: !!st.schedule?.enabled,
+					next_change: st.next_change
+				};
+			});
+			return wait(rows);
+		},
+		storeOpenStatus: (id) => wait(demoOpen.statusOf(openStore(id), true)),
+		async setStoreOpen(id, open, o = {}) {
+			const live = openStore(id);
+			const status = demoOpen.teamSetOpen(live, open, me.nickname, { reason: o.reason, until: o.until, extraHours: o.hours, rev: o.rev });
+			settle(id, live);
+			record(open ? 'STORE_OPENED' : 'STORE_LOCKED', 'store', id, live.name, open ? { by: 'team' } : { reason: o.reason ?? '', until: o.until ?? null });
+			return wait(status);
+		},
+		async releaseStoreOpen(id, followSchedule, rev) {
+			const live = openStore(id);
+			const status = demoOpen.teamRelease(live, followSchedule, rev);
+			settle(id, live);
+			record('STORE_UNLOCKED', 'store', id, live.name, { follow_schedule: followSchedule });
+			return wait(status);
+		},
+		async setStoreHours(id, hours: OperatingHours, rev) {
+			const live = openStore(id);
+			const status = demoOpen.saveHours(live, hours, 'TEAM', me.nickname, rev);
+			settle(id, live);
+			record('STORE_OPERATING_HOURS_UPDATED', 'store', id, live.name, { hours: live.operatingHours, by: 'team' });
+			return wait(status);
 		},
 		async setItemAvailable(itemId, available) {
 			const owner = catalog.stores.find((st) => st.menuItems.some((m) => m.id === itemId));

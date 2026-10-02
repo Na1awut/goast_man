@@ -2,7 +2,19 @@
 // partner's (menu, details, storefront), sent through the admin_* functions.
 import type { Store } from '$lib/types';
 import type { StoreOps } from '$lib/storeOps';
+import type { OpenApi } from '$lib/storeOpenApi';
 import type { AdminApi } from './api';
+
+/** The team's open/closed controls for one store (admin_* functions): closing is a lock the owner cannot undo */
+export function teamOpenApi(api: AdminApi, storeId: string): OpenApi {
+	return {
+		status: () => api.storeOpenStatus(storeId),
+		setOpen: (open, o) => api.setStoreOpen(storeId, open, o),
+		followSchedule: (rev) => api.releaseStoreOpen(storeId, true, rev),
+		release: (rev) => api.releaseStoreOpen(storeId, false, rev),
+		saveHours: (hours, rev) => api.setStoreHours(storeId, hours, rev)
+	};
+}
 
 /** `current` is the store as loaded; `reload` fetches it again after each change */
 export function teamOps(api: AdminApi, current: () => Store | null, reload: () => Promise<void>): StoreOps {

@@ -2,12 +2,13 @@
 	import { assets } from '$app/paths';
 	import Icon from '$lib/components/Icon.svelte';
 	import PartnerMenu from '$lib/components/partner/PartnerMenu.svelte';
+	import StoreOpenPanel from '$lib/components/StoreOpenPanel.svelte';
 	import StoreInfoForm from '$lib/components/partner/StoreInfoForm.svelte';
 	import StorefrontForm from '$lib/components/partner/StorefrontForm.svelte';
 	import type { Store } from '$lib/types';
 	import { adminError } from '../api';
 	import { consoleState as c } from '../console.svelte';
-	import { teamOps } from '../storeOps';
+	import { teamOpenApi, teamOps } from '../storeOps';
 	import type { AdminStore } from '../types';
 	import Empty from '../ui/Empty.svelte';
 	import Modal from '../ui/Modal.svelte';
@@ -172,10 +173,6 @@
 					<Toggle checked={!(meta?.hidden ?? false)} label="แสดงร้านในแอป" onchange={(v) => c.act(async () => { await c.api!.setStoreHidden(storeId, !v); await load(); }, v ? `แสดง ${store!.name} ในแอปแล้ว` : `ซ่อน ${store!.name} จากแอปแล้ว`)} />
 					<span class="text-[11px] text-slate-500">{meta?.hidden ? 'ซ่อนจากแอป' : 'แสดงในแอป'}</span>
 				</div>
-				<div class="flex flex-col items-center gap-1">
-					<Toggle checked={store.isOpen} label="เปิดรับออเดอร์" onchange={(v) => c.act(async () => { await c.api!.setStoreOpen(storeId, v); await load(); }, v ? `เปิดรับออเดอร์ ${store!.name} แล้ว` : `ปิดรับออเดอร์ ${store!.name} แล้ว`)} />
-					<span class="text-[11px] text-slate-500">{store.isOpen ? 'รับออเดอร์' : 'ปิดรับ'}</span>
-				</div>
 			</div>
 			{#if meta?.hidden && !store.menuItems.length}
 				<p class="w-full rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">ยังไม่มีเมนู · ใส่เมนูแล้วค่อยกด "แสดงในแอป" (รูปใส่ทีหลังได้)</p>
@@ -184,6 +181,13 @@
 				<p class="w-full rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">ยังไม่มีรูปร้าน ลูกค้าจะเห็นนาฬิกาทราย "กำลังดำเนินการ" แทนรูป · ใส่รูปเมื่อพร้อม</p>
 			{/if}
 		</section>
+
+		<!-- Open / closed: the owner's switch, the opening hours and the team's lock all end up here -->
+		<div class="mx-auto max-w-2xl">
+			{#key meta?.hidden}
+				<StoreOpenPanel who="team" api={teamOpenApi(c.api!, storeId)} storeName={store.name} explain={adminError} />
+			{/key}
+		</div>
 
 		<Tabs label="แก้ไขร้าน" value={tab} onchange={(t) => (tab = t)} tabs={[{ id: 'info', label: 'ข้อมูลและหน้าร้าน' }, { id: 'menu', label: 'เมนู', count: store.menuItems.length }]} />
 
