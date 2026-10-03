@@ -1,5 +1,7 @@
 <script lang="ts">
+	import FaqSection from '$lib/components/FaqSection.svelte';
 	import InfoShell from '$lib/components/InfoShell.svelte';
+	import { FAQ_PARTNER } from '$lib/seoContent';
 </script>
 
 <InfoShell
@@ -25,6 +27,8 @@
 		<h2 id="join" class="text-xl font-bold">เข้าร่วมยังไง</h2>
 		<p class="mt-3 text-slate-700">ติดต่อทีม Goose Man ผ่าน Facebook: GooseRider หรือ Instagram: gooserider.co ทีมงานจะเพิ่มร้านของคุณและส่งคำเชิญไปที่อีเมลของร้าน จากนั้นเข้าสู่ระบบที่หน้าแรกด้วยปุ่ม "เข้าสู่ระบบร้านค้า" เพื่อจัดการร้านได้ทันที</p>
 	</section>
+
+	<FaqSection items={FAQ_PARTNER} heading="คำถามสำหรับร้านค้า" />
 
 	<p class="rounded-2xl bg-brand-50 p-5 text-center">
 		<a href="/" class="inline-flex min-h-12 items-center rounded-full bg-brand px-6 font-semibold text-white hover:bg-brand-600">เข้าสู่ระบบร้านค้า</a>

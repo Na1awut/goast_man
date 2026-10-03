@@ -1,6 +1,8 @@
 <script lang="ts">
+	import FaqSection from '$lib/components/FaqSection.svelte';
 	import InfoShell from '$lib/components/InfoShell.svelte';
 	import { DROPOFF_POINTS, PICKUP_HUBS } from '$lib/data/locations';
+	import { FAQ_AREAS } from '$lib/seoContent';
 
 	const canteens = PICKUP_HUBS.filter((h) => h.zone === 'CANTEEN');
 	const others = PICKUP_HUBS.filter((h) => h.zone !== 'CANTEEN');
@@ -38,6 +40,8 @@
 		</ul>
 		<p class="mt-3 text-sm text-slate-500">ร้านที่เปิดให้สั่งและเวลาเปิด-ปิดดูได้ในแอป แต่ละร้านตั้งเวลาเองและอาจเปลี่ยนได้</p>
 	</section>
+
+	<FaqSection items={FAQ_AREAS} heading="คำถามเกี่ยวกับจุดส่งและจุดรับ" />
 
 	<section aria-labelledby="address">
 		<h2 id="address" class="text-xl font-bold">ที่ตั้งมหาวิทยาลัย</h2>

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { FAQ } from './seoContent';
+import { FAQ, FAQ_AREAS, FAQ_PARTNER, FAQ_RIDER } from './seoContent';
 import { bodyFallback, headTags, PAGES, SITE, seoFor, sitemapXml } from './seo';
 
 describe('search metadata', () => {
@@ -76,4 +76,29 @@ describe('search metadata', () => {
 			expect(f.a.length).toBeGreaterThan(30);
 		}
 	});
+
+	const types = (path: string) => {
+		const html = headTags(seoFor(path));
+		const graph = JSON.parse(/<script type="application\/ld\+json">(.*)<\/script>/.exec(html)![1])['@graph'] as { '@type': string }[];
+		return graph.map((n) => n['@type']);
+	};
+
+	it('each page carries the structured data AI systems read for what it is', () => {
+		expect(types('/')).toEqual(expect.arrayContaining(['WebSite', 'Organization', 'Service', 'WebApplication']));
+		expect(types('/about/')).toEqual(expect.arrayContaining(['FAQPage', 'HowTo', 'BreadcrumbList', 'WebPage']));
+		expect(types('/areas/')).toEqual(expect.arrayContaining(['ItemList', 'FAQPage']));
+		expect(types('/rider/')).toContain('FAQPage');
+		expect(types('/partner/')).toContain('FAQPage');
+	});
+
+	it('FAQ answers are short and quotable, and every question is asked once', () => {
+		const all = [...FAQ, ...FAQ_AREAS, ...FAQ_RIDER, ...FAQ_PARTNER];
+		expect(new Set(all.map((f) => f.q)).size).toBe(all.length);
+		for (const f of all) {
+			expect(f.q.length).toBeLessThanOrEqual(80);
+			expect(f.a.length).toBeLessThanOrEqual(420);
+		}
+		expect(FAQ.length).toBeGreaterThanOrEqual(18);
+	});
 });
+

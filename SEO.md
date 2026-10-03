@@ -66,3 +66,17 @@
 3. **ทดสอบเอง**: ทุก 2 สัปดาห์ ถามประโยคแบบที่นักศึกษาถาม เช่น "แอปส่งอาหารใน มจธ. มีอะไรบ้าง" ใน ChatGPT, Gemini, Perplexity แล้วจดว่าเราโผล่หรือยัง
 4. ไม่ต้องหวังเร็ว: เว็บใหม่และไม่มีใครพูดถึง AI ยังไม่แนะนำแน่ๆ คาดว่าต้องใช้หลายสัปดาห์ถึงหลายเดือน
 
+### Schema Markup (JSON-LD) และ FAQ สำหรับ AI
+
+| หน้า | Schema ที่ใส่ |
+|---|---|
+| `/` | WebSite, Organization (มี slogan, knowsAbout, areaServed), Service, WebApplication |
+| `/about/` | FAQPage (19 คำถาม), HowTo (4 ขั้นตอน), WebPage (dateModified), BreadcrumbList |
+| `/areas/` | ItemList ของจุดส่ง 8 แห่งและร้านที่หิ้วได้ 7 แห่ง (เป็น Place ใน มจธ.), FAQPage (5), WebPage, BreadcrumbList |
+| `/rider/` | FAQPage (6), WebPage, BreadcrumbList |
+| `/partner/` | FAQPage (4), WebPage, BreadcrumbList |
+
+กติกาของ FAQ: คำถามเป็นประโยคที่คนพิมพ์ถาม AI จริง คำตอบสั้น ขึ้นต้นด้วยคำตอบเลย (ไม่เกิน 420 ตัวอักษร) และ **ทุกข้อใน JSON-LD ต้องเห็นอยู่ในหน้าด้วย** (สร้างจากข้อมูลชุดเดียวกัน `seoContent.ts` ผ่าน `FaqSection.svelte`) ห้ามเขียนคำตอบที่แอปทำไม่ได้จริง ไม่ใส่ข้อมูลที่ไม่รู้ เช่น ค่าธรรมเนียมร้านค้า ระยะเวลาส่ง ระยะเวลาโอนเงินคนหิ้ว
+
+ที่ยังไม่ได้ใส่: `sameAs` (ลิงก์ Facebook/Instagram ของทีม) ใส่ URL เต็มใน `SOCIAL_URLS` ที่ `seo.ts` เมื่อรู้ จะช่วยให้ Google/AI ผูกเว็บกับเพจเป็นแบรนด์เดียวกัน และไม่ได้ใส่คะแนนรีวิว (`aggregateRating`) เพราะยังไม่มีรีวิวจริง
+

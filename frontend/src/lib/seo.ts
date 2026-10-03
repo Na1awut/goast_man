@@ -5,7 +5,8 @@
 // tags into the static HTML at build time (prerender), for the home page and for
 // the four information pages under routes/(info). Everything stated here is a
 // fact from the app or from kmutt.ac.th: no invented ratings, prices or claims.
-import { FAQ } from '$lib/seoContent';
+import { DROPOFF_POINTS, PICKUP_HUBS } from '$lib/data/locations';
+import { FAQ, FAQ_AREAS, FAQ_PARTNER, FAQ_RIDER, STEPS } from '$lib/seoContent';
 
 export const SITE = 'https://goose-man.tech';
 /** When the public copy was last checked against the app (shown on the pages and in JSON-LD): update it when you edit the copy */
@@ -28,6 +29,9 @@ const KMUTT = {
 	}
 };
 
+/** The team's Facebook / Instagram page URLs, once known: they tell search and AI systems these pages are the same entity (sameAs). */
+export const SOCIAL_URLS: string[] = [];
+
 const ORGANIZATION = {
 	'@type': 'Organization',
 	'@id': `${SITE}/#org`,
@@ -35,7 +39,25 @@ const ORGANIZATION = {
 	alternateName: ['Goose Man', 'ห่านบางมด'],
 	url: `${SITE}/`,
 	logo: `${SITE}/icon-512.png`,
-	description: 'แพลตฟอร์มฝากหิ้วอาหารและของในรั้ว มจธ. บางมด โดยนักศึกษา เพื่อนักศึกษา'
+	slogan: 'ขี้เกียจเดินฝ่าแดด? ให้ห่านบางมดหิ้วให้',
+	description: 'แพลตฟอร์มฝากหิ้วอาหารและของในรั้ว มจธ. บางมด โดยนักศึกษา เพื่อนักศึกษา',
+	knowsAbout: ['ฝากหิ้วอาหาร', 'ส่งอาหารในมหาวิทยาลัย', 'มจธ. บางมด', 'KMUTT', "โรงอาหาร KFC (King Mongkut's Food Center)"],
+	...(SOCIAL_URLS.length ? { sameAs: SOCIAL_URLS } : {})
+};
+
+const APP = {
+	'@type': 'WebApplication',
+	'@id': `${SITE}/#app`,
+	name: 'Goose Man (ห่านบางมด)',
+	url: `${SITE}/`,
+	applicationCategory: 'LifestyleApplication',
+	operatingSystem: 'Web browser (เพิ่มลงหน้าจอโฮมได้)',
+	inLanguage: 'th',
+	isAccessibleForFree: true,
+	offers: { '@type': 'Offer', price: '0', priceCurrency: 'THB', description: 'ใช้แอปฟรี ค่าหิ้วเริ่มต้น 15 บาทต่อออเดอร์' },
+	audience: { '@type': 'Audience', audienceType: 'นักศึกษาและบุคลากร มจธ.' },
+	provider: { '@id': `${SITE}/#org` },
+	featureList: ['สั่งอาหารจากโรงอาหารและร้านรอบมอ', 'ส่งถึงหน้าตึกเรียนและหอพักใน มจธ.', 'ชำระด้วย PromptPay', 'รับของด้วยรหัส OTP', 'แชทและโทรกับคนหิ้วในแอป', 'แจ้งเตือนแม้ปิดแอป']
 };
 
 const WEBSITE = { '@type': 'WebSite', '@id': `${SITE}/#website`, name: BRAND, url: `${SITE}/`, inLanguage: 'th', publisher: { '@id': `${SITE}/#org` } };
@@ -51,6 +73,11 @@ const SERVICE = {
 };
 
 const webPage = (path: string) => ({ '@type': 'WebPage', '@id': `${SITE}${path}#page`, url: `${SITE}${path}`, inLanguage: 'th', isPartOf: { '@id': `${SITE}/#website` }, about: { '@id': `${SITE}/#org` }, dateModified: UPDATED });
+
+const faqLd = (items: { q: string; a: string }[]) => ({
+	'@type': 'FAQPage',
+	mainEntity: items.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } }))
+});
 
 const crumbs = (...items: { name: string; path: string }[]) => ({
 	'@type': 'BreadcrumbList',
@@ -90,7 +117,7 @@ export const PAGES: PageSeo[] = [
 			'ห่านบางมด',
 			'Goose Man'
 		],
-		ld: [WEBSITE, ORGANIZATION, SERVICE],
+		ld: [WEBSITE, ORGANIZATION, SERVICE, APP],
 		priority: 1
 	},
 	{
@@ -102,7 +129,13 @@ export const PAGES: PageSeo[] = [
 		ld: [
 			crumbs({ name: 'ใช้งานยังไง', path: '/about/' }),
 			webPage('/about/'),
-			{ '@type': 'FAQPage', mainEntity: FAQ.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }
+			faqLd(FAQ),
+			{
+				'@type': 'HowTo',
+				name: 'วิธีฝากหิ้วอาหารใน มจธ. ด้วย Goose Man',
+				inLanguage: 'th',
+				step: STEPS.map((s, i) => ({ '@type': 'HowToStep', position: i + 1, name: s.title, text: s.body }))
+			}
 		],
 		priority: 0.9
 	},
@@ -113,7 +146,18 @@ export const PAGES: PageSeo[] = [
 			'รับของได้ที่ไหนใน มจธ. บางมด: จุดส่งหน้าตึก LX, CB2, CB3, SIT, ตึกวิศวะ 12 ชั้น, หอสมุด, หอพักชาย S5, หอพักหญิง S6 และร้านที่หิ้วได้ จากโรงอาหาร KFC, โรงอาหารหอพัก, CB1, Green Canteen 190 ปี, เซเว่นหน้าหอใน',
 		keywords: ['โรงอาหาร KFC มจธ.', 'King Mongkut\'s Food Center', 'หอพักชาย S5', 'หอพักหญิง S6', 'ตึก LX มจธ.', 'CB3 มจธ.', 'Green Canteen มจธ.', 'เซเว่นหน้าหอใน มจธ.', 'ซอยประชาอุทิศ 45'],
 		ld: [crumbs({ name: 'จุดส่งและจุดรับใน มจธ.', path: '/areas/' }),
-			webPage('/areas/')],
+			webPage('/areas/'),
+			{
+				'@type': 'ItemList',
+				name: 'จุดส่งของใน มจธ. บางมด',
+				itemListElement: DROPOFF_POINTS.map((p, i) => ({ '@type': 'ListItem', position: i + 1, item: { '@type': 'Place', name: p.name, description: p.note, containedInPlace: KMUTT } }))
+			},
+			{
+				'@type': 'ItemList',
+				name: 'ร้านและโรงอาหารที่หิ้วได้',
+				itemListElement: PICKUP_HUBS.map((h, i) => ({ '@type': 'ListItem', position: i + 1, item: { '@type': 'Place', name: h.name } }))
+			},
+			faqLd(FAQ_AREAS)],
 		priority: 0.8
 	},
 	{
@@ -123,7 +167,8 @@ export const PAGES: PageSeo[] = [
 			'นักศึกษา มจธ. หิ้วอาหารให้เพื่อนในมอ ได้ค่าหิ้วเริ่มต้นงานละ 15 บาท + ทิป ทีมโอนเข้า PromptPay หลังส่งสำเร็จ เลือกวันและเวลาว่างเองได้ ถือได้ครั้งละไม่เกิน 4 งาน',
 		keywords: ['งานพิเศษ นักศึกษา มจธ.', 'หารายได้พิเศษ มจธ.', 'สมัครคนหิ้ว', 'รับจ้างหิ้วอาหาร มจธ.', 'งานพาร์ทไทม์ บางมด'],
 		ld: [crumbs({ name: 'สมัครเป็นคนหิ้ว', path: '/rider/' }),
-			webPage('/rider/')],
+			webPage('/rider/'),
+			faqLd(FAQ_RIDER)],
 		priority: 0.7
 	},
 	{
@@ -133,7 +178,8 @@ export const PAGES: PageSeo[] = [
 			'ร้านค้าใน มจธ. และรอบมหาวิทยาลัย: รับออเดอร์จากนักศึกษาผ่านแอป จัดการเมนู ราคา รูป ตั้งเวลาเปิด-ปิดร้านอัตโนมัติ และดูยอดขาย โดยไม่ต้องมีหน้าร้านออนไลน์เอง',
 		keywords: ['ลงร้านขายอาหาร มจธ.', 'ร้านค้า มจธ.', 'ร้านอาหารรอบ มจธ.', 'ระบบรับออเดอร์ร้านอาหาร', 'แอปส่งอาหาร ร้านค้า'],
 		ld: [crumbs({ name: 'สำหรับร้านค้า', path: '/partner/' }),
-			webPage('/partner/')],
+			webPage('/partner/'),
+			faqLd(FAQ_PARTNER)],
 		priority: 0.6
 	}
 ];

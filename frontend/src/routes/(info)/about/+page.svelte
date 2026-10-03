@@ -1,4 +1,5 @@
 <script lang="ts">
+	import FaqSection from '$lib/components/FaqSection.svelte';
 	import InfoShell from '$lib/components/InfoShell.svelte';
 	import { FAQ, STEPS } from '$lib/seoContent';
 </script>
@@ -42,17 +43,7 @@
 		<p class="mt-3 text-slate-700">ส่งถึงอาคารเรียน LX, CB2, CB3, SIT, ตึกวิศวะ 12 ชั้น, หอสมุด มจธ. และหอพักชาย S5 กับหอพักหญิง S6 หิ้วจากโรงอาหาร KFC (King Mongkut's Food Center) โรงอาหารหอพัก CB1 Green Canteen และร้านรอบมอ ดู<a href="/areas/" class="font-medium text-brand underline underline-offset-2">รายละเอียดจุดส่งและจุดรับ</a></p>
 	</section>
 
-	<section aria-labelledby="faq">
-		<h2 id="faq" class="text-xl font-bold">คำถามที่พบบ่อย</h2>
-		<dl class="mt-4 divide-y divide-slate-100 rounded-2xl border border-slate-100 bg-white">
-			{#each FAQ as f (f.q)}
-				<div class="px-4 py-3.5">
-					<dt class="font-semibold">{f.q}</dt>
-					<dd class="mt-1 text-slate-600">{f.a}</dd>
-				</div>
-			{/each}
-		</dl>
-	</section>
+	<FaqSection items={FAQ} />
 
 	<p class="rounded-2xl bg-brand-50 p-5 text-center">
 		<a href="/" class="inline-flex min-h-12 items-center rounded-full bg-brand px-6 font-semibold text-white hover:bg-brand-600">เปิดแอป แล้วฝากหิ้วเลย</a>

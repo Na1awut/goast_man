@@ -1,5 +1,7 @@
 <script lang="ts">
+	import FaqSection from '$lib/components/FaqSection.svelte';
 	import InfoShell from '$lib/components/InfoShell.svelte';
+	import { FAQ_RIDER } from '$lib/seoContent';
 </script>
 
 <InfoShell
@@ -30,6 +32,8 @@
 			<li>เปิดโหมดคนหิ้ว กดพร้อมรับงาน แล้วเริ่มหิ้วได้เลย</li>
 		</ol>
 	</section>
+
+	<FaqSection items={FAQ_RIDER} heading="คำถามเกี่ยวกับการเป็นคนหิ้ว" />
 
 	<p class="rounded-2xl bg-brand-50 p-5 text-center">
 		<a href="/" class="inline-flex min-h-12 items-center rounded-full bg-brand px-6 font-semibold text-white hover:bg-brand-600">เปิดแอป แล้วสมัครเป็นคนหิ้ว</a>
