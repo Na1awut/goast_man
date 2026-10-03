@@ -7,6 +7,7 @@ import * as demoOpen from '$lib/storeOpenDemo';
 import { friendlyError, isLive } from '$lib/supabase';
 import { uid } from '$lib/utils';
 import { toast } from './toast.svelte';
+import { t } from '$lib/i18n';
 
 export interface StorefrontDraft {
 	tagline: string;
@@ -124,7 +125,7 @@ class CatalogStore {
 			if (request !== this.#partnerRequest) return;
 			this.partnerStore = null;
 			this.partnerError = err instanceof Error && err.message === 'STORE_NOT_FOUND'
-				? 'ไม่พบร้านที่เชื่อมกับบัญชีนี้ ติดต่อทีม Goose Man เพื่อตรวจสอบร้าน'
+				? t('ไม่พบร้านที่เชื่อมกับบัญชีนี้ ติดต่อทีม Goose Man เพื่อตรวจสอบร้าน')
 				: friendlyError(err);
 		} finally {
 			if (request === this.#partnerRequest) this.partnerLoading = false;
@@ -192,7 +193,7 @@ class CatalogStore {
 	async setStoreOpen(storeId: string, open: boolean, opts: { hours?: number; rev?: number; name?: string } = {}): Promise<StoreOpenStatus> {
 		if (isLive) return this.#adopt(storeId, await api.setMyStoreOpen(open, { hours: opts.hours, rev: opts.rev }));
 		const store = this.#demoStore(storeId);
-		return this.#demoSaved(store, demoOpen.ownerSetOpen(store, open, opts.name ?? 'ร้านค้า', opts.hours, opts.rev));
+		return this.#demoSaved(store, demoOpen.ownerSetOpen(store, open, opts.name ?? t('ร้านค้า'), opts.hours, opts.rev));
 	}
 
 	/** Drop the hand switch: the schedule runs the store again */
@@ -206,7 +207,7 @@ class CatalogStore {
 	async saveOperatingHours(storeId: string, hours: OperatingHours, opts: { rev?: number; name?: string } = {}): Promise<StoreOpenStatus> {
 		if (isLive) return this.#adopt(storeId, await api.setMyOperatingHours(hours, opts.rev));
 		const store = this.#demoStore(storeId);
-		const status = demoOpen.saveHours(store, hours, 'OWNER', opts.name ?? 'ร้านค้า', opts.rev);
+		const status = demoOpen.saveHours(store, hours, 'OWNER', opts.name ?? t('ร้านค้า'), opts.rev);
 		if (typeof localStorage !== 'undefined') {
 			try {
 				localStorage.setItem('gm_store_hours_' + storeId, JSON.stringify(store.operatingHours));
@@ -374,7 +375,7 @@ class CatalogStore {
 				const p = store.promotions.find((x) => x.id === promotion.id);
 				if (p && !p.approved) {
 					p.approved = true;
-					toast.show(`[เดโม] ทีม Goose Man อนุมัติโปรร่วม "${p.title}" แล้ว`, 'success', { notify: true });
+					toast.show(t('[เดโม] ทีม Goose Man อนุมัติโปรร่วม "{title}" แล้ว', { title: p.title }), 'success', { notify: true });
 				}
 			});
 		}, 2500);

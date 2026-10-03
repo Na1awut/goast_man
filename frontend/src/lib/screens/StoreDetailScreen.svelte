@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import { fly } from 'svelte/transition';
 	import Icon from '$lib/components/Icon.svelte';
 	import PartnerBadge from '$lib/components/PartnerBadge.svelte';
@@ -17,7 +18,7 @@
 	import { formatBaht } from '$lib/utils';
 	import { formatDaysText } from '$lib/operatingHours';
 
-	const POPULAR = 'เมนูยอดฮิต';
+	const POPULAR = t('เมนูยอดฮิต');
 
 	const store = $derived(storeView.selected);
 	// The database decides (schedule, team lock, owner switch) and realtime keeps it current
@@ -42,12 +43,12 @@
 
 	async function share() {
 		if (!store) return;
-		const data = { title: store.name, text: `${store.name} — สั่งผ่าน Goose Man` };
+		const data = { title: store.name, text: t('{name} — สั่งผ่าน Goose Man', { name: store.name }) };
 		try {
 			if (navigator.share) await navigator.share(data);
 			else {
 				await navigator.clipboard.writeText(`${data.text} ${location.href}`);
-				toast.show('คัดลอกลิงก์ร้านแล้ว', 'success');
+				toast.show(t('คัดลอกลิงก์ร้านแล้ว'), 'success');
 			}
 		} catch {
 			// user dismissed the share sheet
@@ -56,7 +57,7 @@
 
 	function toggleFavorite() {
 		if (!store) return;
-		const message = favorite ? 'นำออกจากร้านโปรดแล้ว' : 'บันทึกเป็นร้านโปรดแล้ว';
+		const message = favorite ? t('นำออกจากร้านโปรดแล้ว') : t('บันทึกเป็นร้านโปรดแล้ว');
 		storeView.toggleFavorite(store.id);
 		toast.show(message, 'success');
 	}
@@ -64,24 +65,24 @@
 
 {#if !store}
 	<div class="flex flex-1 flex-col items-center justify-center px-8 text-center">
-		<p class="text-sm font-medium text-slate-800">ไม่พบร้านนี้แล้ว</p>
-		<button type="button" onclick={() => nav.reset('STORES')} class="mt-4 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white">ดูร้านค้าทั้งหมด</button>
+		<p class="text-sm font-medium text-slate-800">{t('ไม่พบร้านนี้แล้ว')}</p>
+		<button type="button" onclick={() => nav.reset('STORES')} class="mt-4 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white">{t('ดูร้านค้าทั้งหมด')}</button>
 	</div>
 {:else}
 <div class="flex flex-1 flex-col">
 	<!-- Cover: a partner's own storefront banner when set -->
 	<div class="relative h-56 shrink-0">
-		<SmartImage src={store.bannerUrl ?? store.imageUrl} alt={store.bannerUrl ? `แบนเนอร์ร้าน ${store.name}` : store.name} pending class="h-full w-full" />
+		<SmartImage src={store.bannerUrl ?? store.imageUrl} alt={store.bannerUrl ? t('แบนเนอร์ร้าน {name}', { name: store.name }) : store.name} pending class="h-full w-full" />
 		<div class="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/40 to-transparent"></div>
 		<div class="absolute inset-x-0 top-0 flex items-center justify-between px-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
-			<button type="button" onclick={() => nav.back()} aria-label="ย้อนกลับ" class="flex h-10 w-10 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-sm">
+			<button type="button" onclick={() => nav.back()} aria-label={t('ย้อนกลับ')} class="flex h-10 w-10 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-sm">
 				<Icon name="chevron-left" class="h-6 w-6" />
 			</button>
 			<div class="flex gap-2">
-				<button type="button" onclick={share} aria-label="แชร์ร้าน" class="flex h-10 w-10 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-sm">
+				<button type="button" onclick={share} aria-label={t('แชร์ร้าน')} class="flex h-10 w-10 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-sm">
 					<Icon name="share" />
 				</button>
-				<button type="button" onclick={toggleFavorite} aria-label={favorite ? 'นำออกจากร้านโปรด' : 'บันทึกเป็นร้านโปรด'} aria-pressed={favorite} class="flex h-10 w-10 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm {favorite ? 'text-brand' : 'text-white'}">
+				<button type="button" onclick={toggleFavorite} aria-label={favorite ? t('นำออกจากร้านโปรด') : t('บันทึกเป็นร้านโปรด')} aria-pressed={favorite} class="flex h-10 w-10 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm {favorite ? 'text-brand' : 'text-white'}">
 					<Icon name="heart" filled={favorite} />
 				</button>
 			</div>
@@ -97,23 +98,23 @@
 			<div class="mt-2"><PartnerBadge /></div>
 		{/if}
 		<p class="mt-2 flex items-center gap-1.5 text-sm text-slate-500">
-			<Icon name="pin" class="h-4 w-4" /> {ZONE_NAMES[store.zone]} {store.lock}
+			<Icon name="pin" class="h-4 w-4" /> {t(ZONE_NAMES[store.zone])} {store.lock}
 		</p>
 		<p class="mt-1 flex items-center gap-1.5 text-sm text-slate-600">
 			{#if hasReviews(store)}
 				<Icon name="star" class="h-4 w-4 text-beak" filled strokeWidth={0} />
 				<span class="font-medium text-slate-900">{store.rating}</span>
-				<span class="text-slate-400">({store.reviewsCount} รีวิว)</span>
+				<span class="text-slate-400">{t('({reviewsCount} รีวิว)', { reviewsCount: store.reviewsCount })}</span>
 			{:else}
-				<span class="font-medium text-fresh-700">ร้านใหม่ในแอป</span>
+				<span class="font-medium text-fresh-700">{t('ร้านใหม่ในแอป')}</span>
 			{/if}
 			<span class="text-slate-300">·</span>
-			คิวหน้าร้าน ~{store.queueMinutes} นาที
+			{t('คิวหน้าร้าน ~{queueMinutes} นาที', { queueMinutes: store.queueMinutes })}
 		</p>
 		{#if store.isPartner && store.fastLaneMinutes}
 			<p class="mt-2 flex items-center gap-2 rounded-xl bg-fresh-50 px-3 py-2 text-sm text-fresh-700">
 				<Icon name="zap" class="h-4 w-4" />
-				<span><span class="font-semibold">Fast lane</span> ออเดอร์ผ่านแอปทำก่อน ~{store.fastLaneMinutes} นาที</span>
+				<span><span class="font-semibold">Fast lane</span> {t('ออเดอร์ผ่านแอปทำก่อน ~{fastLaneMinutes} นาที', { fastLaneMinutes: store.fastLaneMinutes })}</span>
 			</p>
 		{/if}
 	</section>
@@ -123,23 +124,23 @@
 			<div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900" role="alert">
 				<div class="flex items-center gap-2 font-semibold text-sm">
 					<Icon name="clock" class="h-4 w-4 text-amber-600" />
-					<span>ร้านนี้ปิดรับออเดอร์อยู่ในขณะนี้</span>
+					<span>{t('ร้านนี้ปิดรับออเดอร์อยู่ในขณะนี้')}</span>
 				</div>
 				{#if store.operatingHours?.enabled}
 					<p class="mt-1 text-xs text-amber-800">
-						เวลาเปิดทำการ: {store.operatingHours.openTime} - {store.operatingHours.closeTime} น. ({formatDaysText(store.operatingHours.days)})
+						{t('เวลาเปิดทำการ: {openTime} - {closeTime} น. ({v})', { openTime: store.operatingHours.openTime, closeTime: store.operatingHours.closeTime, v: formatDaysText(store.operatingHours.days) })}
 					</p>
 				{:else}
 					<p class="mt-1 text-xs text-amber-800">
-						ขออภัยในความไม่สะดวก ร้านจะเปิดรับออเดอร์อีกครั้งเร็วๆ นี้
+						{t('ขออภัยในความไม่สะดวก ร้านจะเปิดรับออเดอร์อีกครั้งเร็วๆ นี้')}
 					</p>
 				{/if}
 			</div>
 		{/if}
 
 		{#if promotions.length}
-			<section class="overflow-hidden rounded-2xl border border-brand-200 bg-brand-50" aria-label="โปรโมชันของร้าน">
-				<h2 class="flex items-center gap-1.5 px-4 pt-3 text-sm font-semibold text-brand-700"><Icon name="zap" class="h-4 w-4" /> ดีลพิเศษเฉพาะเด็กบางมด</h2>
+			<section class="overflow-hidden rounded-2xl border border-brand-200 bg-brand-50" aria-label={t('โปรโมชันของร้าน')}>
+				<h2 class="flex items-center gap-1.5 px-4 pt-3 text-sm font-semibold text-brand-700"><Icon name="zap" class="h-4 w-4" /> {t('ดีลพิเศษเฉพาะเด็กบางมด')}</h2>
 				<ul class="divide-y divide-brand-100">
 					{#each promotions as promo (promo.id)}
 						{@const applied = cart.appliedPromotion?.promotion.id === promo.id && cartIsThisStore}
@@ -147,18 +148,18 @@
 						<li class="flex items-start gap-3 px-4 py-3">
 							<div class="min-w-0 flex-1">
 								{#if promo.kind === 'CO_PROMO'}
-									<span class="mb-1 inline-block rounded bg-brand px-1.5 py-0.5 text-[10px] font-semibold text-white">โปรร่วม Goose Man</span>
+									<span class="mb-1 inline-block rounded bg-brand px-1.5 py-0.5 text-[10px] font-semibold text-white">{t('โปรร่วม Goose Man')}</span>
 								{/if}
 								<p class="text-sm font-medium text-slate-900">{promo.title}</p>
 								<p class="text-xs text-slate-600">{promo.description || describeBenefit(promo)}</p>
 							</div>
 							<span class="shrink-0 pt-0.5 text-xs font-medium {applied ? 'text-fresh-700' : 'text-slate-500'}">
 								{#if applied}
-									<span class="flex items-center gap-1"><Icon name="check-circle" class="h-3.5 w-3.5" /> ใช้อยู่</span>
+									<span class="flex items-center gap-1"><Icon name="check-circle" class="h-3.5 w-3.5" /> {t('ใช้อยู่')}</span>
 								{:else if missing > 0 && qtyInCart > 0}
-									อีก {missing} ชิ้น
+									{t('อีก {missing} ชิ้น', { missing })}
 								{:else if promo.minQty > 1}
-									สั่ง {promo.minQty} ชิ้น
+									{t('สั่ง {minQty} ชิ้น', { minQty: promo.minQty })}
 								{/if}
 							</span>
 						</li>
@@ -170,12 +171,12 @@
 		{#if !cart.isEmpty && !cartIsThisStore}
 			<p class="flex gap-2 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
 				<Icon name="info" class="h-4 w-4" />
-				<span>ตะกร้ามีของจาก {cart.store?.name} อยู่ สั่งได้ทีละร้าน ถ้าเพิ่มเมนูร้านนี้ ตะกร้าเดิมจะถูกล้าง</span>
+				<span>{t('ตะกร้ามีของจาก {name} อยู่ สั่งได้ทีละร้าน ถ้าเพิ่มเมนูร้านนี้ ตะกร้าเดิมจะถูกล้าง', { name: cart.store?.name })}</span>
 			</p>
 		{/if}
 
 		<!-- Category chips -->
-		<div class="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4" role="tablist" aria-label="หมวดเมนู">
+		<div class="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4" role="tablist" aria-label={t('หมวดเมนู')}>
 			{#each categories as c (c)}
 				{@const active = category === c}
 				<button
@@ -185,7 +186,7 @@
 					onclick={() => (category = active ? null : c)}
 					class="shrink-0 rounded-full px-4 py-2 text-sm whitespace-nowrap transition-colors {active ? 'bg-brand font-medium text-white' : 'border border-slate-200 bg-white text-slate-600'}"
 				>
-					{c}
+					{t(c)}
 				</button>
 			{/each}
 		</div>
@@ -200,20 +201,20 @@
 						<h3 class="text-sm leading-snug font-semibold text-slate-900">{item.name}</h3>
 						{#if item.description}<p class="line-clamp-2 text-xs text-slate-500">{item.description}</p>{/if}
 						{#if item.originalPrice}
-							<span class="mt-1 w-fit rounded-md bg-brand-50 px-1.5 py-0.5 text-[11px] text-brand-700">ลด {item.originalPrice - item.price} ฿ จากหน้าร้าน {item.originalPrice} ฿</span>
+							<span class="mt-1 w-fit rounded-md bg-brand-50 px-1.5 py-0.5 text-[11px] text-brand-700">{t('ลด {v} ฿ จากหน้าร้าน {originalPrice} ฿', { v: item.originalPrice - item.price, originalPrice: item.originalPrice })}</span>
 						{/if}
 
 						{#if hasOptions}
 							<!-- Customizable dish with options / toppings -->
 							<div class="mt-auto flex items-end justify-between gap-2 pt-2">
 								<div>
-									<span class="text-xs text-slate-500">เริ่มต้น</span>
+									<span class="text-xs text-slate-500">{t('เริ่มต้น')}</span>
 									<span class="text-base font-semibold text-slate-900 tabular-nums ml-1">{formatBaht(item.price)}</span>
 								</div>
 								<div class="flex items-center gap-1.5">
 									{#if qty > 0}
 										<span class="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700">
-											ในตะกร้า {qty}
+											{t('ในตะกร้า {qty}', { qty })}
 										</span>
 									{/if}
 									<button
@@ -222,14 +223,14 @@
 										onclick={() => (customizingItem = item)}
 										class="rounded-xl bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-xs active:bg-brand-600 disabled:opacity-50"
 									>
-										+ {qty > 0 ? 'เลือกเพิ่ม' : 'เลือกตัวเลือก'}
+										+ {qty > 0 ? t('เลือกเพิ่ม') : t('เลือกตัวเลือก')}
 									</button>
 								</div>
 							</div>
 						{:else if item.specialPrice}
 							<!-- Two sizes: one stepper per size -->
 							<div class="mt-2 space-y-1.5">
-								{#each [{ special: false, label: 'ธรรมดา', price: item.price }, { special: true, label: 'พิเศษ', price: item.specialPrice }] as size (size.label)}
+								{#each [{ special: false, label: t('ธรรมดา'), price: item.price }, { special: true, label: t('พิเศษ'), price: item.specialPrice }] as size (size.label)}
 									<div class="flex items-center justify-between gap-2">
 										<span class="text-sm text-slate-600">{size.label} <span class="font-semibold text-slate-900 tabular-nums">{formatBaht(size.price)}</span></span>
 										<QtyStepper
@@ -251,7 +252,7 @@
 					</div>
 				</li>
 			{:else}
-				<li class="py-8 text-center text-sm text-slate-500">ไม่มีเมนูในหมวดนี้</li>
+				<li class="py-8 text-center text-sm text-slate-500">{t('ไม่มีเมนูในหมวดนี้')}</li>
 			{/each}
 		</ul>
 	</div>
@@ -265,8 +266,8 @@
 				class="flex w-full items-center gap-2 rounded-2xl bg-brand px-5 py-4 text-sm font-semibold text-white shadow-[0_8px_20px_-6px_rgb(250_70_22/0.45)] active:bg-brand-600"
 			>
 				<Icon name="cart" />
-				<span class="tabular-nums">{#key cart.totalItems}<span class="tick inline-block">{cart.totalItems}</span>{/key} รายการ | {formatBaht(cart.subtotal)}</span>
-				<span class="ml-auto flex items-center gap-1">ดูตะกร้าสินค้า <Icon name="arrow-right" class="h-4 w-4" /></span>
+				<span class="tabular-nums">{#key cart.totalItems}<span class="tick inline-block">{cart.totalItems}</span>{/key} {t('รายการ | {v}', { v: formatBaht(cart.subtotal) })}</span>
+				<span class="ml-auto flex items-center gap-1">{t('ดูตะกร้าสินค้า')} <Icon name="arrow-right" class="h-4 w-4" /></span>
 			</button>
 		</div>
 	{/if}

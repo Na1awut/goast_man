@@ -7,6 +7,7 @@ import { isLive } from '$lib/supabase';
 import { campus, dropoffLabel } from './campus.svelte';
 import { cart } from './cart.svelte';
 import { orders, OrderError } from './orders.svelte';
+import { t } from '$lib/i18n';
 
 class CheckoutStore {
 	note = $state('');
@@ -53,10 +54,10 @@ class CheckoutStore {
 			const riders = await api.fetchRidersOnline().catch(() => orders.onlineRiders);
 			if (riders === 0) {
 				orders.onlineRiders = 0;
-				throw new OrderError('ขณะนี้ไม่มีคนหิ้วเปิดรับงาน ไม่สามารถสร้าง QR ชำระเงินได้');
+				throw new OrderError(t('ขณะนี้ไม่มีคนหิ้วเปิดรับงาน ไม่สามารถสร้าง QR ชำระเงินได้'));
 			}
 		} else if (orders.onlineRiders === 0) {
-			throw new OrderError('ขณะนี้ไม่มีคนหิ้วเปิดรับงาน ไม่สามารถสร้าง QR ชำระเงินได้');
+			throw new OrderError(t('ขณะนี้ไม่มีคนหิ้วเปิดรับงาน ไม่สามารถสร้าง QR ชำระเงินได้'));
 		}
 		this.placing = true;
 		try {

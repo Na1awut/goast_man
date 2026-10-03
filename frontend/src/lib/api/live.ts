@@ -9,6 +9,7 @@ import { isTestSite } from '$lib/sim';
 import { db } from '$lib/supabase';
 import { formatTime } from '$lib/utils';
 import { fileToDataUrl } from '$lib/image';
+import { t } from '$lib/i18n';
 
 type Row = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -829,7 +830,7 @@ export async function saveHomeBanner(banner: HomeBanner): Promise<string> {
 			p_title: banner.title,
 			p_subtitle: banner.subtitle,
 			p_link_url: banner.linkUrl ?? null,
-			p_button_text: banner.buttonText ?? 'ฝากหิ้วเลย',
+			p_button_text: banner.buttonText ?? t('ฝากหิ้วเลย'),
 			p_active: banner.active,
 			p_sort: banner.sort
 		})

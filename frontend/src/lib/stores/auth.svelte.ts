@@ -8,6 +8,7 @@ import { isTestSite } from '$lib/sim';
 import { friendlyError, isLive, supabase } from '$lib/supabase';
 import { toast } from './toast.svelte';
 import { catalog } from './catalog.svelte';
+import { t } from '$lib/i18n';
 
 const USER_KEY = 'gooseman_user';
 const TOKEN_KEY = 'gooseman_token';
@@ -19,7 +20,7 @@ const TOKEN_KEY = 'gooseman_token';
 export const DEMO_USER: User = {
 	id: 'u-demo-001',
 	email: 'goose.b@mail.kmutt.ac.th',
-	fullName: 'กูส บางมด',
+	fullName: t('กูส บางมด'),
 	nickname: '',
 	studentId: '',
 	faculty: '',
@@ -42,8 +43,8 @@ export const DEMO_USER: User = {
 export const DEMO_RIDER: User = {
 	id: 'u-demo-rider',
 	email: 'hiw.demo@mail.kmutt.ac.th',
-	fullName: 'หิ้ว ทดลอง',
-	nickname: 'หิ้ว',
+	fullName: t('หิ้ว ทดลอง'),
+	nickname: t('หิ้ว'),
 	studentId: '66070500999',
 	faculty: 'คณะวิศวกรรมศาสตร์',
 	studyLevel: '3',
@@ -67,8 +68,8 @@ export const DEMO_RIDER: User = {
 export const DEMO_PARTNER: User = {
 	id: 'u-demo-partner',
 	email: 'demo.shop@example.com',
-	fullName: 'บัญชีร้านทดลอง',
-	nickname: 'ร้านทดลอง',
+	fullName: t('บัญชีร้านทดลอง'),
+	nickname: t('ร้านทดลอง'),
 	studentId: '',
 	faculty: '',
 	avatarUrl: '',
@@ -117,7 +118,7 @@ class AuthStore {
 				if (event === 'SIGNED_OUT' && this.user) {
 					this.user = null;
 					this.sessionExpired = true;
-					toast.show('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่', 'error', { duration: 6000 });
+					toast.show(t('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่'), 'error', { duration: 6000 });
 				}
 			});
 
@@ -151,7 +152,7 @@ class AuthStore {
 		await new Promise((r) => setTimeout(r, 900));
 		const user = options.asPartner ? DEMO_PARTNER : options.asRider ? DEMO_RIDER : DEMO_USER;
 		if (user.role !== 'PARTNER' && !isKmuttEmail(user.email)) {
-			throw new AuthError('ใช้ได้เฉพาะอีเมล @kmutt.ac.th หรือ @mail.kmutt.ac.th เท่านั้น');
+			throw new AuthError(t('ใช้ได้เฉพาะอีเมล @kmutt.ac.th หรือ @mail.kmutt.ac.th เท่านั้น'));
 		}
 		this.user = user;
 		this.token = `demo-token-${Date.now()}`;
@@ -163,7 +164,7 @@ class AuthStore {
 
 	/** Test site only: be the demo student, rider or shop owner straight away. Refuses on the real site. */
 	signInDemo(role: 'student' | 'rider' | 'partner'): User {
-		if (isLive) throw new AuthError('โหมดจำลองใช้ได้เฉพาะเว็บทดสอบ');
+		if (isLive) throw new AuthError(t('โหมดจำลองใช้ได้เฉพาะเว็บทดสอบ'));
 		const user = role === 'partner' ? DEMO_PARTNER : role === 'rider' ? DEMO_RIDER : DEMO_USER;
 		this.user = user;
 		this.token = `demo-token-${Date.now()}`;
@@ -184,7 +185,7 @@ class AuthStore {
 		await new Promise((r) => setTimeout(r, 900));
 		const user = options.asPartner ? DEMO_PARTNER : options.asRider ? DEMO_RIDER : DEMO_USER;
 		if (user.role !== 'PARTNER' && !isKmuttEmail(user.email)) {
-			throw new AuthError('ใช้ได้เฉพาะอีเมล @kmutt.ac.th หรือ @mail.kmutt.ac.th เท่านั้น');
+			throw new AuthError(t('ใช้ได้เฉพาะอีเมล @kmutt.ac.th หรือ @mail.kmutt.ac.th เท่านั้น'));
 		}
 		this.user = user;
 		this.token = `demo-token-${Date.now()}`;
@@ -196,7 +197,7 @@ class AuthStore {
 
 	/** Save the onboarding / edit-profile form. Throws AuthError with a message ready to show. */
 	async completeProfile(input: ProfileInput): Promise<User> {
-		if (!this.user) throw new AuthError('กรุณาเข้าสู่ระบบก่อน');
+		if (!this.user) throw new AuthError(t('กรุณาเข้าสู่ระบบก่อน'));
 		const studentFields = this.user.role === 'STUDENT';
 		const values = {
 			nickname: input.nickname.trim(),

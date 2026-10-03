@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import HomeBannerCarousel from '$lib/components/HomeBannerCarousel.svelte';
 	import GooseMark from '$lib/components/GooseMark.svelte';
 	import StoreLogo from '$lib/components/StoreLogo.svelte';
@@ -24,10 +25,10 @@
 
 	/** Greeting in the product's voice, following the campus day */
 	function greetingFor(hour: number): string {
-		if (hour < 11) return 'เช้านี้กินอะไรดี';
-		if (hour < 14) return 'เที่ยงแดดแรง ให้เพื่อนหิ้วดีกว่า';
-		if (hour < 17) return 'บ่ายนี้หิวรึยัง';
-		return 'มื้อเย็นให้ห่านหิ้วไปหอ';
+		if (hour < 11) return t('เช้านี้กินอะไรดี');
+		if (hour < 14) return t('เที่ยงแดดแรง ให้เพื่อนหิ้วดีกว่า');
+		if (hour < 17) return t('บ่ายนี้หิวรึยัง');
+		return t('มื้อเย็นให้ห่านหิ้วไปหอ');
 	}
 	const greeting = greetingFor(new Date().getHours());
 
@@ -42,8 +43,8 @@
 
 	// Broad choices stay compact as new campus locations are added.
 	const pickupTypes: { id: StoreType; label: string; icon: IconName }[] = [
-		{ id: 'canteen', label: 'โรงอาหาร', icon: 'utensils' },
-		{ id: 'shop', label: 'ร้านค้า', icon: 'store' }
+		{ id: 'canteen', label: t('โรงอาหาร'), icon: 'utensils' },
+		{ id: 'shop', label: t('ร้านค้า'), icon: 'store' }
 	];
 
 	function choosePickupType(type: StoreType) {
@@ -52,17 +53,17 @@
 
 	// --- Frequent drop-offs as a compact chip row
 	const frequent: { id: string; label: string; icon: IconName }[] = [
-		{ id: 'lx-1', label: 'อาคาร LX', icon: 'home' },
+		{ id: 'lx-1', label: t('อาคาร LX'), icon: 'home' },
 		{ id: 'cb2', label: 'CB2 / CB3', icon: 'book' },
-		{ id: 'sit', label: 'อาคาร SIT', icon: 'cpu' },
-		{ id: 'dorm-s5', label: 'หอพักนักศึกษา', icon: 'key' }
+		{ id: 'sit', label: t('อาคาร SIT'), icon: 'cpu' },
+		{ id: 'dorm-s5', label: t('หอพักนักศึกษา'), icon: 'key' }
 	];
 
 	function chooseDropoff(id: string) {
 		const point = DROPOFF_POINTS.find((p) => p.id === id);
 		if (point && point.id !== campus.dropoff.id) {
 			campus.select(point);
-			toast.show(`ส่งไปที่ ${point.name}`, 'success');
+			toast.show(t('ส่งไปที่ {name}', { name: point.name }), 'success');
 		}
 	}
 
@@ -77,7 +78,7 @@
 			lastOrder.items.map((i) => ({ menuItemId: i.menuItem.id, quantity: i.quantity, special: i.special }))
 		);
 		if (added === 0) {
-			toast.show('เมนูจากออเดอร์นี้หมดแล้ว ลองดูเมนูอื่นในร้าน', 'warning');
+			toast.show(t('เมนูจากออเดอร์นี้หมดแล้ว ลองดูเมนูอื่นในร้าน'), 'warning');
 			storeView.open(lastStore.id);
 			return;
 		}
@@ -108,8 +109,8 @@
 	<header class="sticky top-0 z-40 border-b border-slate-100 bg-white pt-[env(safe-area-inset-top)]">
 		<div class="flex h-16 items-center gap-3 px-4">
 			<GooseMark class="h-10 w-10 border border-slate-100" />
-			<button type="button" onclick={() => campus.openPicker()} class="min-w-0 flex-1 text-left" aria-label="เปลี่ยนจุดส่ง ตอนนี้ {campus.dropoff.name}">
-				<span class="block text-[11px] leading-tight text-slate-500">ส่งไปที่</span>
+			<button type="button" onclick={() => campus.openPicker()} class="min-w-0 flex-1 text-left" aria-label={t('เปลี่ยนจุดส่ง ตอนนี้ {name}', { name: campus.dropoff.name })}>
+				<span class="block text-[11px] leading-tight text-slate-500">{t('ส่งไปที่')}</span>
 				<span class="flex items-center gap-1 text-[15px] leading-tight font-semibold text-slate-900">
 					<span class="truncate">{campus.label}</span>
 					<Icon name="chevron-down" class="h-4 w-4 text-brand" strokeWidth={2.5} />
@@ -119,7 +120,7 @@
 				type="button"
 				onclick={() => (toast.inboxOpen = true)}
 				class="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-700 hover:bg-slate-100"
-				aria-label="การแจ้งเตือน{toast.unreadCount ? ` ${toast.unreadCount} รายการใหม่` : ''}"
+				aria-label={t('การแจ้งเตือน{v}', { v: toast.unreadCount ? t(' {unreadCount} รายการใหม่', { unreadCount: toast.unreadCount }) : '' })}
 			>
 				<Icon name="bell" />
 				{#if toast.unreadCount > 0}<span class="absolute top-2 right-2.5 h-2 w-2 rounded-full bg-brand ring-2 ring-white"></span>{/if}
@@ -131,33 +132,33 @@
 		<!-- Greeting + search -->
 		<section class="space-y-3">
 			<div>
-				<h1 class="text-xl font-semibold text-slate-900">สวัสดี {auth.displayName}</h1>
+				<h1 class="text-xl font-semibold text-slate-900">{t('สวัสดี {displayName}', { displayName: auth.displayName })}</h1>
 				<p class="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-slate-500">
 					{greeting}
 					{#if orders.onlineRiders !== null}
 						<span class="inline-flex items-center gap-1.5 text-slate-600">
-							<span class="h-1.5 w-1.5 rounded-full bg-fresh"></span>เพื่อนพร้อมหิ้ว <span class="font-medium text-slate-900 tabular-nums">{orders.onlineRiders}</span> คน
+							<span class="h-1.5 w-1.5 rounded-full bg-fresh"></span>{t('เพื่อนพร้อมหิ้ว')} <span class="font-medium text-slate-900 tabular-nums">{orders.onlineRiders}</span> {t('คน')}
 						</span>
 					{/if}
 				</p>
 			</div>
 			<button type="button" onclick={openSearch} class="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-left text-sm text-slate-400">
 				<Icon name="search" class="h-5 w-5" />
-				อยากกินอะไร ค้นหาร้านหรือเมนู
+				{t('อยากกินอะไร ค้นหาร้านหรือเมนู')}
 			</button>
 		</section>
 
 		<!-- Waiting for payment: one tap to the QR -->
 		{#if unpaidOrder}
-			<section aria-label="ออเดอร์ที่รอชำระเงิน" class="flex items-center gap-3 rounded-2xl border border-brand-200 bg-brand-50 p-3 pl-4">
+			<section aria-label={t('ออเดอร์ที่รอชำระเงิน')} class="flex items-center gap-3 rounded-2xl border border-brand-200 bg-brand-50 p-3 pl-4">
 				<button type="button" onclick={() => openOrder(unpaidOrder.id, 'TRACKING')} class="flex min-w-0 flex-1 items-center gap-3 text-left">
 					<span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-brand"><Icon name="qr" /></span>
 					<span class="min-w-0 flex-1">
-						<span class="block text-sm font-semibold text-slate-900">รอชำระเงิน <span class="text-brand tabular-nums">{formatBaht(unpaidOrder.totalPrice)}</span></span>
+						<span class="block text-sm font-semibold text-slate-900">{t('รอชำระเงิน')} <span class="text-brand tabular-nums">{formatBaht(unpaidOrder.totalPrice)}</span></span>
 						<span class="block truncate text-xs text-slate-600">{unpaidOrder.orderCode} · {unpaidOrder.itemDetails}</span>
 					</span>
 				</button>
-				<button type="button" onclick={() => openOrder(unpaidOrder.id, 'PAYMENT')} class="min-h-11 shrink-0 rounded-xl bg-brand px-4 text-sm font-semibold text-white active:bg-brand-600">ชำระเงิน</button>
+				<button type="button" onclick={() => openOrder(unpaidOrder.id, 'PAYMENT')} class="min-h-11 shrink-0 rounded-xl bg-brand px-4 text-sm font-semibold text-white active:bg-brand-600">{t('ชำระเงิน')}</button>
 			</section>
 		{/if}
 
@@ -190,10 +191,10 @@
 			<div class="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
 				<Icon name="alert" class="h-5 w-5 text-amber-600" />
 				<p class="min-w-0 flex-1 text-sm text-amber-900">{catalog.error}</p>
-				<button type="button" onclick={() => catalog.load()} class="shrink-0 rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-amber-900 ring-1 ring-amber-200">ลองใหม่</button>
+				<button type="button" onclick={() => catalog.load()} class="shrink-0 rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-amber-900 ring-1 ring-amber-200">{t('ลองใหม่')}</button>
 			</div>
 		{:else if catalog.loading}
-			<div class="space-y-3" aria-label="กำลังโหลดร้านค้า">
+			<div class="space-y-3" aria-label={t('กำลังโหลดร้านค้า')}>
 				<div class="skeleton h-5 w-40 rounded"></div>
 				<div class="flex gap-3 overflow-hidden">
 					{#each [0, 1] as i (i)}<div class="skeleton h-40 w-60 shrink-0 rounded-2xl"></div>{/each}
@@ -204,7 +205,7 @@
 		<!-- Deals the stores run themselves -->
 		{#if catalog.storeDeals.length}
 			<section class="space-y-3" aria-labelledby="deals-title">
-				<h2 id="deals-title" class="text-base font-semibold text-slate-900">โปรจากร้านค้า</h2>
+				<h2 id="deals-title" class="text-base font-semibold text-slate-900">{t('โปรจากร้านค้า')}</h2>
 				<div class="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1">
 					{#each catalog.storeDeals as { store, promotion } (promotion.id)}
 						<button type="button" onclick={() => storeView.open(store.id)} class="w-72 shrink-0 snap-start overflow-hidden rounded-2xl bg-brand text-left text-white">
@@ -219,7 +220,7 @@
 										</span>
 										<span class="min-w-0">
 											<span class="line-clamp-2 text-lg leading-tight font-bold">{describeBenefit(promotion, false)}</span>
-											<span class="mt-0.5 block truncate text-xs text-white/85">{promotion.minQty > 1 ? `เมื่อสั่ง ${promotion.minQty} ชิ้นขึ้นไป` : 'ทุกออเดอร์ผ่านแอป'}</span>
+											<span class="mt-0.5 block truncate text-xs text-white/85">{promotion.minQty > 1 ? t('เมื่อสั่ง {minQty} ชิ้นขึ้นไป', { minQty: promotion.minQty }) : t('ทุกออเดอร์ผ่านแอป')}</span>
 										</span>
 									</div>
 									<SmartImage src={store.imageUrl} alt="" pending class="w-28 shrink-0 [clip-path:ellipse(100%_90%_at_100%_50%)]" />
@@ -234,8 +235,8 @@
 
 		<!-- Where to buy -->
 		<section class="space-y-3">
-			<h2 class="text-base font-semibold text-slate-900">สั่งจากที่ไหนดี</h2>
-			<div class="grid grid-cols-2 gap-3" aria-label="ประเภทจุดซื้อ">
+			<h2 class="text-base font-semibold text-slate-900">{t('สั่งจากที่ไหนดี')}</h2>
+			<div class="grid grid-cols-2 gap-3" aria-label={t('ประเภทจุดซื้อ')}>
 				{#each pickupTypes as type (type.id)}
 					<button type="button" onclick={() => choosePickupType(type.id)} class="flex min-h-20 flex-col items-center justify-center gap-2 rounded-xl bg-white px-2 py-3 text-center text-slate-900 transition-colors hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand active:bg-brand-50">
 						<Icon name={type.icon} class="h-6 w-6 text-brand" />
@@ -247,7 +248,7 @@
 
 		<!-- Frequent drop-offs -->
 		<section class="space-y-3">
-			<h2 class="text-base font-semibold text-slate-900">ส่งไปที่ไหนบ่อยๆ</h2>
+			<h2 class="text-base font-semibold text-slate-900">{t('ส่งไปที่ไหนบ่อยๆ')}</h2>
 			<div class="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
 				{#each frequent as f (f.id)}
 					{@const selected = campus.dropoff.id === f.id}
@@ -269,7 +270,7 @@
 		<!-- Order again -->
 		{#if lastOrder && lastStore}
 			<section class="space-y-3">
-				<h2 class="text-base font-semibold text-slate-900">สั่งอีกครั้ง</h2>
+				<h2 class="text-base font-semibold text-slate-900">{t('สั่งอีกครั้ง')}</h2>
 				<div class="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white p-3">
 					<SmartImage src={lastStore.imageUrl} alt={lastStore.name} pending class="h-14 w-14 shrink-0 rounded-xl" />
 					<div class="min-w-0 flex-1">
@@ -277,7 +278,7 @@
 						<p class="truncate text-xs text-slate-500">{lastOrder.itemDetails}</p>
 						<p class="text-[11px] text-slate-400">{formatRelativeDate(lastOrder.createdAt)} · {formatBaht(lastOrder.foodTotal)}</p>
 					</div>
-					<button type="button" onclick={orderAgain} class="shrink-0 rounded-full border border-brand px-3.5 py-1.5 text-sm font-medium text-brand active:bg-brand-50">สั่งซ้ำ</button>
+					<button type="button" onclick={orderAgain} class="shrink-0 rounded-full border border-brand px-3.5 py-1.5 text-sm font-medium text-brand active:bg-brand-50">{t('สั่งซ้ำ')}</button>
 				</div>
 			</section>
 		{/if}
@@ -286,8 +287,8 @@
 		{#if deals.length}
 			<section class="space-y-3">
 				<div class="flex items-baseline justify-between">
-					<h2 class="text-base font-semibold text-slate-900">ดีลเฉพาะเด็กบางมด</h2>
-					<button type="button" onclick={() => storeView.browse()} class="text-sm font-medium text-brand">ดูทั้งหมด</button>
+					<h2 class="text-base font-semibold text-slate-900">{t('ดีลเฉพาะเด็กบางมด')}</h2>
+					<button type="button" onclick={() => storeView.browse()} class="text-sm font-medium text-brand">{t('ดูทั้งหมด')}</button>
 				</div>
 				<div class="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1">
 					{#each deals as { store, deal } (store.id)}
@@ -295,7 +296,7 @@
 							<div class="relative">
 								<SmartImage src={store.imageUrl} alt={store.name} pending class="h-28 w-full" />
 								<span class="absolute bottom-2 left-2 flex items-center gap-1 rounded-md bg-white px-1.5 py-0.5 text-[11px] font-medium text-slate-700">
-									<Icon name="clock" class="h-3 w-3" /> ~{store.queueMinutes} นาที
+									<Icon name="clock" class="h-3 w-3" /> {t('~{queueMinutes} นาที', { queueMinutes: store.queueMinutes })}
 								</span>
 							</div>
 							<div class="space-y-0.5 p-3">
@@ -315,7 +316,7 @@
 		<!-- Popular -->
 		{#if popular.length}
 			<section class="space-y-3">
-				<h2 class="text-base font-semibold text-slate-900">{reviewed ? 'ร้านที่เพื่อนสั่งบ่อย' : 'ร้านในแอป'}</h2>
+				<h2 class="text-base font-semibold text-slate-900">{reviewed ? t('ร้านที่เพื่อนสั่งบ่อย') : t('ร้านในแอป')}</h2>
 				<ul class="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-100 bg-white">
 					{#each popular as store, i (store.id)}
 						<li>
@@ -325,7 +326,7 @@
 								<span class="min-w-0 flex-1">
 									<span class="block truncate text-sm font-medium text-slate-900">{store.name}</span>
 									<span class="flex items-center gap-1 text-xs text-slate-500">
-										{#if hasReviews(store)}<Icon name="star" class="h-3.5 w-3.5 text-beak" filled strokeWidth={0} />{store.rating}<span class="text-slate-300">·</span>{/if}{store.category}
+										{#if hasReviews(store)}<Icon name="star" class="h-3.5 w-3.5 text-beak" filled strokeWidth={0} />{store.rating}<span class="text-slate-300">·</span>{/if}{t(store.category)}
 									</span>
 								</span>
 								<Icon name="chevron-right" class="h-4 w-4 text-slate-300" />

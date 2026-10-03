@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import type { LegalPage } from '$lib/data/legal';
 	import {
 		digitsOnly,
@@ -66,7 +67,7 @@
 			await auth.completeProfile(input);
 			onsaved();
 		} catch (err) {
-			serverError = err instanceof AuthError ? err.message : 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง';
+			serverError = err instanceof AuthError ? err.message : t('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง');
 		} finally {
 			saving = false;
 		}
@@ -87,22 +88,22 @@
 			</div>
 			<span class="ml-auto flex shrink-0 items-center gap-1 text-xs font-medium text-fresh-700">
 				<Icon name="shield" class="h-3.5 w-3.5" />
-				{isStudent ? 'บัญชี มจธ.' : 'ร้าน Partner'}
+				{isStudent ? t('บัญชี มจธ.') : t('ร้าน Partner')}
 			</span>
 		</section>
 
 		<!-- About you -->
 		<section class="space-y-4 rounded-2xl border border-slate-100 bg-white p-4">
-			<h2 class="text-sm font-semibold text-slate-900">เกี่ยวกับคุณ</h2>
+			<h2 class="text-sm font-semibold text-slate-900">{t('เกี่ยวกับคุณ')}</h2>
 			<label class="block">
-				<span class="mb-1 block text-sm text-slate-700">ชื่อเล่น <span class="text-slate-400">(คนหิ้วจะเห็นชื่อนี้)</span></span>
+				<span class="mb-1 block text-sm text-slate-700">{t('ชื่อเล่น')} <span class="text-slate-400">{t('(คนหิ้วจะเห็นชื่อนี้)')}</span></span>
 				<input type="text" bind:value={nickname} maxlength="30" autocomplete="nickname" aria-invalid={!!show('nickname')} class="{field} {ring(show('nickname'))}" />
 				{#if show('nickname')}<span class="mt-1 block text-xs text-red-600">{show('nickname')}</span>{/if}
 			</label>
 
 			{#if isStudent}
 				<fieldset>
-					<legend class="mb-1.5 text-sm text-slate-700">ชั้นปี</legend>
+					<legend class="mb-1.5 text-sm text-slate-700">{t('ชั้นปี')}</legend>
 					<div class="flex flex-wrap gap-2" role="radiogroup" aria-invalid={!!show('studyLevel')}>
 						{#each STUDY_LEVELS as level (level.id)}
 							<label class="cursor-pointer rounded-full border px-3.5 py-1.5 text-sm transition-colors {studyLevel === level.id ? 'border-brand bg-brand-50 font-medium text-brand-700' : 'border-slate-200 text-slate-600'}">
@@ -116,30 +117,30 @@
 
 				{#if isStaff}
 					<label class="block">
-						<span class="mb-1 block text-sm text-slate-700">หน่วยงาน</span>
-						<input type="text" bind:value={facultyOther} maxlength="80" placeholder="เช่น สำนักงานอธิการบดี" aria-invalid={!!show('faculty')} class="{field} {ring(show('faculty'))}" />
+						<span class="mb-1 block text-sm text-slate-700">{t('หน่วยงาน')}</span>
+						<input type="text" bind:value={facultyOther} maxlength="80" placeholder={t('เช่น สำนักงานอธิการบดี')} aria-invalid={!!show('faculty')} class="{field} {ring(show('faculty'))}" />
 						{#if show('faculty')}<span class="mt-1 block text-xs text-red-600">{show('faculty')}</span>{/if}
 					</label>
 				{:else}
 					<label class="block">
-						<span class="mb-1 block text-sm text-slate-700">คณะ</span>
+						<span class="mb-1 block text-sm text-slate-700">{t('คณะ')}</span>
 						<span class="relative block">
 							<select bind:value={facultyChoice} aria-invalid={!!show('faculty')} class="{field} appearance-none pr-10 {ring(show('faculty'))}">
-								<option value="" disabled>เลือกคณะ</option>
-								{#each FACULTIES as f (f)}<option value={f}>{f}</option>{/each}
-								<option value={OTHER}>อื่นๆ (พิมพ์เอง)</option>
+								<option value="" disabled>{t('เลือกคณะ')}</option>
+								{#each FACULTIES as f (f)}<option value={f}>{t(f)}</option>{/each}
+								<option value={OTHER}>{t('อื่นๆ (พิมพ์เอง)')}</option>
 							</select>
 							<Icon name="chevron-down" class="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-slate-500" />
 						</span>
 						{#if facultyChoice === OTHER}
-							<input type="text" bind:value={facultyOther} maxlength="80" placeholder="ชื่อคณะ / หน่วยงาน" aria-label="ชื่อคณะ" class="mt-2 {field} focus:ring-brand" />
+							<input type="text" bind:value={facultyOther} maxlength="80" placeholder={t('ชื่อคณะ / หน่วยงาน')} aria-label={t('ชื่อคณะ')} class="mt-2 {field} focus:ring-brand" />
 						{/if}
 						{#if show('faculty')}<span class="mt-1 block text-xs text-red-600">{show('faculty')}</span>{/if}
 					</label>
 
 					<label class="block">
-						<span class="mb-1 block text-sm text-slate-700">รหัสนักศึกษา <span class="text-slate-400">(ไม่แสดงให้ผู้ใช้อื่น)</span></span>
-						<input type="text" inputmode="numeric" autocomplete="off" bind:value={studentId} maxlength="13" placeholder="เช่น 66070500123" aria-invalid={!!show('studentId')} class="{field} tabular-nums {ring(show('studentId'))}" />
+						<span class="mb-1 block text-sm text-slate-700">{t('รหัสนักศึกษา')} <span class="text-slate-400">{t('(ไม่แสดงให้ผู้ใช้อื่น)')}</span></span>
+						<input type="text" inputmode="numeric" autocomplete="off" bind:value={studentId} maxlength="13" placeholder={t('เช่น 66070500123')} aria-invalid={!!show('studentId')} class="{field} tabular-nums {ring(show('studentId'))}" />
 						{#if show('studentId')}<span class="mt-1 block text-xs text-red-600">{show('studentId')}</span>{/if}
 					</label>
 				{/if}
@@ -148,9 +149,9 @@
 
 		<!-- Contact & payment -->
 		<section class="space-y-4 rounded-2xl border border-slate-100 bg-white p-4">
-			<h2 class="text-sm font-semibold text-slate-900">ติดต่อและรับเงิน</h2>
+			<h2 class="text-sm font-semibold text-slate-900">{t('ติดต่อและรับเงิน')}</h2>
 			<label class="block">
-				<span class="mb-1 block text-sm text-slate-700">เบอร์มือถือ <span class="text-slate-400">(ให้คนหิ้วโทรหาตอนส่งของ)</span></span>
+				<span class="mb-1 block text-sm text-slate-700">{t('เบอร์มือถือ')} <span class="text-slate-400">{t('(ให้คนหิ้วโทรหาตอนส่งของ)')}</span></span>
 				<input
 					type="tel"
 					inputmode="tel"
@@ -165,13 +166,13 @@
 			</label>
 			<label class="block">
 				<span class="mb-1 flex items-baseline justify-between text-sm text-slate-700">
-					<span>PromptPay <span class="text-slate-400">(ไม่บังคับ)</span></span>
+					<span>PromptPay <span class="text-slate-400">{t('(ไม่บังคับ)')}</span></span>
 					{#if phone && digitsOnly(phone) !== digitsOnly(promptPay)}
-						<button type="button" onclick={samePhoneForPromptPay} class="text-xs font-medium text-brand">ใช้เบอร์เดียวกัน</button>
+						<button type="button" onclick={samePhoneForPromptPay} class="text-xs font-medium text-brand">{t('ใช้เบอร์เดียวกัน')}</button>
 					{/if}
 				</span>
-				<input type="text" inputmode="numeric" autocomplete="off" bind:value={promptPay} maxlength="17" placeholder="เบอร์มือถือ หรือเลขบัตรประชาชน" aria-invalid={!!show('promptPay')} class="{field} tabular-nums {ring(show('promptPay'))}" />
-				<span class="mt-1 block text-xs {show('promptPay') ? 'text-red-600' : 'text-slate-500'}">{show('promptPay') || 'ใช้รับเงินเมื่อคุณเป็นคนหิ้วให้เพื่อน'}</span>
+				<input type="text" inputmode="numeric" autocomplete="off" bind:value={promptPay} maxlength="17" placeholder={t('เบอร์มือถือ หรือเลขบัตรประชาชน')} aria-invalid={!!show('promptPay')} class="{field} tabular-nums {ring(show('promptPay'))}" />
+				<span class="mt-1 block text-xs {show('promptPay') ? 'text-red-600' : 'text-slate-500'}">{show('promptPay') || t('ใช้รับเงินเมื่อคุณเป็นคนหิ้วให้เพื่อน')}</span>
 			</label>
 		</section>
 
@@ -180,10 +181,10 @@
 				<label class="flex cursor-pointer items-start gap-3">
 					<input type="checkbox" bind:checked={consent} aria-invalid={!!show('consent')} class="mt-0.5 h-5 w-5 shrink-0 accent-brand" />
 					<span class="text-sm text-slate-700">
-						ฉันยอมรับ
-						<button type="button" onclick={() => (legal = 'terms')} class="font-medium text-brand underline underline-offset-2">เงื่อนไขการใช้งาน</button>
-						และยินยอมให้เก็บและใช้ข้อมูลตาม
-						<button type="button" onclick={() => (legal = 'privacy')} class="font-medium text-brand underline underline-offset-2">นโยบายความเป็นส่วนตัว</button>
+						{t('ฉันยอมรับ')}
+						<button type="button" onclick={() => (legal = 'terms')} class="font-medium text-brand underline underline-offset-2">{t('เงื่อนไขการใช้งาน')}</button>
+						{t('และยินยอมให้เก็บและใช้ข้อมูลตาม')}
+						<button type="button" onclick={() => (legal = 'privacy')} class="font-medium text-brand underline underline-offset-2">{t('นโยบายความเป็นส่วนตัว')}</button>
 					</span>
 				</label>
 				{#if show('consent')}<span class="mt-2 block text-xs text-red-600">{show('consent')}</span>{/if}
@@ -197,7 +198,7 @@
 
 	<BottomBar>
 		<button type="submit" disabled={saving} class="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand py-4 text-sm font-semibold text-white active:bg-brand-600 disabled:opacity-80">
-			{#if saving}<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span> กำลังบันทึก...{:else}{submitLabel ?? (mode === 'onboarding' ? 'เริ่มใช้งาน Goose Man' : 'บันทึกข้อมูล')}{/if}
+			{#if saving}<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span> {t('กำลังบันทึก...')}{:else}{submitLabel ?? (mode === 'onboarding' ? t('เริ่มใช้งาน Goose Man') : t('บันทึกข้อมูล'))}{/if}
 		</button>
 	</BottomBar>
 </form>

@@ -2,6 +2,7 @@
 // and mirrored on the backend.
 import type { CartItem, Promotion, Store } from '$lib/types';
 import { livePromotions } from '$lib/data/stores';
+import { t } from '$lib/i18n';
 
 export const STORE_DELIVERY_FEE = 15;
 export const CUSTOM_DELIVERY_FEE = 20;
@@ -36,9 +37,9 @@ export function quoteDelivery(a: { distanceM: number | null; floor: number; rain
 
 /** "15 ฿ ใกล้โรงอาหาร · ชั้น 5 +4 ฿ · ฝนตก +5 ฿" */
 export function describeQuote(q: DeliveryQuote, floor: number, custom = false): string {
-	const parts = [custom ? `ฝากซื้อ ${q.base} ฿` : `${q.base} ฿ ${q.near ? 'ใกล้โรงอาหาร' : 'ไกลจากโรงอาหาร'}`];
-	if (q.floorFee) parts.push(`ชั้น ${floor} +${q.floorFee} ฿`);
-	if (q.rain) parts.push(`ฝนตก +${q.rain} ฿`);
+	const parts = [custom ? t('ฝากซื้อ {base} ฿', { base: q.base }) : t('{base} ฿ {v}', { base: q.base, v: q.near ? t('ใกล้โรงอาหาร') : t('ไกลจากโรงอาหาร') })];
+	if (q.floorFee) parts.push(t('ชั้น {floor} +{floorFee} ฿', { floor, floorFee: q.floorFee }));
+	if (q.rain) parts.push(t('ฝนตก +{rain} ฿', { rain: q.rain }));
 	return parts.join(' · ');
 }
 /** Upper bound for a custom order: the runner fronts this money in cash */
@@ -66,7 +67,7 @@ export function unitPrice(line: Pick<CartItem, 'menuItem' | 'special'> & { selec
 
 /** Display name of a cart line, with the size and selected options/toppings */
 export function lineName(line: Pick<CartItem, 'menuItem' | 'special'> & { selectedOptions?: CartItem['selectedOptions'] }): string {
-	const size = line.special && line.menuItem.specialPrice ? ' (พิเศษ)' : '';
+	const size = line.special && line.menuItem.specialPrice ? t(' (พิเศษ)') : '';
 	const options = line.selectedOptions ?? [];
 	const optionsStr = options.length > 0 ? ` (+${options.map((o) => o.name).join(', ')})` : '';
 	return `${line.menuItem.name}${size}${optionsStr}`;
@@ -80,9 +81,9 @@ export function promoDiscount(applied: AppliedCode | null, deliveryFee: number):
 
 /** "ลด 10 ฿ + ฟรีค่าหิ้ว", plus the minimum when there is one */
 export function describeBenefit(p: Pick<Promotion, 'discount' | 'freeDelivery' | 'minQty'>, withMinimum = true): string {
-	const benefit = [p.discount > 0 ? `ลด ${p.discount} ฿` : '', p.freeDelivery ? 'ฟรีค่าหิ้ว' : ''].filter(Boolean).join(' + ');
+	const benefit = [p.discount > 0 ? t('ลด {discount} ฿', { discount: p.discount }) : '', p.freeDelivery ? t('ฟรีค่าหิ้ว') : ''].filter(Boolean).join(' + ');
 	if (!withMinimum) return benefit;
-	return p.minQty > 1 ? `${benefit} เมื่อสั่ง ${p.minQty} ชิ้นขึ้นไป` : `${benefit} ทุกออเดอร์`;
+	return p.minQty > 1 ? t('{benefit} เมื่อสั่ง {minQty} ชิ้นขึ้นไป', { benefit, minQty: p.minQty }) : t('{benefit} ทุกออเดอร์', { benefit });
 }
 
 export interface AppliedPromotion {

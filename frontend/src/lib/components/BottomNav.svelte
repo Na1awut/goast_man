@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import type { TabId } from '$lib/types';
 	import { cart } from '$lib/stores/cart.svelte';
 	import { nav } from '$lib/stores/nav.svelte';
@@ -8,12 +9,12 @@
 	type Tab = { id: TabId; label: string; icon: IconName };
 
 	const left: Tab[] = [
-		{ id: 'HOME', label: 'หน้าแรก', icon: 'home' },
-		{ id: 'ORDERS', label: 'คำสั่งซื้อ', icon: 'receipt' }
+		{ id: 'HOME', label: t('หน้าแรก'), icon: 'home' },
+		{ id: 'ORDERS', label: t('คำสั่งซื้อ'), icon: 'receipt' }
 	];
 	const right: Tab[] = [
-		{ id: 'CHAT', label: 'แชท', icon: 'message' },
-		{ id: 'PROFILE', label: 'โปรไฟล์', icon: 'user' }
+		{ id: 'CHAT', label: t('แชท'), icon: 'message' },
+		{ id: 'PROFILE', label: t('โปรไฟล์'), icon: 'user' }
 	];
 
 	const badges = $derived<Partial<Record<TabId, number>>>({ ORDERS: orders.active.length });
@@ -48,7 +49,7 @@
 	</button>
 {/snippet}
 
-<nav class="sticky bottom-0 z-40 border-t border-slate-100 bg-white pb-[env(safe-area-inset-bottom)]" aria-label="เมนูหลัก">
+<nav class="sticky bottom-0 z-40 border-t border-slate-100 bg-white pb-[env(safe-area-inset-bottom)]" aria-label={t('เมนูหลัก')}>
 	<div class="relative flex h-[4.25rem] items-stretch px-2">
 		{#each left as t (t.id)}{@render tab(t)}{/each}
 
@@ -58,10 +59,10 @@
 				type="button"
 				onclick={() => nav.reset('STORES')}
 				class="relative flex h-11 items-center gap-1.5 self-center rounded-full bg-brand px-4 text-sm font-semibold whitespace-nowrap text-white transition-transform active:scale-95"
-				aria-label="สั่งอาหาร{cart.totalItems ? ` (ในตะกร้า ${cart.totalItems} ชิ้น)` : ''}"
+				aria-label={t('สั่งอาหาร{v}', { v: cart.totalItems ? t(' (ในตะกร้า {totalItems} ชิ้น)', { totalItems: cart.totalItems }) : '' })}
 			>
 				<Icon name="cart" class="h-5 w-5" />
-				สั่งอาหาร
+				{t('สั่งอาหาร')}
 				{#if cart.totalItems > 0}
 					{#key cart.totalItems}<span class="tick absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-900 px-1 text-[11px] font-semibold ring-2 ring-white">{cart.totalItems}</span>{/key}
 				{/if}

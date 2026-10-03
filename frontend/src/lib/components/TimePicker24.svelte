@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	let {
 		value = $bindable('08:00'),
 		label,
@@ -40,7 +41,7 @@
 			value={hour}
 			onchange={(e) => update(e.currentTarget.value, minute)}
 			class="flex-1 cursor-pointer appearance-none bg-transparent py-2 text-center text-sm font-semibold text-slate-900 outline-none"
-			aria-label="{label ? `${label} ` : ''}ชั่วโมง (00-23)"
+			aria-label={t('{v}ชั่วโมง (00-23)', { v: label ? `${label} ` : '' })}
 		>
 			{#each HOURS as h}
 				<option value={h}>{h}</option>
@@ -52,12 +53,12 @@
 			value={minute}
 			onchange={(e) => update(hour, e.currentTarget.value)}
 			class="flex-1 cursor-pointer appearance-none bg-transparent py-2 text-center text-sm font-semibold text-slate-900 outline-none"
-			aria-label="{label ? `${label} ` : ''}นาที (00-59)"
+			aria-label={t('{v}นาที (00-59)', { v: label ? `${label} ` : '' })}
 		>
 			{#each MINUTES as m}
 				<option value={m}>{m}</option>
 			{/each}
 		</select>
-		<span class="pl-1 text-xs font-medium text-slate-500 select-none">น.</span>
+		<span class="pl-1 text-xs font-medium text-slate-500 select-none">{t('น.')}</span>
 	</div>
 </div>

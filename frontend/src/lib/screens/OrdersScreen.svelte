@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import AppBar from '$lib/components/AppBar.svelte';
 	import Goose from '$lib/components/Goose.svelte';
 	import Icon from '$lib/components/Icon.svelte';
@@ -11,9 +12,9 @@
 	let filter = $state<Filter>('ALL');
 
 	const filters = $derived<{ id: Filter; label: string; count: number }[]>([
-		{ id: 'ALL', label: 'ทั้งหมด', count: orders.orders.length },
-		{ id: 'ACTIVE', label: 'กำลังส่ง', count: orders.active.length },
-		{ id: 'COMPLETED', label: 'สำเร็จ', count: orders.completed.length }
+		{ id: 'ALL', label: t('ทั้งหมด'), count: orders.orders.length },
+		{ id: 'ACTIVE', label: t('กำลังส่ง'), count: orders.active.length },
+		{ id: 'COMPLETED', label: t('สำเร็จ'), count: orders.completed.length }
 	]);
 
 	const list = $derived(filter === 'ALL' ? orders.orders : filter === 'ACTIVE' ? orders.active : orders.completed);
@@ -25,8 +26,8 @@
 </script>
 
 <div class="flex flex-1 flex-col">
-	<AppBar title="คำสั่งซื้อ" showBack={false}>
-		<div class="flex px-4" role="tablist" aria-label="กรองสถานะ">
+	<AppBar title={t('คำสั่งซื้อ')} showBack={false}>
+		<div class="flex px-4" role="tablist" aria-label={t('กรองสถานะ')}>
 			{#each filters as f (f.id)}
 				{@const active = filter === f.id}
 				<button
@@ -46,9 +47,9 @@
 		{#if list.length === 0}
 			<div class="rounded-2xl border border-slate-100 bg-white px-6 py-12 text-center">
 				<Goose pose="wait" class="mx-auto mb-3 w-28" />
-				<p class="text-sm font-medium text-slate-800">{filter === 'ACTIVE' ? 'ตอนนี้ไม่มีใครหิ้วของให้คุณอยู่' : 'ยังไม่มีคำสั่งซื้อ'}</p>
-				<p class="mt-1 text-xs text-slate-500">หิวเมื่อไหร่ ฝากเพื่อนที่อยู่ใกล้ร้านได้เลย</p>
-				<button type="button" onclick={() => nav.reset('STORES')} class="mt-4 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white">สั่งอาหาร</button>
+				<p class="text-sm font-medium text-slate-800">{filter === 'ACTIVE' ? t('ตอนนี้ไม่มีใครหิ้วของให้คุณอยู่') : t('ยังไม่มีคำสั่งซื้อ')}</p>
+				<p class="mt-1 text-xs text-slate-500">{t('หิวเมื่อไหร่ ฝากเพื่อนที่อยู่ใกล้ร้านได้เลย')}</p>
+				<button type="button" onclick={() => nav.reset('STORES')} class="mt-4 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white">{t('สั่งอาหาร')}</button>
 			</div>
 		{:else}
 			<ul class="space-y-3">
@@ -58,7 +59,7 @@
 							<div class="flex items-start justify-between gap-2">
 								<div>
 									<p class="text-sm font-semibold text-slate-900">{order.orderCode}</p>
-									<p class="text-xs text-slate-400">{formatRelativeDate(order.createdAt)} · {order.kind === 'CUSTOM' ? 'ฝากซื้อ' : 'ร้านพาร์ทเนอร์'}</p>
+									<p class="text-xs text-slate-400">{formatRelativeDate(order.createdAt)} · {order.kind === 'CUSTOM' ? t('ฝากซื้อ') : t('ร้านพาร์ทเนอร์')}</p>
 								</div>
 								<StatusBadge status={order.status} />
 							</div>

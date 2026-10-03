@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import AppBar from '$lib/components/AppBar.svelte';
 	import BottomBar from '$lib/components/BottomBar.svelte';
 	import FloorPicker from '$lib/components/FloorPicker.svelte';
@@ -26,12 +27,12 @@
 	});
 
 	const errors = $derived({
-		items: customDraft.items.trim().length < 3 ? 'ระบุรายการที่ต้องการอย่างน้อย 3 ตัวอักษร' : '',
-		price: food <= 0 ? 'ใส่ราคาประมาณ เพื่อให้เพื่อนสำรองเงินได้พอ' : food > CUSTOM_MAX_PRICE ? `สูงสุด ${CUSTOM_MAX_PRICE} บาท เพราะเพื่อนต้องสำรองจ่ายก่อน` : ''
+		items: customDraft.items.trim().length < 3 ? t('ระบุรายการที่ต้องการอย่างน้อย 3 ตัวอักษร') : '',
+		price: food <= 0 ? t('ใส่ราคาประมาณ เพื่อให้เพื่อนสำรองเงินได้พอ') : food > CUSTOM_MAX_PRICE ? t('สูงสุด {CUSTOM_MAX_PRICE} บาท เพราะเพื่อนต้องสำรองจ่ายก่อน', { CUSTOM_MAX_PRICE }) : ''
 	});
 	const isValid = $derived(!errors.items && !errors.price);
 
-	const steps = ['ข้อมูลคำสั่งซื้อ', 'หาคนหิ้ว', 'จัดส่งสำเร็จ'];
+	const steps = [t('ข้อมูลคำสั่งซื้อ'), t('หาคนหิ้ว'), t('จัดส่งสำเร็จ')];
 
 	async function submit(e: SubmitEvent) {
 		e.preventDefault();
@@ -59,7 +60,7 @@
 			customDraft.clear();
 			nav.reset('TRACKING');
 		} catch (err) {
-			toast.show(err instanceof OrderError ? err.message : 'สั่งไม่สำเร็จ ลองใหม่อีกครั้ง', 'error', { duration: 5000 });
+			toast.show(err instanceof OrderError ? err.message : t('สั่งไม่สำเร็จ ลองใหม่อีกครั้ง'), 'error', { duration: 5000 });
 		} finally {
 			sending = false;
 		}
@@ -67,8 +68,8 @@
 </script>
 
 <form class="flex flex-1 flex-col" onsubmit={submit} novalidate>
-	<AppBar title="ฝากซื้ออาหาร / ของกิน">
-		<ol class="flex items-center gap-2 px-4 pb-3 text-xs" aria-label="ขั้นตอน">
+	<AppBar title={t('ฝากซื้ออาหาร / ของกิน')}>
+		<ol class="flex items-center gap-2 px-4 pb-3 text-xs" aria-label={t('ขั้นตอน')}>
 			{#each steps as step, i (step)}
 				{#if i > 0}<li aria-hidden="true" class="h-px flex-1 bg-slate-200"></li>{/if}
 				<li class="flex items-center gap-1.5 {i === 0 ? 'font-medium text-brand' : 'text-slate-400'}" aria-current={i === 0 ? 'step' : undefined}>
@@ -83,7 +84,7 @@
 		<label class="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white p-4">
 			<span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand"><Icon name={pickup.icon} /></span>
 			<span class="min-w-0 flex-1">
-				<span class="block text-xs text-slate-500">จุดซื้อของ</span>
+				<span class="block text-xs text-slate-500">{t('จุดซื้อของ')}</span>
 				<span class="relative block">
 					<select bind:value={customDraft.pickupId} class="w-full appearance-none bg-transparent pr-6 text-sm font-semibold text-slate-900 outline-none">
 						{#each PICKUP_HUBS as hub (hub.id)}<option value={hub.id}>{hub.name}</option>{/each}
@@ -95,13 +96,13 @@
 
 		<!-- Items -->
 		<div class="space-y-2 pt-1">
-			<label for="items" class="text-sm font-semibold text-slate-900">รายละเอียดอาหาร / ของกิน</label>
+			<label for="items" class="text-sm font-semibold text-slate-900">{t('รายละเอียดอาหาร / ของกิน')}</label>
 			<textarea
 				id="items"
 				bind:value={customDraft.items}
 				rows="3"
 				maxlength="300"
-				placeholder="เช่น ข้าวมันไก่พิเศษเนื้อน่อง ไม่แตงกวา ร้านป้าณี"
+				placeholder={t('เช่น ข้าวมันไก่พิเศษเนื้อน่อง ไม่แตงกวา ร้านป้าณี')}
 				aria-invalid={submitted && !!errors.items}
 				class="w-full resize-none rounded-2xl border bg-white p-4 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-brand {submitted && errors.items ? 'border-red-400' : 'border-slate-200'}"
 			></textarea>
@@ -112,8 +113,8 @@
 		<div class="rounded-2xl border bg-white p-4 {submitted && errors.price ? 'border-red-400' : 'border-slate-100'}">
 			<div class="flex items-center gap-3">
 				<label for="price" class="min-w-0 flex-1">
-					<span class="block text-sm font-semibold text-slate-900">ประมาณราคาอาหาร (บาท)</span>
-					<span class="block text-xs text-slate-500">เพื่อนจะใช้สำรองจ่ายก่อน</span>
+					<span class="block text-sm font-semibold text-slate-900">{t('ประมาณราคาอาหาร (บาท)')}</span>
+					<span class="block text-xs text-slate-500">{t('เพื่อนจะใช้สำรองจ่ายก่อน')}</span>
 				</label>
 				<input
 					id="price"
@@ -134,7 +135,7 @@
 		<button type="button" onclick={() => campus.openPicker()} class="flex w-full items-center gap-3 rounded-2xl border border-slate-100 bg-white p-4 text-left">
 			<span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand"><Icon name="pin" /></span>
 			<span class="min-w-0 flex-1">
-				<span class="block text-xs text-slate-500">จุดส่งของ</span>
+				<span class="block text-xs text-slate-500">{t('จุดส่งของ')}</span>
 				<span class="block truncate text-sm font-semibold text-slate-900">{dropoffLabel(campus.dropoff, campus.floor)}</span>
 			</span>
 			<Icon name="chevron-right" class="h-5 w-5 text-slate-400" />
@@ -145,29 +146,29 @@
 			type="text"
 			bind:value={customDraft.note}
 			maxlength="120"
-			placeholder="หมายเหตุถึงคนหิ้ว (ไม่บังคับ)"
-			aria-label="หมายเหตุถึงคนหิ้ว"
+			placeholder={t('หมายเหตุถึงคนหิ้ว (ไม่บังคับ)')}
+			aria-label={t('หมายเหตุถึงคนหิ้ว')}
 			class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none placeholder:text-slate-400 focus:border-brand"
 		/>
 
 		<!-- Summary -->
 		<div class="space-y-2 rounded-2xl border border-slate-100 bg-white p-4 text-sm">
-			<div class="flex justify-between text-slate-600"><span>ค่าอาหาร</span><span class="text-slate-900 tabular-nums">{food}</span></div>
+			<div class="flex justify-between text-slate-600"><span>{t('ค่าอาหาร')}</span><span class="text-slate-900 tabular-nums">{food}</span></div>
 			<div class="flex items-center justify-between text-slate-600">
-				<span class="min-w-0">ค่าหิ้วน้ำใจ <span class="block text-xs text-slate-500">{describeQuote(quote, campus.floor, true)}</span></span>
+				<span class="min-w-0">{t('ค่าหิ้วน้ำใจ')} <span class="block text-xs text-slate-500">{describeQuote(quote, campus.floor, true)}</span></span>
 				<span class="shrink-0 font-medium text-brand tabular-nums">{quote.fee}</span>
 			</div>
 			<div class="flex items-center justify-between border-t border-dashed border-slate-200 pt-3">
-				<span class="font-semibold text-slate-900">ยอดรวมทั้งหมด</span>
+				<span class="font-semibold text-slate-900">{t('ยอดรวมทั้งหมด')}</span>
 				<span class="text-xl font-bold text-brand tabular-nums">{formatBaht(total)}</span>
 			</div>
-			<p class="flex items-center gap-1.5 text-xs text-slate-500"><Icon name="cash" class="h-4 w-4" /> ชำระเงินสดกับเพื่อนตอนรับของ ตามใบเสร็จจริง</p>
+			<p class="flex items-center gap-1.5 text-xs text-slate-500"><Icon name="cash" class="h-4 w-4" /> {t('ชำระเงินสดกับเพื่อนตอนรับของ ตามใบเสร็จจริง')}</p>
 		</div>
 	</div>
 
 	<BottomBar>
 		<button type="submit" disabled={sending} class="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand py-4 text-sm font-semibold text-white active:bg-brand-600 disabled:opacity-80">
-			{#if sending}<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span> กำลังส่งออเดอร์...{:else}ยืนยันและหาเพื่อนหิ้ว ({formatBaht(total)}){/if}
+			{#if sending}<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span> {t('กำลังส่งออเดอร์...')}{:else}{t('ยืนยันและหาเพื่อนหิ้ว ({v})', { v: formatBaht(total) })}{/if}
 		</button>
 	</BottomBar>
 </form>

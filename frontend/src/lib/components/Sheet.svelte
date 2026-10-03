@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import type { Snippet } from 'svelte';
 	import { fade, fly } from 'svelte/transition';
 	import Icon from './Icon.svelte';
@@ -19,7 +20,7 @@
 
 {#if open}
 	<div class="fixed inset-0 z-50 flex items-end justify-center">
-		<button type="button" aria-label="ปิด" class="absolute inset-0 bg-slate-900/40" onclick={onclose} transition:fade={{ duration: 150 }}></button>
+		<button type="button" aria-label={t('ปิด')} class="absolute inset-0 bg-slate-900/40" onclick={onclose} transition:fade={{ duration: 150 }}></button>
 		<div
 			role="dialog"
 			aria-modal="true"
@@ -30,7 +31,7 @@
 			<div class="mx-auto mb-3 h-1 w-10 rounded-full bg-slate-200"></div>
 			<div class="mb-4 flex items-center justify-between">
 				<h2 class="text-base font-semibold text-slate-900">{title}</h2>
-				<button type="button" onclick={onclose} aria-label="ปิด" class="-mr-2 flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100">
+				<button type="button" onclick={onclose} aria-label={t('ปิด')} class="-mr-2 flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100">
 					<Icon name="x" />
 				</button>
 			</div>

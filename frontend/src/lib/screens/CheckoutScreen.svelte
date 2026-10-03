@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import { slide } from 'svelte/transition';
 	import AnimatedNumber from '$lib/components/AnimatedNumber.svelte';
 	import AppBar from '$lib/components/AppBar.svelte';
@@ -46,14 +47,14 @@
 	/** The database's reason, in the buyer's words; unknown reasons read as "code not found" */
 	function promoErrorText(err: unknown, input: string): string {
 		const msg = err instanceof Error ? err.message : String(err);
-		if (msg.includes('PROMO_NOT_STARTED')) return 'โค้ดนี้ยังไม่เริ่มใช้ได้';
-		if (msg.includes('PROMO_USES_UP')) return 'โค้ดนี้ถูกใช้ครบจำนวนแล้ว';
-		return `ไม่พบโค้ด ${input.trim().toUpperCase()}`;
+		if (msg.includes('PROMO_NOT_STARTED')) return t('โค้ดนี้ยังไม่เริ่มใช้ได้');
+		if (msg.includes('PROMO_USES_UP')) return t('โค้ดนี้ถูกใช้ครบจำนวนแล้ว');
+		return t('ไม่พบโค้ด {input}', { input: input.trim().toUpperCase() });
 	}
 
 	async function applyPromo(input = promoInput) {
 		if (!input.trim()) {
-			promoError = 'กรอกโค้ดส่วนลดก่อน';
+			promoError = t('กรอกโค้ดส่วนลดก่อน');
 			return;
 		}
 		checkingPromo = true;
@@ -61,13 +62,13 @@
 		try {
 			const applied = await cart.checkCode(input);
 			if (applied.kind === 'FREE_DELIVERY' && checkout.feeAfterPromotion === 0) {
-				promoError = 'ออเดอร์นี้ฟรีค่าหิ้วจากโปรของร้านอยู่แล้ว';
+				promoError = t('ออเดอร์นี้ฟรีค่าหิ้วจากโปรของร้านอยู่แล้ว');
 				return;
 			}
 			cart.promo = applied;
 			haptic([10, 40, 10]);
 			promoInput = '';
-			toast.show(`ใช้โค้ด ${applied.code} แล้ว (${applied.kind === 'FREE_DELIVERY' ? `ฟรีค่าหิ้ว ${checkout.feeAfterPromotion} ฿` : `ลด ${applied.amount} ฿`})`, 'success');
+			toast.show(t('ใช้โค้ด {code} แล้ว ({v})', { code: applied.code, v: applied.kind === 'FREE_DELIVERY' ? t('ฟรีค่าหิ้ว {feeAfterPromotion} ฿', { feeAfterPromotion: checkout.feeAfterPromotion }) : t('ลด {amount} ฿', { amount: applied.amount }) }), 'success');
 		} catch (err) {
 			promoError = promoErrorText(err, input);
 		} finally {
@@ -90,7 +91,7 @@
 		// First order: ask for the buyer's details once, then come back here
 		if (!profileGate.ensure()) return;
 		if (orders.onlineRiders === 0) {
-			toast.show('ขณะนี้ไม่มีคนหิ้วเปิดรับงาน ไม่สามารถสร้าง QR ชำระเงินได้', 'error');
+			toast.show(t('ขณะนี้ไม่มีคนหิ้วเปิดรับงาน ไม่สามารถสร้าง QR ชำระเงินได้'), 'error');
 			return;
 		}
 		if (!isLive) {
@@ -102,20 +103,20 @@
 			// Live PromptPay: order is created unpaid, then paid by slip on PAYMENT screen
 			if (await checkout.place()) nav.reset('PAYMENT');
 		} catch (err) {
-			toast.show(err instanceof OrderError ? err.message : 'สั่งไม่สำเร็จ ลองใหม่อีกครั้ง', 'error', { duration: 5000 });
+			toast.show(err instanceof OrderError ? err.message : t('สั่งไม่สำเร็จ ลองใหม่อีกครั้ง'), 'error', { duration: 5000 });
 		}
 	}
 </script>
 
 <div class="flex flex-1 flex-col">
-	<AppBar title="สรุปคำสั่งซื้อ" />
+	<AppBar title={t('สรุปคำสั่งซื้อ')} />
 
 	{#if cart.isEmpty || !cart.store}
 		<div class="flex flex-1 flex-col items-center justify-center px-8 text-center">
 			<Goose pose="wait" class="mb-3 w-28" />
-			<p class="text-sm font-medium text-slate-800">ถุงยังว่างอยู่</p>
-			<p class="mt-1 text-xs text-slate-500">เลือกเมนูจากร้านพาร์ทเนอร์ แล้วน้องห่านจะหิ้วไปให้</p>
-			<button type="button" onclick={() => nav.reset('STORES')} class="mt-5 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white">ดูร้านค้า</button>
+			<p class="text-sm font-medium text-slate-800">{t('ถุงยังว่างอยู่')}</p>
+			<p class="mt-1 text-xs text-slate-500">{t('เลือกเมนูจากร้านพาร์ทเนอร์ แล้วน้องห่านจะหิ้วไปให้')}</p>
+			<button type="button" onclick={() => nav.reset('STORES')} class="mt-5 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white">{t('ดูร้านค้า')}</button>
 		</div>
 	{:else}
 		{@const store = cart.store}
@@ -125,27 +126,27 @@
 				<button type="button" onclick={() => profileGate.ensure()} class="flex w-full items-center gap-3 rounded-2xl border border-brand-100 bg-brand-50 p-4 text-left">
 					<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-brand"><Icon name="user" class="h-5 w-5" /></span>
 					<span class="min-w-0 flex-1">
-						<span class="block text-sm font-semibold text-slate-900">กรอกข้อมูลผู้สั่ง (ครั้งเดียว)</span>
-						<span class="block text-xs text-slate-600">ชื่อเล่นและเบอร์ให้คนหิ้วติดต่อ ครั้งต่อไปไม่ต้องกรอกอีก</span>
+						<span class="block text-sm font-semibold text-slate-900">{t('กรอกข้อมูลผู้สั่ง (ครั้งเดียว)')}</span>
+						<span class="block text-xs text-slate-600">{t('ชื่อเล่นและเบอร์ให้คนหิ้วติดต่อ ครั้งต่อไปไม่ต้องกรอกอีก')}</span>
 					</span>
 					<Icon name="chevron-right" class="h-4 w-4 shrink-0 text-slate-400" />
 				</button>
 			{:else if auth.user}
-				<section class="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white p-4" aria-label="ผู้สั่ง">
+				<section class="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white p-4" aria-label={t('ผู้สั่ง')}>
 					<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500"><Icon name="user" class="h-5 w-5" /></span>
 					<span class="min-w-0 flex-1">
 						<span class="block truncate text-sm font-semibold text-slate-900">{auth.user.nickname} · <span class="font-normal tabular-nums">{formatPhone(auth.user.phoneNumber)}</span></span>
 						<span class="block truncate text-xs text-slate-500">{auth.user.faculty || auth.user.email}</span>
 					</span>
-					<span class="flex shrink-0 items-center gap-1 text-[11px] text-slate-400"><Icon name="lock" class="h-3.5 w-3.5" /> ผูกกับบัญชี</span>
+					<span class="flex shrink-0 items-center gap-1 text-[11px] text-slate-400"><Icon name="lock" class="h-3.5 w-3.5" /> {t('ผูกกับบัญชี')}</span>
 				</section>
 			{/if}
 
 			<!-- Drop-off -->
 			<section class="space-y-3 rounded-2xl border border-slate-100 bg-white p-4">
-				<h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900"><Icon name="pin" class="h-4 w-4 text-brand" /> จุดส่งมอบอาหารใน มจธ.</h2>
+				<h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900"><Icon name="pin" class="h-4 w-4 text-brand" /> {t('จุดส่งมอบอาหารใน มจธ.')}</h2>
 				<label class="relative block">
-					<span class="sr-only">จุดส่งมอบ</span>
+					<span class="sr-only">{t('จุดส่งมอบ')}</span>
 					<select value={campus.dropoff.id} onchange={selectDropoff} class="w-full appearance-none rounded-xl bg-slate-100 py-3 pr-10 pl-3.5 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-brand">
 						{#each DROPOFF_POINTS as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
 					</select>
@@ -153,12 +154,12 @@
 				</label>
 				<FloorPicker />
 				<label class="block">
-					<span class="mb-1 block text-xs text-slate-500">หมายเหตุถึงคนหิ้ว</span>
+					<span class="mb-1 block text-xs text-slate-500">{t('หมายเหตุถึงคนหิ้ว')}</span>
 					<input
 						type="text"
 						bind:value={checkout.note}
 						maxlength="120"
-						placeholder="เช่น นั่งโต๊ะม้าหินอ่อน ใส่เสื้อสีขาว"
+						placeholder={t('เช่น นั่งโต๊ะม้าหินอ่อน ใส่เสื้อสีขาว')}
 						class="w-full rounded-xl bg-slate-100 px-3.5 py-3 text-sm outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-brand"
 					/>
 				</label>
@@ -166,11 +167,11 @@
 
 			<!-- Items -->
 			<section class="rounded-2xl border border-slate-100 bg-white p-4">
-				<h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900"><Icon name="store" class="h-4 w-4 text-slate-500" /> <span class="min-w-0 flex-1 truncate">{store.name}</span> <span class="shrink-0 text-xs font-normal tabular-nums {cart.full ? 'text-brand-700' : 'text-slate-500'}">{cart.totalItems}/{MAX_ORDER_ITEMS} ชิ้น</span></h2>
+				<h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900"><Icon name="store" class="h-4 w-4 text-slate-500" /> <span class="min-w-0 flex-1 truncate">{store.name}</span> <span class="shrink-0 text-xs font-normal tabular-nums {cart.full ? 'text-brand-700' : 'text-slate-500'}">{t('{totalItems}/{MAX_ORDER_ITEMS} ชิ้น', { totalItems: cart.totalItems, MAX_ORDER_ITEMS })}</span></h2>
 				{#if cart.overLimit}
-					<p class="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">คนหิ้วถือได้สูงสุด {MAX_ORDER_ITEMS} ชิ้น ลดให้เหลือ {MAX_ORDER_ITEMS} ชิ้นก่อนสั่ง</p>
+					<p class="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">{t('คนหิ้วถือได้สูงสุด {MAX_ORDER_ITEMS} ชิ้น ลดให้เหลือ {MAX_ORDER_ITEMS2} ชิ้นก่อนสั่ง', { MAX_ORDER_ITEMS, MAX_ORDER_ITEMS2: MAX_ORDER_ITEMS })}</p>
 				{:else if cart.full}
-					<p class="mt-2 text-xs text-slate-500">ครบ {MAX_ORDER_ITEMS} ชิ้นแล้ว (คนหิ้วถือได้เท่านี้)</p>
+					<p class="mt-2 text-xs text-slate-500">{t('ครบ {MAX_ORDER_ITEMS} ชิ้นแล้ว (คนหิ้วถือได้เท่านี้)', { MAX_ORDER_ITEMS })}</p>
 				{/if}
 				<ul class="mt-2 divide-y divide-slate-100">
 					{#each cart.items as item (item.menuItem.id + (item.special ? ':special' : '') + (item.selectedOptions?.map(o => o.choiceId).join(',') ?? ''))}
@@ -179,7 +180,7 @@
 								<p class="text-sm font-medium text-slate-900">{lineName(item)}</p>
 								{#if item.selectedOptions?.length}
 									<p class="text-xs text-slate-500">
-										{item.selectedOptions.map((o) => `${o.name}${o.price > 0 ? ` (+${o.price}฿)` : ''}`).join(', ')}
+										{item.selectedOptions.map((o) => `${o.name}${o.price > 0 ? t(' (+{price}฿)', { price: o.price }) : ''}`).join(', ')}
 									</p>
 								{/if}
 								<p class="text-xs text-slate-500 tabular-nums">{formatBaht(unitPrice(item) * item.quantity)}</p>
@@ -189,17 +190,17 @@
 					{/each}
 				</ul>
 				<button type="button" onclick={() => addMore(store.id)} class="mt-1 flex items-center gap-1 text-sm font-medium text-brand">
-					<Icon name="plus" class="h-4 w-4" /> สั่งเพิ่มจากร้านนี้
+					<Icon name="plus" class="h-4 w-4" /> {t('สั่งเพิ่มจากร้านนี้')}
 				</button>
 			</section>
 
 			<!-- Promo -->
 			<section class="space-y-3 rounded-2xl border border-slate-100 bg-white p-4">
-				<h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900"><Icon name="ticket" class="h-4 w-4 text-brand" /> โค้ดส่วนลด</h2>
+				<h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900"><Icon name="ticket" class="h-4 w-4 text-brand" /> {t('โค้ดส่วนลด')}</h2>
 				{#if cart.promo}
 					<span class="inline-flex items-center gap-2 rounded-lg bg-fresh-50 px-3 py-1.5 text-sm font-medium text-fresh-700">
-						{cart.promo.code} ลด {checkout.codeDiscount} บาท
-						<button type="button" onclick={() => (cart.promo = null)} aria-label="ยกเลิกโค้ด {cart.promo.code}" class="text-fresh-700/70 hover:text-fresh-700"><Icon name="x-circle" class="h-4 w-4" /></button>
+						{t('{code} ลด {codeDiscount} บาท', { code: cart.promo.code, codeDiscount: checkout.codeDiscount })}
+						<button type="button" onclick={() => (cart.promo = null)} aria-label={t('ยกเลิกโค้ด {code}', { code: cart.promo.code })} class="text-fresh-700/70 hover:text-fresh-700"><Icon name="x-circle" class="h-4 w-4" /></button>
 					</span>
 				{:else}
 					<form
@@ -213,14 +214,14 @@
 							type="text"
 							bind:value={promoInput}
 							oninput={() => (promoError = '')}
-							placeholder="ใส่โค้ดส่วนลดจากทีม Goose Man"
-							aria-label="โค้ดส่วนลด"
+							placeholder={t('ใส่โค้ดส่วนลดจากทีม Goose Man')}
+							aria-label={t('โค้ดส่วนลด')}
 							aria-invalid={!!promoError}
 							autocapitalize="characters"
 							disabled={checkingPromo}
 							class="min-w-0 flex-1 rounded-xl bg-slate-100 px-3.5 py-3 text-sm uppercase outline-none placeholder:normal-case placeholder:text-slate-400 focus:ring-2 disabled:opacity-60 {promoError ? 'ring-2 ring-red-300' : 'focus:ring-brand'}"
 						/>
-						<button type="submit" disabled={checkingPromo} class="shrink-0 rounded-xl bg-brand px-4 text-sm font-semibold text-white disabled:opacity-60">{checkingPromo ? 'กำลังตรวจสอบ...' : 'ใช้โค้ด'}</button>
+						<button type="submit" disabled={checkingPromo} class="shrink-0 rounded-xl bg-brand px-4 text-sm font-semibold text-white disabled:opacity-60">{checkingPromo ? t('กำลังตรวจสอบ...') : t('ใช้โค้ด')}</button>
 					</form>
 					{#if promoError}<p class="text-xs text-red-600">{promoError}</p>{/if}
 				{/if}
@@ -228,55 +229,55 @@
 
 			<!-- Totals -->
 			<section class="space-y-2 rounded-2xl border border-slate-100 bg-white p-4 text-sm">
-				<div class="flex justify-between text-slate-600"><span>ค่าอาหารรวม</span><span class="text-slate-900 tabular-nums">{formatBaht(cart.subtotal)}</span></div>
+				<div class="flex justify-between text-slate-600"><span>{t('ค่าอาหารรวม')}</span><span class="text-slate-900 tabular-nums">{formatBaht(cart.subtotal)}</span></div>
 				<div class="flex justify-between gap-3 text-slate-600">
 					<span class="min-w-0">
-						ค่าหิ้วน้ำใจ (เพื่อน นศ. ส่งให้)
+						{t('ค่าหิ้วน้ำใจ (เพื่อน นศ. ส่งให้)')}
 						<span class="block text-xs text-slate-500">{describeQuote(cart.deliveryQuote, campus.floor)}</span>
 					</span>
 					<span class="shrink-0 text-slate-900 tabular-nums">{formatBaht(checkout.deliveryFee)}</span>
 				</div>
 				{#if cart.deliveryQuote.rain}
-					<p class="flex items-center gap-1.5 rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-800">ช่วงฝนตก ค่าหิ้วเพิ่ม {cart.deliveryQuote.rain} บาท ให้เพื่อนที่ฝ่าฝนมาส่ง</p>
+					<p class="flex items-center gap-1.5 rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-800">{t('ช่วงฝนตก ค่าหิ้วเพิ่ม {rain} บาท ให้เพื่อนที่ฝ่าฝนมาส่ง', { rain: cart.deliveryQuote.rain })}</p>
 				{/if}
 				{#if checkout.codeDiscount > 0}
-					<div class="flex justify-between text-slate-600"><span>ส่วนลดจากโค้ด [{cart.promo?.code}]</span><span class="font-medium text-fresh-700 tabular-nums">-{formatBaht(checkout.codeDiscount)}</span></div>
+					<div class="flex justify-between text-slate-600"><span>{t('ส่วนลดจากโค้ด [{code}]', { code: cart.promo?.code })}</span><span class="font-medium text-fresh-700 tabular-nums">-{formatBaht(checkout.codeDiscount)}</span></div>
 				{/if}
 				{#if cart.partnerDiscount > 0 && cart.appliedPromotion}
-					<div class="flex justify-between gap-3 text-slate-600"><span class="min-w-0 truncate">{cart.appliedPromotion.promotion.kind === 'CO_PROMO' ? 'โปรร่วม' : 'โปรร้าน'}: {cart.appliedPromotion.promotion.title}</span><span class="font-medium text-fresh-700 tabular-nums">-{formatBaht(cart.partnerDiscount)}</span></div>
+					<div class="flex justify-between gap-3 text-slate-600"><span class="min-w-0 truncate">{cart.appliedPromotion.promotion.kind === 'CO_PROMO' ? t('โปรร่วม') : t('โปรร้าน')}: {cart.appliedPromotion.promotion.title}</span><span class="font-medium text-fresh-700 tabular-nums">-{formatBaht(cart.partnerDiscount)}</span></div>
 				{/if}
 				{#if checkout.tip > 0}
-					<div class="flex justify-between text-slate-600" transition:slide={{ duration: 180 }}><span>ทิปให้เพื่อน (ปัดเศษ)</span><span class="text-slate-900 tabular-nums">{formatBaht(checkout.tip)}</span></div>
+					<div class="flex justify-between text-slate-600" transition:slide={{ duration: 180 }}><span>{t('ทิปให้เพื่อน (ปัดเศษ)')}</span><span class="text-slate-900 tabular-nums">{formatBaht(checkout.tip)}</span></div>
 				{/if}
 				<div class="flex items-center justify-between border-t border-slate-100 pt-3">
-					<span class="font-semibold text-slate-900">ยอดชำระสุทธิ</span>
+					<span class="font-semibold text-slate-900">{t('ยอดชำระสุทธิ')}</span>
 					<AnimatedNumber value={checkout.total} class="text-xl font-bold text-brand" />
 				</div>
 				{#if saved > 0}
 					<p class="flex items-center gap-1.5 rounded-lg bg-fresh-50 px-3 py-2 text-xs font-medium text-fresh-700" transition:slide={{ duration: 180 }}>
-						<Icon name="tag" class="h-3.5 w-3.5" /> ออเดอร์นี้ประหยัดไป {saved} บาท
+						<Icon name="tag" class="h-3.5 w-3.5" /> {t('ออเดอร์นี้ประหยัดไป {saved} บาท', { saved })}
 					</p>
 				{/if}
 			</section>
 
 			<!-- Payment -->
 			<section class="rounded-2xl border border-slate-100 bg-white p-4">
-				<h2 id="pay-label" class="text-sm font-semibold text-slate-900">วิธีชำระเงิน</h2>
+				<h2 id="pay-label" class="text-sm font-semibold text-slate-900">{t('วิธีชำระเงิน')}</h2>
 				<div class="mt-2.5 flex items-center gap-3 rounded-xl bg-slate-50 p-3.5">
 					<span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-brand">
 						<span class="h-2.5 w-2.5 rounded-full bg-brand"></span>
 					</span>
 					<div>
-						<span class="block text-sm font-medium text-slate-900">สแกน PromptPay QR Code</span>
-						<span class="block text-xs text-slate-500">เงินพักในระบบจนกว่าจะยืนยัน OTP เมื่อได้รับของครบ</span>
+						<span class="block text-sm font-medium text-slate-900">{t('สแกน PromptPay QR Code')}</span>
+						<span class="block text-xs text-slate-500">{t('เงินพักในระบบจนกว่าจะยืนยัน OTP เมื่อได้รับของครบ')}</span>
 					</div>
 				</div>
 				{#if orders.onlineRiders === 0}
 					<div class="mt-3 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800" role="alert">
 						<Icon name="alert" class="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
 						<div>
-							<p class="font-semibold text-red-900">ขณะนี้ไม่มีคนหิ้วเปิดรับงานในระบบ</p>
-							<p class="mt-0.5 text-red-700">ไม่สามารถสร้าง QR Code ชำระเงินได้ชั่วคราว กรุณารอสักครู่จนกว่าจะมีเพื่อนเปิดรับงาน</p>
+							<p class="font-semibold text-red-900">{t('ขณะนี้ไม่มีคนหิ้วเปิดรับงานในระบบ')}</p>
+							<p class="mt-0.5 text-red-700">{t('ไม่สามารถสร้าง QR Code ชำระเงินได้ชั่วคราว กรุณารอสักครู่จนกว่าจะมีเพื่อนเปิดรับงาน')}</p>
 						</div>
 					</div>
 				{/if}
@@ -293,8 +294,8 @@
 				>
 					<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {checkout.roundUp ? 'bg-brand text-white' : 'bg-brand-50 text-brand'}"><Icon name="heart" class="h-5 w-5" /></span>
 					<span class="min-w-0 flex-1">
-						<span class="block text-sm font-semibold text-slate-900">ปัดเป็น {formatBaht(checkout.baseTotal + checkout.tipOffer)} ไหม?</span>
-						<span class="block text-xs text-slate-600">ส่วนต่าง {checkout.tipOffer} บาทเป็นทิปให้เพื่อนที่หิ้ว</span>
+						<span class="block text-sm font-semibold text-slate-900">{t('ปัดเป็น {v} ไหม?', { v: formatBaht(checkout.baseTotal + checkout.tipOffer) })}</span>
+						<span class="block text-xs text-slate-600">{t('ส่วนต่าง {tipOffer} บาทเป็นทิปให้เพื่อนที่หิ้ว', { tipOffer: checkout.tipOffer })}</span>
 					</span>
 					<span class="relative h-6 w-10 shrink-0 rounded-full transition-colors {checkout.roundUp ? 'bg-brand' : 'bg-slate-200'}" aria-hidden="true">
 						<span class="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all {checkout.roundUp ? 'left-[18px]' : 'left-0.5'}"></span>
@@ -306,7 +307,7 @@
 		<BottomBar>
 			{#if orders.onlineRiders === 0}
 				<div class="mb-2 flex items-center justify-center gap-1.5 text-xs font-medium text-red-600">
-					<span class="h-2 w-2 rounded-full bg-red-500"></span> ไม่มีคนหิ้วออนไลน์ (เพื่อนพร้อมหิ้ว 0 คน)
+					<span class="h-2 w-2 rounded-full bg-red-500"></span> {t('ไม่มีคนหิ้วออนไลน์ (เพื่อนพร้อมหิ้ว 0 คน)')}
 				</div>
 			{/if}
 			<button
@@ -316,11 +317,11 @@
 				class="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand py-4 text-sm font-semibold text-white active:bg-brand-600 disabled:opacity-60 disabled:cursor-not-allowed"
 			>
 				{#if checkout.placing}
-					<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span> กำลังส่งออเดอร์...
+					<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span> {t('กำลังส่งออเดอร์...')}
 				{:else if orders.onlineRiders === 0}
-					ไม่มีคนหิ้วเปิดรับงานในขณะนี้
+					{t('ไม่มีคนหิ้วเปิดรับงานในขณะนี้')}
 				{:else}
-					สั่งอาหารและหาเพื่อนหิ้ว ({formatBaht(checkout.total)})
+					{t('สั่งอาหารและหาเพื่อนหิ้ว ({v})', { v: formatBaht(checkout.total) })}
 				{/if}
 			</button>
 		</BottomBar>

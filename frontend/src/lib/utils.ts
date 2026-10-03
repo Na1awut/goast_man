@@ -1,3 +1,4 @@
+import { dateLocale, t } from '$lib/i18n';
 // Small, framework-agnostic helpers shared across screens.
 
 export function uid(prefix = 'id'): string {
@@ -13,12 +14,12 @@ export function randomDigits4(): string {
 }
 
 export function formatBaht(amount: number): string {
-	return `${amount.toLocaleString('th-TH', { maximumFractionDigits: 2 })} ฿`;
+	return t('{v} ฿', { v: amount.toLocaleString(dateLocale, { maximumFractionDigits: 2 }) });
 }
 
 export function formatTime(iso: string | undefined): string {
 	if (!iso) return '';
-	return new Date(iso).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' น.';
+	return new Date(iso).toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit', hour12: false }) + t(' น.');
 }
 
 export function nowTime(): string {
@@ -31,9 +32,9 @@ export function formatRelativeDate(iso: string): string {
 	const yesterday = new Date();
 	yesterday.setDate(today.getDate() - 1);
 	const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
-	if (sameDay(date, today)) return `วันนี้ ${formatTime(iso)}`;
-	if (sameDay(date, yesterday)) return `เมื่อวาน ${formatTime(iso)}`;
-	return date.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) + ` ${formatTime(iso)}`;
+	if (sameDay(date, today)) return t('วันนี้ {v}', { v: formatTime(iso) });
+	if (sameDay(date, yesterday)) return t('เมื่อวาน {v}', { v: formatTime(iso) });
+	return date.toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' }) + ` ${formatTime(iso)}`;
 }
 
 /** KMUTT student/staff Google Workspace domains */

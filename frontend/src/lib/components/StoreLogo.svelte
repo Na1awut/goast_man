@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import type { Store } from '$lib/types';
 	import { initialOf } from '$lib/utils';
 
@@ -12,7 +13,7 @@
 
 <span class="flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-white font-semibold text-brand-700 ring-1 ring-black/5 {className}">
 	{#if showImage}
-		<img src={store.logoUrl} alt="โลโก้ร้าน {store.name}" class="h-full w-full object-cover" loading="lazy" decoding="async" onerror={() => (failedSrc = store.logoUrl ?? null)} />
+		<img src={store.logoUrl} alt={t('โลโก้ร้าน {name}', { name: store.name })} class="h-full w-full object-cover" loading="lazy" decoding="async" onerror={() => (failedSrc = store.logoUrl ?? null)} />
 	{:else}
 		<span aria-hidden="true">{initialOf(store.name)}</span>
 	{/if}

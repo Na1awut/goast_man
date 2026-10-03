@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	// Deterministic QR-looking pattern (demo only — not a scannable EMVCo payload).
 	// Swap for a real PromptPay payload + QR encoder once payments go live.
 	let { seed, size = 176 }: { seed: string; size?: number } = $props();
@@ -47,7 +48,7 @@
 	];
 </script>
 
-<svg width={size} height={size} viewBox="-1 -1 {N + 2} {N + 2}" role="img" aria-label="PromptPay QR (จำลอง)" shape-rendering="crispEdges">
+<svg width={size} height={size} viewBox="-1 -1 {N + 2} {N + 2}" role="img" aria-label={t('PromptPay QR (จำลอง)')} shape-rendering="crispEdges">
 	<rect x="-1" y="-1" width={N + 2} height={N + 2} fill="#fff" />
 	{#each cells as [x, y] (`${x}-${y}`)}
 		<rect {x} {y} width="1" height="1" fill="#0f172a" />

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import { fade } from 'svelte/transition';
 	import head1 from '$lib/assets/goose-head-1.webp';
 	import head2 from '$lib/assets/goose-head-2.webp';
@@ -26,7 +27,7 @@
 		type="button"
 		data-welcome
 		onclick={() => welcome.hide()}
-		aria-label="ข้ามหน้าต้อนรับ"
+		aria-label={t('ข้ามหน้าต้อนรับ')}
 		class="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-white px-8 text-center"
 		out:fade={{ duration: prefersReducedMotion() ? 0 : 250 }}
 	>
@@ -36,7 +37,7 @@
 				<img {src} alt="" width="480" height="480" draggable="false" class="block h-auto w-full {i === 0 ? '' : 'absolute inset-0'} {i === frame ? 'opacity-100' : 'opacity-0'}" />
 			{/each}
 		</span>
-		<span class="mt-4 block text-2xl font-bold text-slate-900">สวัสดี {welcome.name}</span>
-		<span class="mt-1 block text-sm text-slate-500">ยินดีต้อนรับสู่ Goose Man</span>
+		<span class="mt-4 block text-2xl font-bold text-slate-900">{t('สวัสดี {name}', { name: welcome.name })}</span>
+		<span class="mt-1 block text-sm text-slate-500">{t('ยินดีต้อนรับสู่ Goose Man')}</span>
 	</button>
 {/if}

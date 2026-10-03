@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import type { Order } from '$lib/types';
 	import Goose from './Goose.svelte';
 	import { awaitingPayment } from '$lib/payments';
@@ -39,19 +40,19 @@
 		order.status === 'DELIVERING' ? 'walk' : order.status === 'COMPLETED' ? 'hop' : order.status === 'CANCELLED' ? 'idle' : 'wait'
 	);
 
-	const rider = $derived(order.rider?.name ?? 'เพื่อน');
+	const rider = $derived(order.rider?.name ?? t('เพื่อน'));
 	const line = $derived(
 		{
-			PENDING: awaitingPayment(order) ? 'รอชำระเงินก่อน แล้วน้องห่านจะหาเพื่อนให้' : 'น้องห่านกำลังหาเพื่อนที่อยู่ใกล้ร้าน',
-			ACCEPTED: `${rider} ต่อคิวซื้อให้อยู่ที่ร้าน`,
-			DELIVERING: `${rider} หิ้วของเดินมาแล้ว อีกราว ${minutesLeft} นาที`,
-			COMPLETED: 'ถึงมือแล้ว ขอให้อร่อย',
-			CANCELLED: 'ออเดอร์นี้ยกเลิกแล้ว'
+			PENDING: awaitingPayment(order) ? t('รอชำระเงินก่อน แล้วน้องห่านจะหาเพื่อนให้') : t('น้องห่านกำลังหาเพื่อนที่อยู่ใกล้ร้าน'),
+			ACCEPTED: t('{rider} ต่อคิวซื้อให้อยู่ที่ร้าน', { rider }),
+			DELIVERING: t('{rider} หิ้วของเดินมาแล้ว อีกราว {minutesLeft} นาที', { rider, minutesLeft }),
+			COMPLETED: t('ถึงมือแล้ว ขอให้อร่อย'),
+			CANCELLED: t('ออเดอร์นี้ยกเลิกแล้ว')
 		}[order.status]
 	);
 </script>
 
-<section class="overflow-hidden rounded-2xl border border-slate-100 bg-white" aria-label="เส้นทางการส่ง">
+<section class="overflow-hidden rounded-2xl border border-slate-100 bg-white" aria-label={t('เส้นทางการส่ง')}>
 	<div class="relative px-4 pt-5 pb-3">
 		<!-- Track: the goose's box is inset so 100% lands exactly on the pin -->
 		<div class="relative h-[72px]">

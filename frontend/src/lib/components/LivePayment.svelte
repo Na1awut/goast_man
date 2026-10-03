@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	// Live PromptPay: the order already exists (unpaid, hidden from riders). The
 	// buyer transfers the server's total to the team and uploads the slip. The slip
 	// is queued at once ("กำลังตรวจสลิป"); verify-slip checks it with SlipOK in the
@@ -32,7 +33,7 @@
 	async function onPaid() {
 		if (!order) return;
 		await orders.reload(order.id);
-		toast.show('ตรวจสลิปผ่านแล้ว กำลังหาเพื่อนรับหิ้ว', 'success');
+		toast.show(t('ตรวจสลิปผ่านแล้ว กำลังหาเพื่อนรับหิ้ว'), 'success');
 		nav.reset('TRACKING', ['HOME', 'ORDERS']);
 	}
 
@@ -83,12 +84,12 @@
 			const count = await api.fetchRidersOnline();
 			orders.onlineRiders = count;
 			if (count > 0) {
-				toast.show(`มีคนหิ้วเปิดรับงานแล้ว (${count} คน) สร้าง QR Code เรียบร้อย`, 'success');
+				toast.show(t('มีคนหิ้วเปิดรับงานแล้ว ({count} คน) สร้าง QR Code เรียบร้อย', { count }), 'success');
 			} else {
-				toast.show('ยังไม่มีคนหิ้วเปิดรับงานในขณะนี้', 'info');
+				toast.show(t('ยังไม่มีคนหิ้วเปิดรับงานในขณะนี้'), 'info');
 			}
 		} catch {
-			toast.show('ตรวจสอบสถานะไม่สำเร็จ ลองใหม่อีกครั้ง', 'error');
+			toast.show(t('ตรวจสอบสถานะไม่สำเร็จ ลองใหม่อีกครั้ง'), 'error');
 		} finally {
 			refreshingRiders = false;
 		}
@@ -100,7 +101,7 @@
 		try {
 			await api.payOrderTest(order.id);
 			await orders.reload(order.id);
-			toast.show('ชำระแบบทดสอบแล้ว กำลังหาเพื่อนรับหิ้ว', 'success');
+			toast.show(t('ชำระแบบทดสอบแล้ว กำลังหาเพื่อนรับหิ้ว'), 'success');
 			nav.reset('TRACKING', ['HOME', 'ORDERS']);
 		} catch (err) {
 			toast.show(friendlyError(err), 'error', { duration: 6000 });
@@ -117,7 +118,7 @@
 		checking = true;
 		try {
 			await api.verifySlip(order.id, file);
-			toast.show('สร้างออเดอร์แล้ว รับสลิปแล้ว กำลังตรวจสลิป', 'success');
+			toast.show(t('สร้างออเดอร์แล้ว รับสลิปแล้ว กำลังตรวจสลิป'), 'success');
 			await refreshSlip();
 		} catch (err) {
 			toast.show(friendlyError(err), 'error', { duration: 6000 });
@@ -135,42 +136,42 @@
 </script>
 
 <div class="flex flex-1 flex-col">
-	<AppBar title="ชำระเงิน (PromptPay)" onback={() => nav.reset('TRACKING', ['HOME', 'ORDERS'])} />
+	<AppBar title={t('ชำระเงิน (PromptPay)')} onback={() => nav.reset('TRACKING', ['HOME', 'ORDERS'])} />
 
 	{#if !order || !payable}
 		<div class="flex flex-1 flex-col items-center justify-center px-8 text-center">
-			<p class="text-sm font-medium text-slate-800">{order && order.paidAt ? 'ออเดอร์นี้ชำระแล้ว' : 'ไม่มีรายการที่รอชำระ'}</p>
+			<p class="text-sm font-medium text-slate-800">{order && order.paidAt ? t('ออเดอร์นี้ชำระแล้ว') : t('ไม่มีรายการที่รอชำระ')}</p>
 			<button type="button" onclick={() => nav.reset(order ? 'TRACKING' : 'STORES')} class="mt-4 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white">
-				{order ? 'ดูสถานะออเดอร์' : 'กลับไปเลือกร้าน'}
+				{order ? t('ดูสถานะออเดอร์') : t('กลับไปเลือกร้าน')}
 			</button>
 		</div>
 	{:else}
 		<div class="flex-1 space-y-4 px-4 pt-4 pb-6">
 			{#if testMode}
-				<section class="rounded-2xl border border-amber-200 bg-amber-50 p-4" aria-label="โหมดทดสอบ">
-					<p class="flex items-center gap-2 text-sm font-semibold text-amber-900"><Icon name="alert" class="h-4 w-4" />โหมดทดสอบเปิดอยู่</p>
-					<p class="mt-1 text-sm text-amber-900">ทีมเปิดให้ลองสั่งโดยไม่ต้องโอนเงินจริง กด "จ่ายแบบทดสอบ" ออเดอร์จะไปหาเพื่อนรับหิ้วเหมือนจ่ายแล้ว</p>
+				<section class="rounded-2xl border border-amber-200 bg-amber-50 p-4" aria-label={t('โหมดทดสอบ')}>
+					<p class="flex items-center gap-2 text-sm font-semibold text-amber-900"><Icon name="alert" class="h-4 w-4" />{t('โหมดทดสอบเปิดอยู่')}</p>
+					<p class="mt-1 text-sm text-amber-900">{t('ทีมเปิดให้ลองสั่งโดยไม่ต้องโอนเงินจริง กด "จ่ายแบบทดสอบ" ออเดอร์จะไปหาเพื่อนรับหิ้วเหมือนจ่ายแล้ว')}</p>
 					<button type="button" onclick={payTest} disabled={checking} class="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-amber-300 bg-white text-sm font-semibold text-amber-900 active:bg-amber-100 disabled:opacity-60">
 						{#if checking}<span class="h-4 w-4 animate-spin rounded-full border-2 border-amber-300 border-t-amber-900"></span>{/if}
-						จ่ายแบบทดสอบ ({order.totalPrice} ฿ ไม่โอนจริง)
+						{t('จ่ายแบบทดสอบ ({totalPrice} ฿ ไม่โอนจริง)', { totalPrice: order.totalPrice })}
 					</button>
 				</section>
 			{/if}
 			{#if waiting}
 				<section class="rounded-2xl border border-sky-200 bg-sky-50 p-4" role="status" aria-live="polite">
-					<p class="flex items-center gap-2 text-sm font-semibold text-sky-900"><span class="h-4 w-4 animate-spin rounded-full border-2 border-sky-200 border-t-sky-700"></span>สร้างออเดอร์แล้ว กำลังตรวจสลิป</p>
-					<p class="mt-1 text-sm text-sky-900">{#if slip && slip.ahead > 0}ตอนนี้มีคนส่งสลิปพร้อมกันเยอะ คุณอยู่คิวที่ {slip.ahead + 1} {:else}รับสลิปแล้ว {/if}ไม่ต้องโอนซ้ำ ปิดหน้านี้ได้ ระบบตรวจให้เอง ผ่านแล้วเพื่อนจะเห็นงานนี้ทันที</p>
+					<p class="flex items-center gap-2 text-sm font-semibold text-sky-900"><span class="h-4 w-4 animate-spin rounded-full border-2 border-sky-200 border-t-sky-700"></span>{t('สร้างออเดอร์แล้ว กำลังตรวจสลิป')}</p>
+					<p class="mt-1 text-sm text-sky-900">{#if slip && slip.ahead > 0}{t('ตอนนี้มีคนส่งสลิปพร้อมกันเยอะ คุณอยู่คิวที่ {v}', { v: slip.ahead + 1 })} {:else}{t('รับสลิปแล้ว')} {/if}{t('ไม่ต้องโอนซ้ำ ปิดหน้านี้ได้ ระบบตรวจให้เอง ผ่านแล้วเพื่อนจะเห็นงานนี้ทันที')}</p>
 				</section>
 			{:else if underReview}
 				<section class="rounded-2xl border border-amber-200 bg-amber-50 p-4" role="status" aria-live="polite">
-					<p class="flex items-center gap-2 text-sm font-semibold text-amber-900"><Icon name="alert" class="h-4 w-4" />ทีมงานกำลังตรวจสลิปให้</p>
-					<p class="mt-1 text-sm text-amber-900">ระบบตรวจอัตโนมัติไม่ได้ ทีมงานจะเทียบกับบัญชีธนาคารให้ ไม่ต้องโอนซ้ำ ผ่านแล้วเพื่อนจะเห็นงานนี้ทันที</p>
+					<p class="flex items-center gap-2 text-sm font-semibold text-amber-900"><Icon name="alert" class="h-4 w-4" />{t('ทีมงานกำลังตรวจสลิปให้')}</p>
+					<p class="mt-1 text-sm text-amber-900">{t('ระบบตรวจอัตโนมัติไม่ได้ ทีมงานจะเทียบกับบัญชีธนาคารให้ ไม่ต้องโอนซ้ำ ผ่านแล้วเพื่อนจะเห็นงานนี้ทันที')}</p>
 				</section>
 			{:else if rejected && slip}
 				<section class="rounded-2xl border border-red-200 bg-red-50 p-4" role="alert">
-					<p class="flex items-center gap-2 text-sm font-semibold text-red-900"><Icon name="alert" class="h-4 w-4" />สลิปนี้ยังไม่ผ่าน</p>
+					<p class="flex items-center gap-2 text-sm font-semibold text-red-900"><Icon name="alert" class="h-4 w-4" />{t('สลิปนี้ยังไม่ผ่าน')}</p>
 					<p class="mt-1 text-sm text-red-800">{friendlyError(new Error(slip.error ?? 'SLIP_INVALID'))}</p>
-					<p class="mt-1 text-xs text-red-700">{slip.attempts_left > 0 ? `แนบใหม่ได้อีก ${slip.attempts_left} ครั้ง` : 'ส่งครบ 5 ครั้งแล้ว ติดต่อทีมงานให้ช่วยตรวจ'}</p>
+					<p class="mt-1 text-xs text-red-700">{slip.attempts_left > 0 ? t('แนบใหม่ได้อีก {attempts_left} ครั้ง', { attempts_left: slip.attempts_left }) : t('ส่งครบ 5 ครั้งแล้ว ติดต่อทีมงานให้ช่วยตรวจ')}</p>
 				</section>
 			{/if}
 			<section class="rounded-2xl border border-slate-100 bg-white px-5 py-6 text-center">
@@ -183,9 +184,9 @@
 						<div class="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
 							<Icon name="alert" class="h-6 w-6" />
 						</div>
-						<p class="text-base font-bold text-red-900">ไม่สามารถสร้าง QR Code ได้</p>
-						<p class="mt-1 text-xs text-red-700">ขณะนี้ไม่มีคนหิ้วเปิดรับงานในระบบ (0 คน) เพื่อป้องกันการโอนเงินโดยไม่มีคนส่ง ระบบจึงระงับการสร้าง QR Code ชำระเงินชั่วคราว</p>
-						<p class="mt-2 text-[11px] text-slate-500">ระบบจะสร้าง QR Code ให้ทันทีเมื่อมีคนหิ้วเปิดรับงาน</p>
+						<p class="text-base font-bold text-red-900">{t('ไม่สามารถสร้าง QR Code ได้')}</p>
+						<p class="mt-1 text-xs text-red-700">{t('ขณะนี้ไม่มีคนหิ้วเปิดรับงานในระบบ (0 คน) เพื่อป้องกันการโอนเงินโดยไม่มีคนส่ง ระบบจึงระงับการสร้าง QR Code ชำระเงินชั่วคราว')}</p>
+						<p class="mt-2 text-[11px] text-slate-500">{t('ระบบจะสร้าง QR Code ให้ทันทีเมื่อมีคนหิ้วเปิดรับงาน')}</p>
 						<button
 							type="button"
 							onclick={checkRiders}
@@ -193,33 +194,33 @@
 							class="mt-4 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm active:bg-slate-50 disabled:opacity-60"
 						>
 							<Icon name="refresh" class="h-3.5 w-3.5 {refreshingRiders ? 'animate-spin' : ''}" />
-							{refreshingRiders ? 'กำลังตรวจสอบ...' : 'ตรวจสอบสถานะคนหิ้วอีกครั้ง'}
+							{refreshingRiders ? t('กำลังตรวจสอบ...') : t('ตรวจสอบสถานะคนหิ้วอีกครั้ง')}
 						</button>
 					</div>
 				{:else}
 					<div class="mt-4">
 						<PromptPayQr payload={promptPayPayload(order.totalPrice)} filename={`gooseman-${order.orderCode.replace('#', '')}.png`} />
 					</div>
-					{#if promptPayName}<p class="mt-3 text-xs text-slate-500">โอนเข้า {promptPayName}</p>{/if}
+					{#if promptPayName}<p class="mt-3 text-xs text-slate-500">{t('โอนเข้า {promptPayName}', { promptPayName })}</p>{/if}
 				{/if}
-				<p class="mt-3 text-xs font-medium text-slate-500">ยอดที่ต้องชำระ · {order.orderCode}</p>
-				<p class="text-3xl font-bold text-brand tabular-nums">{order.totalPrice.toFixed(2)} ฿</p>
+				<p class="mt-3 text-xs font-medium text-slate-500">{t('ยอดที่ต้องชำระ · {orderCode}', { orderCode: order.orderCode })}</p>
+				<p class="text-3xl font-bold text-brand tabular-nums">{t('{v} ฿', { v: order.totalPrice.toFixed(2) })}</p>
 			</section>
 
 			<section class="rounded-2xl border border-dashed border-slate-300 p-4">
-				<h2 class="text-sm font-semibold text-slate-900">ขั้นตอนการชำระเงิน</h2>
+				<h2 class="text-sm font-semibold text-slate-900">{t('ขั้นตอนการชำระเงิน')}</h2>
 				<ol class="mt-3 space-y-2.5 text-sm text-slate-600">
-					{#each ['สแกน QR ด้วยแอปธนาคาร ยอดเงินจะขึ้นให้เอง', 'โอนเสร็จ กด "แนบสลิป" แล้วเลือกรูปสลิป', 'ระบบตรวจสลิปอัตโนมัติ ผ่านแล้วเพื่อนจะเห็นงานนี้ทันที'] as step, i (step)}
+					{#each [t('สแกน QR ด้วยแอปธนาคาร ยอดเงินจะขึ้นให้เอง'), t('โอนเสร็จ กด "แนบสลิป" แล้วเลือกรูปสลิป'), t('ระบบตรวจสลิปอัตโนมัติ ผ่านแล้วเพื่อนจะเห็นงานนี้ทันที')] as step, i (step)}
 						<li class="flex gap-3">
 							<span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand">{i + 1}</span>
 							{step}
 						</li>
 					{/each}
 				</ol>
-				<p class="mt-3 text-xs text-slate-500">ยังไม่มีเพื่อนเห็นออเดอร์นี้จนกว่าจะตรวจสลิปผ่าน</p>
+				<p class="mt-3 text-xs text-slate-500">{t('ยังไม่มีเพื่อนเห็นออเดอร์นี้จนกว่าจะตรวจสลิปผ่าน')}</p>
 			</section>
 
-			<button type="button" onclick={cancelOrder} disabled={checking} class="mx-auto block text-sm text-slate-500 underline underline-offset-2">ยกเลิกออเดอร์นี้</button>
+			<button type="button" onclick={cancelOrder} disabled={checking} class="mx-auto block text-sm text-slate-500 underline underline-offset-2">{t('ยกเลิกออเดอร์นี้')}</button>
 		</div>
 
 		<BottomBar>
@@ -230,16 +231,16 @@
 				class="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand py-4 text-sm font-semibold text-white active:bg-brand-600 disabled:opacity-60 disabled:cursor-not-allowed"
 			>
 				{#if checking || waiting}
-					<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span> {checking ? 'กำลังส่งสลิป...' : 'กำลังตรวจสลิป...'}
+					<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span> {checking ? t('กำลังส่งสลิป...') : t('กำลังตรวจสลิป...')}
 				{:else if underReview}
-					ทีมงานกำลังตรวจสลิปให้
+					{t('ทีมงานกำลังตรวจสลิปให้')}
 				{:else if orders.onlineRiders === 0 && !testMode}
-					ไม่มีคนหิ้วเปิดรับงาน (ระงับชำระเงินชั่วคราว)
+					{t('ไม่มีคนหิ้วเปิดรับงาน (ระงับชำระเงินชั่วคราว)')}
 				{:else}
-					<Icon name="upload" class="h-4 w-4" /> แนบสลิปการโอน ({order.totalPrice} ฿)
+					<Icon name="upload" class="h-4 w-4" /> {t('แนบสลิปการโอน ({totalPrice} ฿)', { totalPrice: order.totalPrice })}
 				{/if}
 			</button>
-			<input bind:this={slipInput} type="file" accept="image/*" class="sr-only" onchange={onSlip} aria-label="เลือกรูปสลิปการโอน" />
+			<input bind:this={slipInput} type="file" accept="image/*" class="sr-only" onchange={onSlip} aria-label={t('เลือกรูปสลิปการโอน')} />
 		</BottomBar>
 	{/if}
 </div>

@@ -15,6 +15,7 @@ import { awaitingPayment } from '$lib/payments';
 import { nowTime, randomDigits4, uid } from '$lib/utils';
 import { catalog } from './catalog.svelte';
 import { toast } from './toast.svelte';
+import { t } from '$lib/i18n';
 
 const ACCEPT_AFTER_MS = 3000;
 const DELIVERING_AFTER_MS = 8000;
@@ -65,20 +66,20 @@ export interface NewOrderInput {
 export class OrderError extends Error {}
 
 const STATUS_TOAST: Partial<Record<OrderStatus, (o: Order) => string>> = {
-	PENDING: (o) => `คนหิ้วคืนงาน ${o.orderCode} กำลังหาเพื่อนคนใหม่`,
-	ACCEPTED: (o) => `${o.rider?.name ?? 'เพื่อน'} รับงานหิ้ว ${o.orderCode} แล้ว`,
-	DELIVERING: (o) => `${o.rider?.name ?? 'คนหิ้ว'} ซื้อของครบแล้ว กำลังเดินมาส่ง เตรียมรหัส OTP ไว้ได้เลย`,
-	COMPLETED: (o) => `ส่งมอบ ${o.orderCode} เรียบร้อย`,
-	CANCELLED: (o) => `ออเดอร์ ${o.orderCode} ถูกยกเลิก`
+	PENDING: (o) => t('คนหิ้วคืนงาน {orderCode} กำลังหาเพื่อนคนใหม่', { orderCode: o.orderCode }),
+	ACCEPTED: (o) => t('{v} รับงานหิ้ว {orderCode} แล้ว', { v: o.rider?.name ?? t('เพื่อน'), orderCode: o.orderCode }),
+	DELIVERING: (o) => t('{v} ซื้อของครบแล้ว กำลังเดินมาส่ง เตรียมรหัส OTP ไว้ได้เลย', { v: o.rider?.name ?? t('คนหิ้ว') }),
+	COMPLETED: (o) => t('ส่งมอบ {orderCode} เรียบร้อย', { orderCode: o.orderCode }),
+	CANCELLED: (o) => t('ออเดอร์ {orderCode} ถูกยกเลิก', { orderCode: o.orderCode })
 };
 
 function autoReply(text: string): string {
-	const t = text.toLowerCase();
-	if (/ขอบคุณ|thank/.test(t)) return 'ยินดีครับ ขอให้อร่อยนะครับ';
-	if (/ถึง|มา|ไหน|นาน/.test(t)) return 'อีกประมาณ 2-3 นาทีถึงครับ กำลังเดินข้ามสะพานลอยอยู่';
-	if (/รอ|ตู้|หน้า|นั่ง|เสื้อ/.test(t)) return 'รับทราบครับ ถึงแล้วเดี๋ยวมองหานะครับ';
-	if (/เผ็ด|ไม่ใส่|เพิ่ม|ผัก|ซอส/.test(t)) return 'ได้ครับ เดี๋ยวบอกแม่ค้าให้ครับ';
-	return 'รับทราบครับ';
+	const lower = text.toLowerCase();
+	if (/ขอบคุณ|thank/.test(lower)) return t('ยินดีครับ ขอให้อร่อยนะครับ');
+	if (/ถึง|มา|ไหน|นาน/.test(lower)) return t('อีกประมาณ 2-3 นาทีถึงครับ กำลังเดินข้ามสะพานลอยอยู่');
+	if (/รอ|ตู้|หน้า|นั่ง|เสื้อ/.test(lower)) return t('รับทราบครับ ถึงแล้วเดี๋ยวมองหานะครับ');
+	if (/เผ็ด|ไม่ใส่|เพิ่ม|ผัก|ซอส/.test(lower)) return t('ได้ครับ เดี๋ยวบอกแม่ค้าให้ครับ');
+	return t('รับทราบครับ');
 }
 
 class OrdersStore {
@@ -188,8 +189,8 @@ class OrdersStore {
 		};
 		this.orders = [order, ...this.orders];
 		this.currentOrderId = order.id;
-		this.chats[order.id] = [{ id: uid('msg'), sender: 'SYSTEM', text: `สร้างออเดอร์ ${orderCode} แล้ว กำลังหาเพื่อนรับหิ้ว`, time: nowTime() }];
-		toast.show(`สร้างออเดอร์ ${orderCode} แล้ว กำลังหาเพื่อนรับหิ้ว`, 'success', { notify: true });
+		this.chats[order.id] = [{ id: uid('msg'), sender: 'SYSTEM', text: t('สร้างออเดอร์ {orderCode} แล้ว กำลังหาเพื่อนรับหิ้ว', { orderCode }), time: nowTime() }];
+		toast.show(t('สร้างออเดอร์ {orderCode} แล้ว กำลังหาเพื่อนรับหิ้ว', { orderCode }), 'success', { notify: true });
 		this.#simulateRunner(order.id);
 		return order;
 	}
@@ -221,14 +222,14 @@ class OrdersStore {
 			throw new OrderError(friendlyError(err));
 		}
 		const order = await this.#refresh(id);
-		if (!order) throw new OrderError('สร้างออเดอร์แล้ว แต่โหลดข้อมูลไม่สำเร็จ ลองเปิดหน้าคำสั่งซื้อ');
+		if (!order) throw new OrderError(t('สร้างออเดอร์แล้ว แต่โหลดข้อมูลไม่สำเร็จ ลองเปิดหน้าคำสั่งซื้อ'));
 		this.open(order.id);
 		// The server total is authoritative; say so if it differs from the preview
 		if (order.totalPrice !== input.totalPrice) {
-			toast.show(`ยอดสุทธิจากระบบคือ ${order.totalPrice} ฿ (ต่างจากที่แสดงก่อนหน้า)`, 'warning', { duration: 6000 });
+			toast.show(t('ยอดสุทธิจากระบบคือ {totalPrice} ฿ (ต่างจากที่แสดงก่อนหน้า)', { totalPrice: order.totalPrice }), 'warning', { duration: 6000 });
 		}
 		toast.show(
-			awaitingPayment(order) ? `สร้างออเดอร์ ${order.orderCode} แล้ว ชำระเงินเพื่อเริ่มหาเพื่อนหิ้ว` : `สร้างออเดอร์ ${order.orderCode} แล้ว กำลังหาเพื่อนรับหิ้ว`,
+			awaitingPayment(order) ? t('สร้างออเดอร์ {orderCode} แล้ว ชำระเงินเพื่อเริ่มหาเพื่อนหิ้ว', { orderCode: order.orderCode }) : t('สร้างออเดอร์ {orderCode} แล้ว กำลังหาเพื่อนรับหิ้ว', { orderCode: order.orderCode }),
 			'success',
 			{ notify: true }
 		);
@@ -263,9 +264,9 @@ class OrdersStore {
 			order.status = 'ACCEPTED';
 			order.rider = rider;
 			order.acceptedAt = new Date().toISOString();
-			this.#system(orderId, `${rider.name} รับงานหิ้วแล้ว`);
-			this.chats[orderId].push({ id: uid('msg'), sender: 'RIDER', text: `สวัสดีครับ ${rider.name} รับออเดอร์แล้วนะครับ กำลังไปต่อคิวให้`, time: nowTime() });
-			toast.show(`${rider.name} (${rider.faculty}) รับงานหิ้วแล้ว`, 'success', { notify: true });
+			this.#system(orderId, t('{name} รับงานหิ้วแล้ว', { name: rider.name }));
+			this.chats[orderId].push({ id: uid('msg'), sender: 'RIDER', text: t('สวัสดีครับ {name} รับออเดอร์แล้วนะครับ กำลังไปต่อคิวให้', { name: rider.name }), time: nowTime() });
+			toast.show(t('{name} ({faculty}) รับงานหิ้วแล้ว', { name: rider.name, faculty: rider.faculty }), 'success', { notify: true });
 		});
 
 		this.#schedule(orderId, DELIVERING_AFTER_MS, () => {
@@ -273,8 +274,8 @@ class OrdersStore {
 			if (order?.status !== 'ACCEPTED') return;
 			order.status = 'DELIVERING';
 			order.deliveringAt = new Date().toISOString();
-			this.#system(orderId, 'คนหิ้วได้รับของครบแล้ว กำลังเดินมาส่ง');
-			toast.show(`${order.rider?.name ?? 'คนหิ้ว'} ซื้อของครบแล้ว กำลังเดินมาส่ง เตรียมรหัส OTP ไว้ได้เลย`, 'info', { notify: true });
+			this.#system(orderId, t('คนหิ้วได้รับของครบแล้ว กำลังเดินมาส่ง'));
+			toast.show(t('{v} ซื้อของครบแล้ว กำลังเดินมาส่ง เตรียมรหัส OTP ไว้ได้เลย', { v: order.rider?.name ?? t('คนหิ้ว') }), 'info', { notify: true });
 		});
 	}
 
@@ -286,8 +287,8 @@ class OrdersStore {
 		order.status = 'COMPLETED';
 		order.completedAt = new Date().toISOString();
 		this.#clearTimers(orderId);
-		this.#system(orderId, 'ยืนยัน OTP สำเร็จ ส่งมอบเรียบร้อย');
-		toast.show(`ส่งมอบ ${order.orderCode} เรียบร้อย`, 'success', { notify: true });
+		this.#system(orderId, t('ยืนยัน OTP สำเร็จ ส่งมอบเรียบร้อย'));
+		toast.show(t('ส่งมอบ {orderCode} เรียบร้อย', { orderCode: order.orderCode }), 'success', { notify: true });
 		return true;
 	}
 
@@ -306,7 +307,7 @@ class OrdersStore {
 		if (order?.status !== 'PENDING') return false;
 		order.status = 'CANCELLED';
 		this.#clearTimers(orderId);
-		toast.show(`ยกเลิกออเดอร์ ${order.orderCode} แล้ว`, 'warning', { notify: true });
+		toast.show(t('ยกเลิกออเดอร์ {orderCode} แล้ว', { orderCode: order.orderCode }), 'warning', { notify: true });
 		return true;
 	}
 
@@ -345,7 +346,7 @@ class OrdersStore {
 		if (!order.rider || order.status === 'COMPLETED' || order.status === 'CANCELLED') return;
 		this.typingOrderId = orderId;
 		this.#schedule(orderId, CHAT_REPLY_AFTER_MS, () => {
-			this.chats[orderId]?.push({ id: uid('msg'), sender: 'RIDER', text: image && !message ? 'เห็นรูปแล้วครับ' : autoReply(message), time: nowTime() });
+			this.chats[orderId]?.push({ id: uid('msg'), sender: 'RIDER', text: image && !message ? t('เห็นรูปแล้วครับ') : autoReply(message), time: nowTime() });
 			if (this.typingOrderId === orderId) this.typingOrderId = null;
 		});
 	}
@@ -399,9 +400,9 @@ class OrdersStore {
 				storeId: 'kfc-05',
 				customerId: 'u-demo-001',
 				rider: RIDER_POOL[1],
-				pickupName: 'ร้านข้าวมันไก่ & ข้าวหมกไก่ (HALAL FOODS)',
-				dropoffName: 'อาคารเรียนรวม CB2',
-				itemDetails: 'ข้าวมันไก่ทอด ×1, ข้าวมันไก่ต้ม ×1',
+				pickupName: t('ร้านข้าวมันไก่ & ข้าวหมกไก่ (HALAL FOODS)'),
+				dropoffName: t('อาคารเรียนรวม CB2'),
+				itemDetails: t('ข้าวมันไก่ทอด ×1, ข้าวมันไก่ต้ม ×1'),
 				items: seedItems('kfc-05', [['kfc-05-4', 1], ['kfc-05-3', 1]]),
 				foodTotal: 75,
 				deliveryFee: 15,
@@ -417,7 +418,7 @@ class OrdersStore {
 				deliveringAt: hoursAgo(25.8),
 				completedAt: hoursAgo(25.6),
 				rating: 5,
-				feedbackTags: ['ส่งไวมาก']
+				feedbackTags: [t('ส่งไวมาก')]
 			},
 			{
 				id: 'ord-seed-6100',
@@ -425,9 +426,9 @@ class OrdersStore {
 				kind: 'CUSTOM',
 				customerId: 'u-demo-001',
 				rider: RIDER_POOL[2],
-				pickupName: 'เซเว่นหน้าหอใน มจธ.',
-				dropoffName: 'หอพักหญิง S6',
-				itemDetails: 'ขนมปัง + นมจืด 2 กล่อง + ขนมขบเคี้ยว 2 ถุง',
+				pickupName: t('เซเว่นหน้าหอใน มจธ.'),
+				dropoffName: t('หอพักหญิง S6'),
+				itemDetails: t('ขนมปัง + นมจืด 2 กล่อง + ขนมขบเคี้ยว 2 ถุง'),
 				foodTotal: 95,
 				deliveryFee: 20,
 				codeDiscount: 0,

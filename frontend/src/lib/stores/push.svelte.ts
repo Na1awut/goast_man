@@ -4,6 +4,7 @@
 import { base } from '$app/paths';
 import { env } from '$env/dynamic/public';
 import { db, isLive } from '$lib/supabase';
+import { t } from '$lib/i18n';
 
 const VAPID_KEY = env.PUBLIC_VAPID_PUBLIC_KEY?.trim() ?? '';
 
@@ -99,14 +100,14 @@ class PushStore {
 		try {
 			const reg = await navigator.serviceWorker.ready;
 			await reg.showNotification('Goose Man', {
-				body: 'เปิดแจ้งเตือนเรียบร้อยแล้ว นี่คือหน้าตาของข้อความที่จะได้รับ',
+				body: t('เปิดแจ้งเตือนเรียบร้อยแล้ว นี่คือหน้าตาของข้อความที่จะได้รับ'),
 				icon: `${base}/icon-192.png`,
 				badge: `${base}/icon-192.png`,
 				lang: 'th',
 				tag: 'push-test'
 			} as NotificationOptions);
 		} catch {
-			this.error = 'ส่งข้อความทดสอบไม่สำเร็จ';
+			this.error = t('ส่งข้อความทดสอบไม่สำเร็จ');
 		}
 	}
 
@@ -153,7 +154,7 @@ class PushStore {
 			await this.#save(sub);
 			this.state = 'on';
 		} catch {
-			this.error = 'เปิดการแจ้งเตือนไม่สำเร็จ ลองใหม่อีกครั้ง';
+			this.error = t('เปิดการแจ้งเตือนไม่สำเร็จ ลองใหม่อีกครั้ง');
 		} finally {
 			this.busy = false;
 		}

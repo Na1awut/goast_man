@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import { toast } from '$lib/stores/toast.svelte';
 	import Icon from './Icon.svelte';
 	import Sheet from './Sheet.svelte';
@@ -9,12 +10,12 @@
 	}
 </script>
 
-<Sheet open={toast.inboxOpen} title="การแจ้งเตือน" onclose={close}>
+<Sheet open={toast.inboxOpen} title={t('การแจ้งเตือน')} onclose={close}>
 	{#if toast.notifications.length === 0}
 		<div class="py-10 text-center">
 			<span class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400"><Icon name="bell" /></span>
-			<p class="text-sm font-medium text-slate-700">ยังไม่มีการแจ้งเตือน</p>
-			<p class="text-xs text-slate-500">สถานะออเดอร์จะแสดงที่นี่</p>
+			<p class="text-sm font-medium text-slate-700">{t('ยังไม่มีการแจ้งเตือน')}</p>
+			<p class="text-xs text-slate-500">{t('สถานะออเดอร์จะแสดงที่นี่')}</p>
 		</div>
 	{:else}
 		<ul class="divide-y divide-slate-100">

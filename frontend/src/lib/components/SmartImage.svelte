@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import { assets } from '$app/paths';
 	import Icon from './Icon.svelte';
 
@@ -19,9 +20,9 @@
 
 <div class="relative overflow-hidden {status === 'none' && pending ? 'bg-brand-50' : 'bg-slate-100'} {className}">
 	{#if status === 'none' && pending}
-		<div class="@container absolute inset-0 flex flex-col items-center justify-center gap-1 text-brand-300" role="img" aria-label="{alt ? `${alt}: ` : ''}รูปกำลังดำเนินการ">
+		<div class="@container absolute inset-0 flex flex-col items-center justify-center gap-1 text-brand-300" role="img" aria-label={t('{v}รูปกำลังดำเนินการ', { v: alt ? `${alt}: ` : '' })}>
 			<Icon name="hourglass" class="h-6 w-6" />
-			<span class="hidden text-[11px] font-medium text-brand-700 @min-[5.5rem]:block">กำลังดำเนินการ</span>
+			<span class="hidden text-[11px] font-medium text-brand-700 @min-[5.5rem]:block">{t('กำลังดำเนินการ')}</span>
 		</div>
 	{:else if status === 'none' || status === 'error'}
 		<div class="absolute inset-0 flex items-center justify-center text-slate-300"><Icon name="utensils" class="h-8 w-8" /></div>

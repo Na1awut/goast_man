@@ -5,16 +5,17 @@ import * as api from '$lib/api/live';
 import { isLive } from '$lib/supabase';
 import { fileToDataUrl } from '$lib/image';
 import defaultBanner from '../../../../src/picture/web_banner_1.png';
+import { t } from '$lib/i18n';
 
 const STORAGE_KEY = 'gooseman_home_banners';
 
 export const DEFAULT_BANNER: HomeBanner = {
 	id: 'default-1',
 	imageUrl: defaultBanner,
-	title: 'ขี้เกียจเดินฝ่าแดด? ให้ห่านบางมดหิ้วให้',
-	subtitle: 'ค่าหิ้วเริ่มต้นเพียง 15.-',
+	title: t('ขี้เกียจเดินฝ่าแดด? ให้ห่านบางมดหิ้วให้'),
+	subtitle: t('ค่าหิ้วเริ่มต้นเพียง 15.-'),
 	linkUrl: 'STORES',
-	buttonText: 'ฝากหิ้วเลย',
+	buttonText: t('ฝากหิ้วเลย'),
 	active: true,
 	sort: 0
 };

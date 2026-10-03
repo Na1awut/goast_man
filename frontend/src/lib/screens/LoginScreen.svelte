@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
+	import LangToggle from '$lib/components/LangToggle.svelte';
 	import goose from '$lib/assets/goose-stand.webp';
 	import GoogleIcon from '$lib/components/GoogleIcon.svelte';
 	import MicrosoftIcon from '$lib/components/MicrosoftIcon.svelte';
@@ -30,32 +32,33 @@
 			void orders.init(user.id);
 			welcome.show(auth.displayName);
 		} catch (err) {
-			error = err instanceof AuthError ? err.message : 'เข้าสู่ระบบไม่สำเร็จ ลองใหม่อีกครั้ง';
+			error = err instanceof AuthError ? err.message : t('เข้าสู่ระบบไม่สำเร็จ ลองใหม่อีกครั้ง');
 		} finally {
 			loading = null;
 		}
 	}
 
 	const points: { icon: IconName; title: string; body: string }[] = [
-		{ icon: 'walk', title: 'เพื่อนในมอหิ้วให้', body: 'ส่งถึงหน้าตึกเรียนหรือหอพัก' },
-		{ icon: 'key', title: 'รับของด้วยรหัส OTP', body: 'บอกรหัสให้เพื่อนเมื่อได้ของครบเท่านั้น' },
-		{ icon: 'cash', title: 'ค่าหิ้วเริ่มต้น 15 บาท', body: 'จ่ายผ่าน PromptPay แล้วแนบสลิป' }
+		{ icon: 'walk', title: t('เพื่อนในมอหิ้วให้'), body: t('ส่งถึงหน้าตึกเรียนหรือหอพัก') },
+		{ icon: 'key', title: t('รับของด้วยรหัส OTP'), body: t('บอกรหัสให้เพื่อนเมื่อได้ของครบเท่านั้น') },
+		{ icon: 'cash', title: t('ค่าหิ้วเริ่มต้น 15 บาท'), body: t('จ่ายผ่าน PromptPay แล้วแนบสลิป') }
 	];
 </script>
 
 <main class="login-page">
 	<div class="login-layout">
 		<section class="intro" aria-labelledby="welcome-title">
+			<div class="flex justify-end"><LangToggle /></div>
 			<header class="brand-lockup">
 				<img src={goose} alt="" width="360" height="280" class="brand-mascot" fetchpriority="high" />
 				<div>
 					<p class="brand-name">Goose Man</p>
-					<p class="brand-description">ห่านบางมด · ฝากหิ้วในรั้ว มจธ.</p>
+					<p class="brand-description">{t('ห่านบางมด · ฝากหิ้วในรั้ว มจธ.')}</p>
 				</div>
 			</header>
 
-			<h1 id="welcome-title">ขี้เกียจเดินฝ่าแดด?<br /><span>ให้ห่านบางมดหิ้วให้</span></h1>
-			<p class="intro-lead">แอปส่งอาหารและฝากหิ้วใน มจธ. บางมด จากโรงอาหาร KFC หอพัก และร้านรอบมอ ส่งถึงหน้าตึกเรียนหรือหอพัก</p>
+			<h1 id="welcome-title">{t('ขี้เกียจเดินฝ่าแดด?')}<br /><span>{t('ให้ห่านบางมดหิ้วให้')}</span></h1>
+			<p class="intro-lead">{t('แอปส่งอาหารและฝากหิ้วใน มจธ. บางมด จากโรงอาหาร KFC หอพัก และร้านรอบมอ ส่งถึงหน้าตึกเรียนหรือหอพัก')}</p>
 			<ul class="benefits">
 				{#each points as p (p.title)}
 					<li>
@@ -72,8 +75,8 @@
 		<section class="sign-in" aria-labelledby="sign-in-title">
 			<div class="sign-in-content">
 				{#if isTestSite}<div class="mb-5"><TestEntryNote /></div>{/if}
-				<h2 id="sign-in-title">พร้อมฝากหิ้วแล้วหรือยัง?</h2>
-				<p class="sign-in-description">เข้าสู่ระบบ แล้วให้เพื่อนในมอหิ้วให้</p>
+				<h2 id="sign-in-title">{t('พร้อมฝากหิ้วแล้วหรือยัง?')}</h2>
+				<p class="sign-in-description">{t('เข้าสู่ระบบ แล้วให้เพื่อนในมอหิ้วให้')}</p>
 				<div class="auth-actions">
 					{#if error}
 						<p id="sign-in-error" class="sign-in-error" role="alert">
@@ -91,10 +94,10 @@
 					>
 						{#if loading === 'google'}
 							<span class="spinner" aria-hidden="true"></span>
-							กำลังยืนยันบัญชี...
+							{t('กำลังยืนยันบัญชี...')}
 						{:else}
 							<GoogleIcon />
-							เข้าสู่ระบบด้วย Google
+							{t('เข้าสู่ระบบด้วย Google')}
 						{/if}
 					</button>
 					<button
@@ -107,49 +110,49 @@
 					>
 						{#if loading === 'microsoft'}
 							<span class="spinner" aria-hidden="true"></span>
-							กำลังยืนยันบัญชี...
+							{t('กำลังยืนยันบัญชี...')}
 						{:else}
 							<MicrosoftIcon />
-							เข้าสู่ระบบด้วย Microsoft (มจธ.)
+							{t('เข้าสู่ระบบด้วย Microsoft (มจธ.)')}
 						{/if}
 					</button>
 					<p id="account-help" class="account-help">
 						<Icon name="lock" class="mt-0.5 h-3.5 w-3.5" />
-						<span>ใช้ได้เฉพาะอีเมลมหาวิทยาลัย<br /><span class="email-domain">@kmutt.ac.th</span> และ <span class="email-domain">@mail.kmutt.ac.th</span></span>
+						<span>{t('ใช้ได้เฉพาะอีเมลมหาวิทยาลัย')}<br /><span class="email-domain">@kmutt.ac.th</span> {t('และ')} <span class="email-domain">@mail.kmutt.ac.th</span></span>
 					</p>
-					<p class="sr-only" role="status">{loading === 'google' ? 'กำลังยืนยันบัญชี Google' : loading === 'microsoft' ? 'กำลังยืนยันบัญชี Microsoft' : loading === 'partner' ? 'กำลังเข้าสู่ระบบร้านค้า' : ''}</p>
+					<p class="sr-only" role="status">{loading === 'google' ? t('กำลังยืนยันบัญชี Google') : loading === 'microsoft' ? t('กำลังยืนยันบัญชี Microsoft') : loading === 'partner' ? t('กำลังเข้าสู่ระบบร้านค้า') : ''}</p>
 				</div>
 				<div class="partner-entry">
-					<p>สำหรับร้านค้า Partner</p>
+					<p>{t('สำหรับร้านค้า Partner')}</p>
 					<button type="button" onclick={() => signIn('partner')} disabled={loading !== null} aria-busy={loading === 'partner'} aria-describedby={error ? 'sign-in-error' : undefined} class="partner-button">
 						{#if loading === 'partner'}
-							<span class="spinner" aria-hidden="true"></span> กำลังเข้าสู่ระบบร้านค้า...
+							<span class="spinner" aria-hidden="true"></span> {t('กำลังเข้าสู่ระบบร้านค้า...')}
 						{:else}
-							<Icon name="store" class="h-4 w-4" /> เข้าสู่ระบบร้านค้า <Icon name="arrow-right" class="h-4 w-4" />
+							<Icon name="store" class="h-4 w-4" /> {t('เข้าสู่ระบบร้านค้า')} <Icon name="arrow-right" class="h-4 w-4" />
 						{/if}
 					</button>
 					{#if !isLive}
 						<!-- Demo only: real riders get rider mode once the team adds them in the team console -->
 						<button type="button" data-demo-rider onclick={() => signIn('rider')} disabled={loading !== null} aria-busy={loading === 'rider'} class="partner-button">
 							{#if loading === 'rider'}
-								<span class="spinner" aria-hidden="true"></span> กำลังเข้าสู่ระบบ...
+								<span class="spinner" aria-hidden="true"></span> {t('กำลังเข้าสู่ระบบ...')}
 							{:else}
-								<Icon name="walk" class="h-4 w-4" /> เดโม: เข้าเป็นคนหิ้วทดลอง
+								<Icon name="walk" class="h-4 w-4" /> {t('เดโม: เข้าเป็นคนหิ้วทดลอง')}
 							{/if}
 						</button>
 					{/if}
 				</div>
 			</div>
-			<nav class="about-links" aria-label="ข้อมูลเกี่ยวกับ Goose Man">
-				<a href="/about/">ใช้งานยังไง</a>
-				<a href="/areas/">จุดส่งใน มจธ.</a>
-				<a href="/rider/">สมัครเป็นคนหิ้ว</a>
-				<a href="/partner/">สำหรับร้านค้า</a>
+			<nav class="about-links" aria-label={t('ข้อมูลเกี่ยวกับ Goose Man')}>
+				<a href="/about/">{t('ใช้งานยังไง')}</a>
+				<a href="/areas/">{t('จุดส่งใน มจธ.')}</a>
+				<a href="/rider/">{t('สมัครเป็นคนหิ้ว')}</a>
+				<a href="/partner/">{t('สำหรับร้านค้า')}</a>
 			</nav>
 			<footer class="legal-links">
-				<button type="button" onclick={() => (legal = 'terms')}>เงื่อนไขการใช้งาน</button>
+				<button type="button" onclick={() => (legal = 'terms')}>{t('เงื่อนไขการใช้งาน')}</button>
 				<span aria-hidden="true">·</span>
-				<button type="button" onclick={() => (legal = 'privacy')}>นโยบายความเป็นส่วนตัว</button>
+				<button type="button" onclick={() => (legal = 'privacy')}>{t('นโยบายความเป็นส่วนตัว')}</button>
 			</footer>
 		</section>
 	</div>

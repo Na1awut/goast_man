@@ -7,6 +7,7 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { haptic } from '$lib/feedback';
 import { db, friendlyError, isLive } from '$lib/supabase';
+import { t } from '$lib/i18n';
 
 type CallState = 'idle' | 'outgoing' | 'incoming' | 'connecting' | 'active' | 'ended';
 type Role = 'CUSTOMER' | 'RIDER';
@@ -78,7 +79,7 @@ class CallStore {
 		this.orderCode = ring.order_code;
 		this.state = 'incoming';
 		this.#tone = new Ringtone('incoming');
-		this.#later(() => this.state === 'incoming' && this.#finish('ไม่ได้รับสาย'), RING_MS);
+		this.#later(() => this.state === 'incoming' && this.#finish(t('ไม่ได้รับสาย')), RING_MS);
 	}
 
 	/** Ring the other person on an order in hand */
@@ -99,7 +100,7 @@ class CallStore {
 			this.#callId = data as string;
 			await this.#join(orderId);
 			this.#tone = new Ringtone('outgoing');
-			this.#later(() => this.state === 'outgoing' && void this.hangup('ไม่มีผู้รับสาย'), RING_MS);
+			this.#later(() => this.state === 'outgoing' && void this.hangup(t('ไม่มีผู้รับสาย')), RING_MS);
 		} catch (err) {
 			this.#finish(this.#explain(err));
 		}
@@ -119,14 +120,14 @@ class CallStore {
 			ready();
 			this.#later(ready, 1500);
 			this.#later(ready, 4000);
-			this.#later(() => this.state === 'connecting' && void this.hangup('เชื่อมต่อไม่สำเร็จ'), 20_000);
+			this.#later(() => this.state === 'connecting' && void this.hangup(t('เชื่อมต่อไม่สำเร็จ')), 20_000);
 		} catch (err) {
 			void this.hangup(this.#explain(err));
 		}
 	}
 
 	/** Hang up, cancel the ring, or decline */
-	async hangup(reason = 'วางสายแล้ว') {
+	async hangup(reason = t('วางสายแล้ว')) {
 		if (this.state === 'idle' || this.state === 'ended') return;
 		const id = this.#callId;
 		this.#send('hangup', {});
@@ -166,7 +167,7 @@ class CallStore {
 		pc.ontrack = (e) => (this.remoteStream = e.streams[0] ?? new MediaStream([e.track]));
 		pc.onconnectionstatechange = () => {
 			if (pc.connectionState === 'connected' && this.state !== 'active') this.#connected();
-			if (pc.connectionState === 'failed') void this.hangup('สัญญาณขาด');
+			if (pc.connectionState === 'failed') void this.hangup(t('สัญญาณขาด'));
 		};
 	}
 
@@ -178,7 +179,7 @@ class CallStore {
 			.on('broadcast', { event: 'offer' }, (m) => this.#mine(m.payload) && void this.#onOffer(m.payload.sdp))
 			.on('broadcast', { event: 'answer' }, (m) => this.#mine(m.payload) && void this.#onAnswer(m.payload.sdp))
 			.on('broadcast', { event: 'ice' }, (m) => this.#mine(m.payload) && void this.#onIce(m.payload.candidate))
-			.on('broadcast', { event: 'hangup' }, (m) => this.#mine(m.payload) && this.#finish('อีกฝ่ายวางสายแล้ว'));
+			.on('broadcast', { event: 'hangup' }, (m) => this.#mine(m.payload) && this.#finish(t('อีกฝ่ายวางสายแล้ว')));
 		await new Promise<void>((resolve, reject) => {
 			channel.subscribe((status) => {
 				if (status === 'SUBSCRIBED') resolve();
@@ -247,14 +248,14 @@ class CallStore {
 	#onRow(row: { id: string; status: string }) {
 		if (row.id !== this.#callId) return;
 		if (row.status === 'ACTIVE' && this.#caller && this.state === 'outgoing') this.#tone?.stop();
-		if (row.status === 'DECLINED') this.#finish('ปลายสายไม่สะดวกรับ');
-		else if (row.status === 'MISSED') this.#finish(this.state === 'incoming' ? 'ไม่ได้รับสาย' : 'ไม่มีผู้รับสาย');
-		else if (row.status === 'ENDED') this.#finish('วางสายแล้ว');
+		if (row.status === 'DECLINED') this.#finish(t('ปลายสายไม่สะดวกรับ'));
+		else if (row.status === 'MISSED') this.#finish(this.state === 'incoming' ? t('ไม่ได้รับสาย') : t('ไม่มีผู้รับสาย'));
+		else if (row.status === 'ENDED') this.#finish(t('วางสายแล้ว'));
 	}
 
 	#explain(err: unknown) {
 		const text = err instanceof Error ? err.message : String((err as { message?: string })?.message ?? err);
-		if (text.includes('MIC_DENIED')) return 'ต้องอนุญาตไมโครโฟนก่อนถึงจะโทรได้';
+		if (text.includes('MIC_DENIED')) return t('ต้องอนุญาตไมโครโฟนก่อนถึงจะโทรได้');
 		return friendlyError(err);
 	}
 

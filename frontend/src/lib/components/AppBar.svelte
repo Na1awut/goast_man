@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import type { Snippet } from 'svelte';
 	import { nav } from '$lib/stores/nav.svelte';
 	import Icon from './Icon.svelte';
@@ -25,7 +26,7 @@
 			<button
 				type="button"
 				onclick={onback}
-				aria-label="ย้อนกลับ"
+				aria-label={t('ย้อนกลับ')}
 				class="absolute left-2 flex h-10 w-10 items-center justify-center rounded-full text-slate-800 transition-colors hover:bg-slate-100 active:bg-slate-200"
 			>
 				<Icon name="chevron-left" class="h-6 w-6" />

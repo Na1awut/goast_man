@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import { onMount } from 'svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import SmartImage from '$lib/components/SmartImage.svelte';
@@ -104,7 +105,7 @@
 	bind:this={root}
 	class="group relative overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xs"
 	aria-roledescription="carousel"
-	aria-label="แบนเนอร์ประชาสัมพันธ์"
+	aria-label={t('แบนเนอร์ประชาสัมพันธ์')}
 	onkeydown={onKeydown}
 	onpointerenter={(e) => (hovering = e.pointerType === 'mouse')}
 	onpointerleave={() => (hovering = false)}
@@ -122,10 +123,10 @@
 		class="no-scrollbar flex w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain"
 	>
 		{#each items as banner, index (banner.id)}
-			<div class="w-full shrink-0 snap-start snap-always" role="group" aria-roledescription="slide" aria-label="{index + 1} จาก {items.length}" inert={index !== currentIndex}>
+			<div class="w-full shrink-0 snap-start snap-always" role="group" aria-roledescription="slide" aria-label={t('{v} จาก {itemsCount}', { v: index + 1, itemsCount: items.length })} inert={index !== currentIndex}>
 				<!-- The picture is tappable too, but the button below is the one keyboards and screen readers use -->
 				<button type="button" tabindex="-1" onclick={() => handleClick(banner)} class="block w-full text-left outline-none">
-					<SmartImage src={banner.imageUrl} alt={banner.title || 'แบนเนอร์ Goose Man'} class="block aspect-[2658/984] w-full object-cover" pending />
+					<SmartImage src={banner.imageUrl} alt={banner.title || t('แบนเนอร์ Goose Man')} class="block aspect-[2658/984] w-full object-cover" pending />
 				</button>
 
 				<div class="flex items-center justify-between gap-3 px-4 pt-3 {many ? 'pb-1' : 'pb-3'}">
@@ -140,7 +141,7 @@
 						onclick={() => handleClick(banner)}
 						class="flex min-h-11 shrink-0 items-center gap-1 rounded-full bg-brand px-4 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-brand-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand active:bg-brand-700"
 					>
-						<span>{banner.buttonText || 'ฝากหิ้วเลย'}</span>
+						<span>{banner.buttonText || t('ฝากหิ้วเลย')}</span>
 						<Icon name="arrow-right" class="h-4 w-4" />
 					</button>
 				</div>
@@ -151,7 +152,7 @@
 	{#if many}
 		<!-- Arrows: only where there is a mouse (touch swipes), over the picture, shown on hover or keyboard focus -->
 		<div class="pointer-events-none absolute inset-x-0 top-0 hidden aspect-[2658/984] items-center justify-between px-2.5 pointer-fine:flex">
-			{#each [{ by: -1, icon: 'chevron-left', label: 'แบนเนอร์ก่อนหน้า' }, { by: 1, icon: 'chevron-right', label: 'แบนเนอร์ถัดไป' }] as arrow (arrow.by)}
+			{#each [{ by: -1, icon: 'chevron-left', label: t('แบนเนอร์ก่อนหน้า') }, { by: 1, icon: 'chevron-right', label: t('แบนเนอร์ถัดไป') }] as arrow (arrow.by)}
 				<button
 					type="button"
 					onclick={() => step(arrow.by)}
@@ -171,7 +172,7 @@
 					<button
 						type="button"
 						onclick={() => goToSlide(i)}
-						aria-label="ไปที่แบนเนอร์ที่ {i + 1}: {banner.title}"
+						aria-label={t('ไปที่แบนเนอร์ที่ {v}: {title}', { v: i + 1, title: banner.title })}
 						aria-current={currentIndex === i ? 'true' : undefined}
 						class="group/seg relative h-8 min-w-0 flex-1 rounded-md focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-brand"
 					>
@@ -198,7 +199,7 @@
 			<button
 				type="button"
 				onclick={() => (userPlaying = !userPlaying)}
-				aria-label={userPlaying ? 'หยุดเลื่อนแบนเนอร์อัตโนมัติ' : 'เลื่อนแบนเนอร์อัตโนมัติ'}
+				aria-label={userPlaying ? t('หยุดเลื่อนแบนเนอร์อัตโนมัติ') : t('เลื่อนแบนเนอร์อัตโนมัติ')}
 				class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-brand"
 			>
 				<Icon name={userPlaying ? 'pause' : 'play'} class="h-3.5 w-3.5" filled />

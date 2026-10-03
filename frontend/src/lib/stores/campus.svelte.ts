@@ -2,12 +2,13 @@
 import type { DropoffPoint } from '$lib/types';
 import { DEFAULT_DROPOFF, DROPOFF_POINTS } from '$lib/data/locations';
 import { MAX_FLOOR } from '$lib/pricing';
+import { t } from '$lib/i18n';
 
 const STORAGE_KEY = 'gooseman_dropoff';
 const FLOOR_KEY = 'gooseman_floor';
 
 /** "อาคาร SIT ชั้น 5": what the order and the rider see (same as dropoff_label() in the database) */
-export const dropoffLabel = (point: Pick<DropoffPoint, 'name'>, floor: number) => `${point.name} ชั้น ${floor}`;
+export const dropoffLabel = (point: Pick<DropoffPoint, 'name'>, floor: number) => t('{name} ชั้น {floor}', { name: point.name, floor });
 
 class CampusStore {
 	dropoff = $state<DropoffPoint>(DEFAULT_DROPOFF);
@@ -16,7 +17,7 @@ class CampusStore {
 	pickerOpen = $state(false);
 
 	/** Short form for headers: "SIT ชั้น 5" */
-	label = $derived(`${this.dropoff.shortName} ชั้น ${this.floor}`);
+	label = $derived(t('{shortName} ชั้น {floor}', { shortName: this.dropoff.shortName, floor: this.floor }));
 
 	/** Maximum allowed floor for the currently selected location */
 	maxFloor = $derived(this.dropoff.maxFloor ?? MAX_FLOOR);

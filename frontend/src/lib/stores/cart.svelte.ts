@@ -8,6 +8,7 @@ import { campus } from './campus.svelte';
 import { flags } from './flags.svelte';
 import { catalog } from './catalog.svelte';
 import { toast } from './toast.svelte';
+import { t } from '$lib/i18n';
 
 const STORAGE_KEY = 'gooseman_cart';
 
@@ -89,20 +90,20 @@ class CartStore {
 	add(menuItem: MenuItem, store: Store, special = false, selectedOptions: SelectedOptionChoice[] = [], quantity = 1): boolean {
 		// isOpen is the database's decision (schedule, team lock, owner switch), kept current by realtime; the order is checked there again
 		if (!store.isOpen) {
-			toast.show(`ร้าน ${store.name} ปิดรับออเดอร์อยู่ในขณะนี้`, 'info');
+			toast.show(t('ร้าน {name} ปิดรับออเดอร์อยู่ในขณะนี้', { name: store.name }), 'info');
 			return false;
 		}
 		if (!menuItem.isAvailable || (special && !menuItem.specialPrice)) return false;
 		const switching = !!this.store && this.store.id !== store.id && this.items.length > 0;
 		if (!switching && this.totalItems + quantity > MAX_ORDER_ITEMS) {
-			toast.show(`สั่งได้สูงสุด ${MAX_ORDER_ITEMS} ชิ้นต่อออเดอร์ (คนหิ้วถือได้เท่านี้)`, 'info');
+			toast.show(t('สั่งได้สูงสุด {MAX_ORDER_ITEMS} ชิ้นต่อออเดอร์ (คนหิ้วถือได้เท่านี้)', { MAX_ORDER_ITEMS }), 'info');
 			return false;
 		}
 		// One store per order: switching store clears the previous cart
 		if (this.store && this.store.id !== store.id && this.items.length > 0) {
 			const previous = this.store.name;
 			this.items = [];
-			toast.show(`เปลี่ยนเป็นร้าน ${store.name} แล้ว ของจาก ${previous} ถูกนำออกจากตะกร้า (สั่งได้ทีละร้าน)`, 'warning', { duration: 4500 });
+			toast.show(t('เปลี่ยนเป็นร้าน {name} แล้ว ของจาก {previous} ถูกนำออกจากตะกร้า (สั่งได้ทีละร้าน)', { name: store.name, previous }), 'warning', { duration: 4500 });
 		}
 		this.storeId = store.id;
 

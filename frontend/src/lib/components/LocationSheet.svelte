@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import type { DropoffPoint, HubZone } from '$lib/types';
 	import { DROPOFF_POINTS } from '$lib/data/locations';
 	import { campus } from '$lib/stores/campus.svelte';
@@ -11,12 +12,12 @@
 	function choose(point: DropoffPoint) {
 		const changed = point.id !== campus.dropoff.id;
 		campus.select(point);
-		if (changed) toast.show(`จุดรับของ: ${point.name}`, 'success');
+		if (changed) toast.show(t('จุดรับของ: {name}', { name: point.name }), 'success');
 	}
 </script>
 
-<Sheet open={campus.pickerOpen} title="เลือกจุดรับของใน มจธ." onclose={() => campus.closePicker()}>
-	<p class="mb-3 text-xs text-slate-500">จุดส่งมอบทุกอาคารรับของที่ชั้น 1 (ล็อบบี้ / หน้าตึก)</p>
+<Sheet open={campus.pickerOpen} title={t('เลือกจุดรับของใน มจธ.')} onclose={() => campus.closePicker()}>
+	<p class="mb-3 text-xs text-slate-500">{t('จุดส่งมอบทุกอาคารรับของที่ชั้น 1 (ล็อบบี้ / หน้าตึก)')}</p>
 	<ul class="divide-y divide-slate-100">
 		{#each DROPOFF_POINTS as point (point.id)}
 			{@const selected = point.id === campus.dropoff.id}

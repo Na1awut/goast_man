@@ -1,4 +1,5 @@
 import type { OperatingHours } from '$lib/types';
+import { t } from '$lib/i18n';
 
 // The weekly schedule. The database is the one that opens and closes stores (see
 // supabase/migrations/20261031000000_store_open_control.sql); this file is the same
@@ -63,35 +64,35 @@ export function nextScheduleChange(hours?: OperatingHours | null, date = new Dat
  * Formats day numbers into friendly Thai day names.
  */
 export function formatDaysText(days?: number[]): string {
-	if (!days || days.length === 0 || days.length === 7) return 'ทุกวัน';
+	if (!days || days.length === 0 || days.length === 7) return t('ทุกวัน');
 	const weekdays = [1, 2, 3, 4, 5];
 	if (days.length === 5 && weekdays.every((d) => days.includes(d))) {
-		return 'จันทร์ - ศุกร์';
+		return t('จันทร์ - ศุกร์');
 	}
 	const names: Record<number, string> = {
-		0: 'อา',
-		1: 'จ',
-		2: 'อ',
-		3: 'พ',
-		4: 'พฤ',
-		5: 'ศ',
-		6: 'ส'
+		0: t('อา'),
+		1: t('จ'),
+		2: t('อ'),
+		3: t('พ'),
+		4: t('พฤ'),
+		5: t('ศ'),
+		6: t('ส')
 	};
 	return days.map((d) => names[d] ?? '').filter(Boolean).join(', ');
 }
 
-const DAY_NAMES = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+const DAY_NAMES = [t('อาทิตย์'), t('จันทร์'), t('อังคาร'), t('พุธ'), t('พฤหัสบดี'), t('ศุกร์'), t('เสาร์')];
 
 /** "17:00 น.", "พรุ่งนี้ 08:00 น." or "วันจันทร์ 08:00 น." for an instant, as seen from `now` */
 export function formatWhen(when: Date | string, now = new Date()): string {
-	const t = typeof when === 'string' ? new Date(when) : when;
-	const w = bkk(t);
+	const at = typeof when === 'string' ? new Date(when) : when;
+	const w = bkk(at);
 	const n = bkk(now);
-	const hhmm = `${String(Math.floor(w.min / 60)).padStart(2, '0')}:${String(w.min % 60).padStart(2, '0')} น.`;
+	const hhmm = t('{v}:{v2} น.', { v: String(Math.floor(w.min / 60)).padStart(2, '0'), v2: String(w.min % 60).padStart(2, '0') });
 	const dayDiff = Math.round((Date.UTC(w.y, w.m, w.day) - Date.UTC(n.y, n.m, n.day)) / 86_400_000);
 	if (dayDiff === 0) return hhmm;
-	if (dayDiff === 1) return `พรุ่งนี้ ${hhmm}`;
-	return `วัน${DAY_NAMES[w.dow]} ${hhmm}`;
+	if (dayDiff === 1) return t('พรุ่งนี้ {hhmm}', { hhmm });
+	return t('วัน{v} {hhmm}', { v: DAY_NAMES[w.dow], hhmm });
 }
 
 /**
@@ -104,8 +105,8 @@ export function describeSchedule(
 	if (!hours || !hours.enabled) {
 		return {
 			isOpenNow: true,
-			label: 'เปิด-ปิดด้วยตนเอง',
-			subtext: 'ไม่ได้เปิดระบบตั้งเวลาอัตโนมัติ'
+			label: t('เปิด-ปิดด้วยตนเอง'),
+			subtext: t('ไม่ได้เปิดระบบตั้งเวลาอัตโนมัติ')
 		};
 	}
 
@@ -114,13 +115,13 @@ export function describeSchedule(
 	if (isWithinHours(hours, date)) {
 		return {
 			isOpenNow: true,
-			label: 'อยู่ในเวลาทำการ',
-			subtext: when ? `จะปิดรับออเดอร์อัตโนมัติ ${when}` : 'เปิดรับออเดอร์ตามเวลาที่ตั้งไว้'
+			label: t('อยู่ในเวลาทำการ'),
+			subtext: when ? t('จะปิดรับออเดอร์อัตโนมัติ {when}', { when }) : t('เปิดรับออเดอร์ตามเวลาที่ตั้งไว้')
 		};
 	}
 	return {
 		isOpenNow: false,
-		label: 'อยู่นอกเวลาทำการ',
-		subtext: when ? `จะเปิดรับออเดอร์อัตโนมัติ ${when}` : 'ปิดรับออเดอร์ตามเวลาที่ตั้งไว้'
+		label: t('อยู่นอกเวลาทำการ'),
+		subtext: when ? t('จะเปิดรับออเดอร์อัตโนมัติ {when}', { when }) : t('ปิดรับออเดอร์ตามเวลาที่ตั้งไว้')
 	};
 }
