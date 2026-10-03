@@ -23,17 +23,18 @@ export const isTestSite = simulationFlag(env.PUBLIC_TEST_SITE);
 /** Either kind of test site: banner, "[ทดสอบ]" titles, noindex */
 export const isTestEnv = isSimulation || isTestSite;
 
-/** The accounts created on the test database (supabase: scripts in TESTING_SITE.md). Emails only; the password is not in the code. */
-export const TEST_ACCOUNTS: { email: string; label: string; area: 'app' | 'console' }[] = [
-	{ email: 'buyer1@mail.kmutt.ac.th', label: 'ผู้ซื้อ 1', area: 'app' },
-	{ email: 'buyer2@mail.kmutt.ac.th', label: 'ผู้ซื้อ 2', area: 'app' },
-	{ email: 'rider1@mail.kmutt.ac.th', label: 'คนหิ้ว 1', area: 'app' },
-	{ email: 'rider2@mail.kmutt.ac.th', label: 'คนหิ้ว 2', area: 'app' },
-	{ email: 'shop1@example.com', label: 'ร้าน 1 (ป้าวาบ)', area: 'app' },
-	{ email: 'shop2@example.com', label: 'ร้าน 2 (ครัวกรุงศรี)', area: 'app' },
-	{ email: 'admin1@mail.kmutt.ac.th', label: 'Admin 1', area: 'console' },
-	{ email: 'admin2@mail.kmutt.ac.th', label: 'Admin 2', area: 'console' },
-	{ email: 'staff1@mail.kmutt.ac.th', label: 'Staff 1', area: 'console' }
+/**
+ * What a team member can open the test site as, from Settings in the real console. The ids are the ones the
+ * test-ticket / test-login functions accept (supabase/functions/_shared/ticket.ts); there is no password anywhere.
+ */
+export const TEST_ROLE_CHOICES: { id: string; label: string }[] = [
+	{ id: 'team', label: 'คอนโซลทีมงาน (บัญชีของคุณเอง)' },
+	{ id: 'student1', label: 'ผู้ซื้อ 1' },
+	{ id: 'student2', label: 'ผู้ซื้อ 2' },
+	{ id: 'rider1', label: 'คนหิ้ว 1' },
+	{ id: 'rider2', label: 'คนหิ้ว 2' },
+	{ id: 'shop1', label: 'ร้าน 1 (ป้าวาบ)' },
+	{ id: 'shop2', label: 'ร้าน 2 (ครัวกรุงศรี)' }
 ];
 
 /** Where the launcher wants the app to open (the rider lands on the job board, not the buyer's home) */

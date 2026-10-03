@@ -1,6 +1,6 @@
 // Team console state (Svelte 5 runes): who is signed in, which page is open,
 // the 15-second refresh, menu badges and the alert sound.
-import { signInWithPasswordForTest, takeAuthRedirectError } from '$lib/api/live';
+import { takeAuthRedirectError } from '$lib/api/live';
 import { db, friendlyError, isLive } from '$lib/supabase';
 import { toast } from '$lib/stores/toast.svelte';
 import { chime as beep, unlockChime } from '$lib/chime';
@@ -160,22 +160,6 @@ class Console {
 		});
 		if (error) {
 			this.signInError = friendlyError(error);
-			this.signingIn = false;
-		}
-	}
-
-	/** Test site with its own database: a test account signs in with its password */
-	async signInTest(email: string, password: string) {
-		if (this.signingIn) return;
-		this.signingIn = true;
-		this.signInError = '';
-		try {
-			await signInWithPasswordForTest(email, password);
-			await this.#enter(email.trim().toLowerCase());
-		} catch (err) {
-			const text = err instanceof Error ? err.message : String(err);
-			this.signInError = /invalid login|credentials/i.test(text) ? 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' : friendlyError(err);
-		} finally {
 			this.signingIn = false;
 		}
 	}

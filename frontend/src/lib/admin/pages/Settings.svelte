@@ -1,11 +1,35 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
-	import { isLive } from '$lib/supabase';
+	import { requestTestTicket } from '$lib/api/live';
+	import { TEST_ROLE_CHOICES, isTestEnv } from '$lib/sim';
+	import { toast } from '$lib/stores/toast.svelte';
+	import { friendlyError, isLive } from '$lib/supabase';
 	import { consoleState as c } from '../console.svelte';
 	import Toggle from '../ui/Toggle.svelte';
 	import { dateTime } from '../format';
 
 	const testOn = $derived(!!c.flags?.payment_test_mode);
+
+	// Real console only: open the test site already signed in, with no separate password
+	let testRole = $state('team');
+	let opening = $state(false);
+	async function openTestSite() {
+		if (opening) return;
+		opening = true;
+		// Opened now, in the click, so the browser doesn't block it; pointed at the test site once the ticket arrives
+		const tab = window.open('about:blank', '_blank');
+		try {
+			const { ticket, url } = await requestTestTicket(testRole);
+			if (!tab) throw new Error('POPUP_BLOCKED');
+			tab.opener = null;
+			tab.location.href = `${url}#t=${ticket}`;
+		} catch (err) {
+			tab?.close();
+			toast.show(err instanceof Error && err.message === 'POPUP_BLOCKED' ? 'เบราว์เซอร์บล็อกหน้าต่างใหม่ อนุญาตป๊อปอัปแล้วลองอีกครั้ง' : friendlyError(err), 'error');
+		} finally {
+			opening = false;
+		}
+	}
 </script>
 
 <div class="max-w-2xl space-y-4">
@@ -49,6 +73,22 @@
 		</ul>
 		{#if !c.isAdmin}<p class="mt-3 text-xs text-slate-500">เฉพาะ ADMIN เปิด/ปิดได้</p>{/if}
 	</section>
+
+	{#if isLive && !isTestEnv}
+		<section class="rounded-2xl border border-slate-100 bg-white p-5">
+			<h2 class="text-base font-semibold">เว็บทดสอบ</h2>
+			<p class="mt-1 text-sm text-slate-500">ลองอัปเดตใหม่ก่อนขึ้นเว็บจริง ใช้ฐานข้อมูลแยก ไม่กระทบผู้ใช้จริง เข้าได้เลยด้วยบัญชีนี้ ไม่ต้องใส่รหัสผ่านอีก</p>
+			<div class="mt-3 flex flex-wrap gap-1.5" role="group" aria-label="เลือกบทบาทที่จะเข้าเว็บทดสอบ">
+				{#each TEST_ROLE_CHOICES as r (r.id)}
+					<button type="button" aria-pressed={testRole === r.id} onclick={() => (testRole = r.id)} class="min-h-9 rounded-full border px-3 text-sm {testRole === r.id ? 'border-brand bg-brand text-white' : 'border-slate-200 bg-white text-slate-700'}">{r.label}</button>
+				{/each}
+			</div>
+			<button type="button" onclick={openTestSite} disabled={opening} class="mt-4 flex h-11 items-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-white disabled:opacity-60">
+				{#if opening}กำลังเปิด...{:else}เปิดเว็บทดสอบ <Icon name="arrow-right" class="h-4 w-4" />{/if}
+			</button>
+			<p class="mt-3 text-xs text-slate-500">ตั๋วเข้าใช้ได้ครั้งเดียวภายใน 1 นาที และออกให้เฉพาะ ADMIN/STAFF ที่ล็อกอินอยู่</p>
+		</section>
+	{/if}
 
 	{#if !isLive}
 		<section class="rounded-2xl border border-amber-200 bg-amber-50 p-5">

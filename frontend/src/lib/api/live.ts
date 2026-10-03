@@ -186,11 +186,24 @@ export async function currentUser(): Promise<User | null> {
  * students' accounts and sent them to a blank sign-in form. The database trigger
  * rejects anything but KMUTT accounts and invited partner shops.
  */
-/** Test site only (see lib/sim.ts): a test account signs in with its password. Refused everywhere else. */
-export async function signInWithPasswordForTest(email: string, password: string): Promise<void> {
+/**
+ * Real console only: asks for a 60-second ticket that lets this signed-in team member open the test site as the
+ * given test role. The server checks they are on the team; the ticket is for the test site's /enter/ page.
+ */
+export async function requestTestTicket(role: string): Promise<{ ticket: string; url: string }> {
+	const { data, error } = await db().functions.invoke('test-ticket', { body: { role } });
+	if (error || !data?.ticket || !data?.url) throw error ?? new Error(String(data?.error ?? 'TICKET_FAILED'));
+	return { ticket: data.ticket, url: data.url };
+}
+
+/** Test site only (see lib/sim.ts): trades a ticket from the real console for a signed-in session. Refused everywhere else. */
+export async function enterTestSite(ticket: string): Promise<'/' | '/admin/'> {
 	if (!isTestSite) throw new Error('TEST_SITE_ONLY');
-	const { error } = await db().auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
-	if (error) throw error;
+	const { data, error } = await db().functions.invoke('test-login', { body: { ticket } });
+	if (error || !data?.token_hash) throw error ?? new Error(String(data?.error ?? 'BAD_TICKET'));
+	const verified = await db().auth.verifyOtp({ token_hash: data.token_hash, type: 'magiclink' });
+	if (verified.error) throw verified.error;
+	return data.next === '/admin/' ? '/admin/' : '/';
 }
 
 export async function signInWithGoogle(asPartner: boolean): Promise<void> {

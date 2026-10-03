@@ -2,7 +2,7 @@
 	import head1 from '$lib/assets/goose-head-1.webp';
 	import GoogleIcon from '$lib/components/GoogleIcon.svelte';
 	import Icon from '$lib/components/Icon.svelte';
-	import TestLogin from '$lib/components/TestLogin.svelte';
+	import TestEntryNote from '$lib/components/TestEntryNote.svelte';
 	import { isTestSite } from '$lib/sim';
 	import { isLive } from '$lib/supabase';
 	import { consoleState as c } from '../console.svelte';
@@ -21,9 +21,9 @@
 			<h2 class="text-2xl font-bold text-slate-900">เข้าสู่ระบบทีมงาน</h2>
 			<p class="mt-1 text-sm text-slate-500">ใช้บัญชี Google ที่ ADMIN เพิ่มไว้ในรายชื่อทีมงาน อีเมล มจธ. หรืออีเมลส่วนตัวก็ได้</p>
 
-			{#if isTestSite}<div class="mt-5"><TestLogin area="console" busy={c.signingIn} error={c.signInError} onsubmit={(e, p) => c.signInTest(e, p)} /></div>{/if}
+			{#if isTestSite}<div class="mt-5"><TestEntryNote /></div>{/if}
 
-			{#if c.signInError && !isTestSite}
+			{#if c.signInError}
 				<p class="mt-5 flex items-start gap-2 rounded-xl bg-red-50 p-3 text-sm text-red-700" role="alert"><Icon name="alert" class="mt-0.5 h-4 w-4" />{c.signInError}</p>
 			{/if}
 
