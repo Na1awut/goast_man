@@ -262,8 +262,9 @@ export async function fetchAppFlags(): Promise<AppFlags> {
 	return check(await db().rpc('app_flags')) as AppFlags;
 }
 
-/** QR test mode only: marks the buyer's own unpaid PromptPay order paid, no transfer */
+/** Test site only: marks the buyer's own unpaid PromptPay order paid, no transfer */
 export async function payOrderTest(orderId: string): Promise<void> {
+	if (!isTestSite) throw new Error('TEST_SITE_ONLY');
 	check(await db().rpc('pay_order_test', { p_order_id: orderId }));
 }
 

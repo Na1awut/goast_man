@@ -7,6 +7,7 @@
 	import { nav } from '$lib/stores/nav.svelte';
 	import { orders } from '$lib/stores/orders.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
+	import { isTestEnv } from '$lib/sim';
 	import { friendlyError } from '$lib/supabase';
 	import AppBar from './AppBar.svelte';
 	import BottomBar from './BottomBar.svelte';
@@ -19,13 +20,13 @@
 	let checking = $state(false);
 	let slipInput = $state<HTMLInputElement>();
 
-	// QR test mode (switched on by the team for trials): pay without a transfer
+	// QR test mode: pay without a transfer. Test site only; the real database refuses it too (migration 20261101)
 	let testMode = $state(false);
 	let refreshingRiders = $state(false);
 
 	$effect(() => {
 		api.fetchAppFlags().then(
-			(f) => (testMode = f.payment_test_mode),
+			(f) => (testMode = isTestEnv && f.payment_test_mode),
 			() => (testMode = false)
 		);
 		void api.fetchRidersOnline().then(

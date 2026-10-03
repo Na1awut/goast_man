@@ -53,6 +53,7 @@
 		<p class="mt-4 text-sm text-slate-500">ข้อมูลทุกหน้าอัปเดตเองทุก 15 วินาทีขณะเปิดหน้านี้อยู่</p>
 	</section>
 
+	{#if isTestEnv || !isLive}
 	<section class="rounded-2xl border bg-white p-5 {testOn ? 'border-amber-300' : 'border-slate-100'}">
 		<h2 class="text-base font-semibold">โหมดทดสอบจ่าย QR</h2>
 		<div class="mt-3 flex items-center gap-4">
@@ -73,6 +74,7 @@
 		</ul>
 		{#if !c.isAdmin}<p class="mt-3 text-xs text-slate-500">เฉพาะ ADMIN เปิด/ปิดได้</p>{/if}
 	</section>
+	{/if}
 
 	{#if isLive && !isTestEnv}
 		<section class="rounded-2xl border border-slate-100 bg-white p-5">
