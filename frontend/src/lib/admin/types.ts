@@ -2,7 +2,7 @@
 
 export type TeamRole = 'ADMIN' | 'STAFF';
 export type Stage = 'AWAITING_PAYMENT' | 'PENDING' | 'ACCEPTED' | 'DELIVERING' | 'COMPLETED' | 'CANCELLED';
-export type AttentionCode = 'OTP_LOCKED' | 'REFUND_DUE' | 'LATE' | 'UNASSIGNED' | 'UNPAID';
+export type AttentionCode = 'OTP_LOCKED' | 'REFUND_DUE' | 'SLIP_REVIEW' | 'LATE' | 'UNASSIGNED' | 'UNPAID';
 export type OrdersTab = 'attention' | 'active' | 'awaiting_payment' | 'done' | 'cancelled' | 'all';
 export type Payment = 'CASH' | 'PROMPTPAY';
 
@@ -418,4 +418,17 @@ export interface ChatLogLine {
 export interface Badges {
 	errors: number;
 	rider_applications: number;
+}
+
+/** A slip the buyer uploaded for a PromptPay order, and what the check made of it */
+export interface SlipLine {
+	id: string;
+	status: 'QUEUED' | 'CHECKING' | 'PAID' | 'REJECTED' | 'NEEDS_REVIEW';
+	error: string | null;
+	trans_ref: string | null;
+	created_at: string;
+	finished_at: string | null;
+	image_path: string;
+	/** Signed link to the image (the console adds it) */
+	image_url?: string;
 }

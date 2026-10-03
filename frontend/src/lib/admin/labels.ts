@@ -20,6 +20,8 @@ export function attentionLabel(a: Attention): string {
 			return 'OTP ถูกล็อก';
 		case 'REFUND_DUE':
 			return `รอคืนเงิน ฿${a.amount ?? ''}`.trim();
+		case 'SLIP_REVIEW':
+			return 'สลิปรอทีมตรวจ';
 		case 'LATE':
 			return `ส่งช้า ${a.minutes} นาที`;
 		case 'UNASSIGNED':
@@ -33,6 +35,7 @@ export function attentionLabel(a: Attention): string {
 export const ATTENTION_HELP: Record<AttentionCode, { text: string; severe: boolean }> = {
 	OTP_LOCKED: { text: 'คนหิ้วกรอก OTP ผิดครบ 5 ครั้ง งานนี้ถูกล็อก ตรวจกับผู้ซื้อแล้วปลดล็อกให้คนหิ้วกรอกใหม่', severe: true },
 	REFUND_DUE: { text: 'ออเดอร์ถูกยกเลิกหลังผู้ซื้อจ่าย PromptPay แล้ว ต้องโอนเงินคืนผู้ซื้อ', severe: true },
+	SLIP_REVIEW: { text: 'สลิปของผู้ซื้อผ่านการตรวจอัตโนมัติไม่ได้ เปิดดูรูปสลิป เทียบกับแอปธนาคาร แล้วกดยืนยันรับเงิน (ถ้าเงินเข้าจริง) ผู้ซื้ออย่าโอนซ้ำ', severe: true },
 	LATE: { text: 'เกินเวลาส่งที่สัญญาไว้ 40 นาที โทรถามคนหิ้วว่าติดอะไร', severe: true },
 	UNASSIGNED: { text: 'ยังไม่มีคนหิ้วรับงาน โทรแจ้งผู้ซื้อ หรือยกเลิกถ้ารอไม่ไหว', severe: false },
 	UNPAID: { text: 'ผู้ซื้อยังไม่ได้ชำระ PromptPay ถ้าผู้ซื้อโอนแล้วแต่ระบบตรวจสลิปไม่ผ่าน ให้ยืนยันรับเงินเอง', severe: false }

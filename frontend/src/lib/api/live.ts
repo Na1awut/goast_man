@@ -232,21 +232,51 @@ export async function signInWithMicrosoft(asPartner: boolean = false): Promise<v
 	if (error) throw error;
 }
 
-/**
- * Sends the transfer slip of a PromptPay order to the verify-slip Edge Function,
- * which checks it with SlipOK and marks the order paid. Throws the error code.
- */
-export async function verifySlip(orderId: string, slip: File): Promise<void> {
+/** What the slip queue made of the buyer's latest slip for an order */
+export interface SlipStatus {
+	id: string;
+	status: 'QUEUED' | 'CHECKING' | 'PAID' | 'REJECTED' | 'NEEDS_REVIEW';
+	/** Why it was rejected / needs review (a code, see friendlyError) */
+	error: string | null;
+	created_at: string;
+	/** Slips in front of this one in the queue */
+	ahead: number;
+	/** Rejected slips allowed before the team has to help (5 in all) */
+	attempts_left: number;
+}
+
+async function slipRequest(body: FormData | string, json = false): Promise<Response> {
 	const {
 		data: { session }
 	} = await db().auth.getSession();
 	if (!session) throw new Error('AUTH_REQUIRED');
+	return fetch(verifySlipUrl, {
+		method: 'POST',
+		headers: { Authorization: `Bearer ${session.access_token}`, ...(json ? { 'Content-Type': 'application/json' } : {}) },
+		body
+	});
+}
+
+/**
+ * Hands the transfer slip of a PromptPay order to the verify-slip Edge Function. It answers at once
+ * ("queued"); the check happens in the background and is read with fetchSlipStatus. Throws the error code.
+ */
+export async function verifySlip(orderId: string, slip: File): Promise<void> {
 	const body = new FormData();
 	body.append('order_id', orderId);
 	body.append('slip', slip);
-	const res = await fetch(verifySlipUrl, { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` }, body });
-	const out = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
-	if (!res.ok || !out.ok) throw new Error(out.error ?? 'SLIPOK_UNAVAILABLE');
+	const res = await slipRequest(body);
+	const out = (await res.json().catch(() => ({}))) as { queued?: boolean; error?: string };
+	if (!res.ok || !out.queued) throw new Error(out.error ?? 'SLIPOK_UNAVAILABLE');
+}
+
+export async function fetchSlipStatus(orderId: string): Promise<SlipStatus | null> {
+	return (check(await db().rpc('my_slip_status', { p_order_id: orderId })) as SlipStatus | null) ?? null;
+}
+
+/** Runs a slip that has waited in the queue too long again (safe to call more than once) */
+export async function kickSlip(submissionId: string): Promise<void> {
+	await slipRequest(JSON.stringify({ kick: submissionId }), true).catch(() => {});
 }
 
 /** Switches the team sets from the console (QR test mode) */

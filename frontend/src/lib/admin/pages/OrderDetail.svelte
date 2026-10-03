@@ -5,7 +5,7 @@
 	import { consoleState as c } from '../console.svelte';
 	import { ago, baht, clock, dateTime, phone } from '../format';
 	import { ACTION_LABEL, ATTENTION_HELP, CANCEL_REASONS, describeDetail } from '../labels';
-	import type { ChatLogLine, OrderDetail } from '../types';
+	import type { ChatLogLine, OrderDetail, SlipLine } from '../types';
 	import AttentionChip from '../ui/AttentionChip.svelte';
 	import CopyButton from '../ui/CopyButton.svelte';
 	import Modal from '../ui/Modal.svelte';
@@ -46,6 +46,40 @@
 			})
 			.catch((err) => (chatError = adminError(err)));
 	});
+	/** Slips the buyer uploaded (PromptPay), with what the automatic check made of them */
+	let slips = $state<SlipLine[]>([]);
+	$effect(() => {
+		void c.tick;
+		const want = id;
+		c.api
+			?.orderSlips(want)
+			.then((s) => {
+				if (want === id) slips = s;
+			})
+			.catch(() => {});
+	});
+	const SLIP_STATUS: Record<SlipLine['status'], string> = {
+		QUEUED: 'รอตรวจ',
+		CHECKING: 'กำลังตรวจ',
+		PAID: 'ตรวจผ่านแล้ว',
+		REJECTED: 'ไม่ผ่าน',
+		NEEDS_REVIEW: 'รอทีมตรวจ'
+	};
+	const SLIP_ERROR: Record<string, string> = {
+		SLIP_USED: 'สลิปนี้ถูกใช้ไปแล้ว',
+		SLIP_AMOUNT_MISMATCH: 'ยอดไม่ตรง',
+		SLIP_WRONG_RECEIVER: 'ไม่ได้โอนเข้าบัญชีทีม',
+		SLIP_INVALID: 'อ่านสลิปไม่ได้',
+		SLIPOK_UNAVAILABLE: 'ระบบตรวจสลิปล่ม',
+		STUCK: 'การตรวจค้าง',
+		ERROR: 'ระบบผิดพลาดระหว่างตรวจ',
+		PAYMENT_NOT_RECORDED: 'ตรวจผ่านแต่บันทึกไม่สำเร็จ',
+		ORDER_NOT_PAYABLE: 'ตรวจผ่านแต่ออเดอร์จ่ายไม่ได้แล้ว',
+		REFUND_DUE: 'ออเดอร์ถูกยกเลิกแล้ว เงินเข้ารายการคืนเงิน'
+	};
+	const slipWaiting = $derived(slips.some((s) => s.status === 'NEEDS_REVIEW' || s.status === 'REJECTED'));
+	/** ADMIN any time; STAFF only once the buyer has uploaded a slip the check could not settle (the database enforces the same) */
+	const canConfirmPay = $derived(!!order && order.payment === 'PROMPTPAY' && !order.paid_at && ((order.stage === 'AWAITING_PAYMENT' && (c.isAdmin || slipWaiting)) || (order.status === 'CANCELLED' && slips.some((s) => s.status === 'NEEDS_REVIEW'))));
 	const CHAT_WHO: Record<ChatLogLine['role'], string> = { CUSTOMER: 'ผู้ซื้อ', RIDER: 'คนหิ้ว', SYSTEM: 'ระบบ' };
 
 	type Dialog = 'cancel' | 'pay' | 'refund' | 'requeue' | 'unlock' | null;
@@ -234,6 +268,21 @@
 				{/if}
 			</section>
 
+			{#if order.payment === 'PROMPTPAY' && slips.length}
+				<section>
+					<p class="mb-2 text-xs font-medium text-slate-500">สลิปที่ผู้ซื้อส่ง</p>
+					<ul class="space-y-2 text-sm">
+						{#each slips as s (s.id)}
+							<li class="rounded-xl bg-slate-50 p-3">
+								<p class="flex flex-wrap items-center gap-x-2"><span class="text-slate-500 tabular-nums">{clock(s.created_at)}</span><span class="font-medium">{SLIP_STATUS[s.status]}</span>{#if s.error}<span class="text-slate-600">· {SLIP_ERROR[s.error] ?? s.error}</span>{/if}</p>
+								{#if s.trans_ref}<p class="mt-1 text-slate-600">เลขอ้างอิงที่ SlipOK อ่านได้ {s.trans_ref}</p>{/if}
+								{#if s.image_url}<a href={s.image_url} target="_blank" rel="noopener noreferrer" class="mt-2 block w-fit"><img src={s.image_url} alt="สลิปการโอน" class="max-h-48 rounded-lg" /></a>{/if}
+							</li>
+						{/each}
+					</ul>
+				</section>
+			{/if}
+
 			{#if order.activity.length}
 				<section>
 					<p class="mb-2 text-xs font-medium text-slate-500">ทีมงานทำอะไรกับออเดอร์นี้</p>
@@ -249,11 +298,11 @@
 		<footer class="border-t border-slate-100 bg-white p-4 {fullPage ? 'sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] rounded-b-2xl md:bottom-0' : ''}">
 			<div class="flex flex-wrap gap-2">
 				{#if locked}<button type="button" onclick={() => open('unlock')} class="h-11 flex-1 rounded-xl bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-600"><Icon name="unlock" class="mr-1 inline h-4 w-4" />ปลดล็อก OTP</button>{/if}
-				{#if order.stage === 'AWAITING_PAYMENT'}<button type="button" onclick={() => open('pay')} class="h-11 flex-1 rounded-xl bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-600">ยืนยันรับเงินเอง</button>{/if}
+				{#if canConfirmPay}<button type="button" onclick={() => open('pay')} class="h-11 flex-1 rounded-xl bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-600">{order.status === 'CANCELLED' ? 'บันทึกว่าได้รับเงิน (เข้ารายการคืนเงิน)' : 'ยืนยันรับเงินเอง'}</button>{/if}
 				{#if refundDue}<button type="button" onclick={() => open('refund')} class="h-11 flex-1 rounded-xl bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-600">บันทึกคืนเงินแล้ว</button>{/if}
 				{#if order.status === 'ACCEPTED'}<button type="button" onclick={() => open('requeue')} class="h-11 flex-1 rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50">คืนงานเข้าคิว</button>{/if}
 				{#if canCancel}<button type="button" onclick={() => open('cancel')} class="h-11 flex-1 rounded-xl border border-red-200 px-4 text-sm font-medium text-red-600 hover:bg-red-50">ยกเลิกออเดอร์</button>{/if}
-				{#if !locked && order.stage !== 'AWAITING_PAYMENT' && !refundDue && order.status !== 'ACCEPTED' && !canCancel}
+				{#if !locked && !canConfirmPay && order.stage !== 'AWAITING_PAYMENT' && !refundDue && order.status !== 'ACCEPTED' && !canCancel}
 					<p class="py-2 text-sm text-slate-500">ออเดอร์นี้ไม่มีอะไรต้องทำเพิ่ม</p>
 				{/if}
 			</div>

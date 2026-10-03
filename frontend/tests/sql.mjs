@@ -110,6 +110,8 @@ try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20261029000000_security_review_fixes.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261030000000_signup_guard.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261031000000_store_open_control.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261101000000_test_pay_test_project_only.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261102000000_slip_queue.sql`, 'utf8'));
 	// The suite signs up dozens of users in seconds; the limit gets its own test below
 	await db.exec(`update app_settings set value = '1000' where key = 'signup_limit_per_minute'`);
 	ok('profile-at-first-order migration applies cleanly', true);
@@ -530,6 +532,9 @@ await as(sam, async () => {
 
 	await expectError('manual payment needs the bank reference', `select admin_confirm_payment('${ppUnpaid}', ' ')`, 'REF_REQUIRED');
 	await expectError('cash orders cannot be confirmed as PromptPay', `select admin_confirm_payment('${cashLate}', 'X')`, 'ORDER_NOT_PAYABLE');
+	// STAFF may confirm by hand only when the buyer uploaded a slip the automatic check could not settle (ADMIN: any time)
+	await expectError('STAFF cannot confirm a payment when the buyer uploaded no slip', `select admin_confirm_payment('${ppUnpaid}', 'KBANK-777')`, 'ADMIN_ONLY');
+	await db.exec(`reset role; insert into slip_submissions (order_id, customer_id, image_path, status, error_code) select id, customer_id, 'x/y.png', 'NEEDS_REVIEW', 'STUCK' from orders where id in ('${ppUnpaid}', '${ppPaid}'); set role authenticated;`);
 	await db.exec(`select admin_confirm_payment('${ppUnpaid}', 'KBANK-777')`);
 	await db.exec(`select admin_confirm_payment('${ppPaid}', 'KBANK-778')`);
 	await expectError('a payment cannot be confirmed twice', `select admin_confirm_payment('${ppUnpaid}', 'KBANK-779')`, 'ALREADY_PAID');
@@ -1140,6 +1145,9 @@ ok('anyone can read whether test mode is on', (await one(`select app_flags() as 
 await expectError('but not flip it', `select admin_set_payment_test_mode(true)`, 'permission denied');
 await db.exec(`reset role;`);
 await as(sam, () => expectError('only ADMIN turns test mode on', `select admin_set_payment_test_mode(true)`, 'ADMIN_ONLY'));
+// The real project has no is_test_project row: even an ADMIN cannot switch test mode on there
+await as(tina, () => expectError('on the real project even ADMIN cannot turn test mode on', `select admin_set_payment_test_mode(true)`, 'TEST_PROJECT_ONLY'));
+await db.exec(`insert into app_settings (key, value) values ('is_test_project', 'true') on conflict (key) do update set value = 'true'::jsonb`);
 await as(tina, async () => {
 	await db.exec(`select admin_set_payment_test_mode(true)`);
 	const f = await rpc(`app_flags()`);
@@ -1639,6 +1647,69 @@ ok('the ownerless store stays ownerless', (await one(`select owner_id from store
 	await as(panee, () => expectError('a schedule for a store that has none cannot be "followed"', `select partner_follow_schedule()`, 'NO_SCHEDULE'));
 	const hid = (await one(`select id from stores where hidden and deleted_at is null limit 1`))?.id;
 	await as(tina, () => expectError('opening a hidden store is refused', `select admin_set_store_open('${hid}', true)`, 'STORE_HIDDEN'));
+}
+
+// ---------- Slip queue and unpaid-order limits (20261102) ----------
+{
+	// Fresh buyer so earlier tests' unpaid orders do not count against the cap
+	const quinn = await newUser('quinn@mail.kmutt.ac.th', 'Quinn Buyer');
+	await ready(quinn, 'Quinn', '0891234501', '6501234501');
+	await db.exec(`update stores set is_open = true where id = 'kfc-01'`);
+	const pp = () => as(quinn, () => placeOrder('kfc-01', [{ menu_item_id: 'kfc-01-1', quantity: 1 }], null, 'PROMPTPAY'));
+	const o1 = (await pp()).id;
+	const o2 = (await pp()).id;
+	const o3 = (await pp()).id;
+	await as(quinn, () => expectError('a 4th unpaid PromptPay order is refused', `select place_order_at('kfc-01', '[{"menu_item_id":"kfc-01-1","quantity":1}]'::jsonb, 'sit', 1, null, 'PROMPTPAY', null)`, 'TOO_MANY_UNPAID'));
+	ok('cash orders are not limited by unpaid PromptPay ones', !!(await as(quinn, () => placeOrder('kfc-01', [{ menu_item_id: 'kfc-01-1', quantity: 1 }]))).id);
+
+	// the queue
+	const sid = (await one(`select gen_random_uuid() as id`)).id;
+	await db.exec(`select slip_enqueue('${sid}', '${o1}', '${quinn}', 'q/1.png')`);
+	await expectError('a second slip while one is queued is refused', `select slip_enqueue(gen_random_uuid(), '${o1}', '${quinn}', 'q/2.png')`, 'SLIP_ALREADY_QUEUED');
+	await expectError("nobody queues a slip for another buyer's order", `select slip_enqueue(gen_random_uuid(), '${o1}', '${alice}', 'q/3.png')`, 'ORDER_NOT_FOUND');
+	ok('the buyer sees the slip as queued', (await as(quinn, () => one(`select my_slip_status('${o1}') as s`))).s.status === 'QUEUED');
+	ok('another buyer sees nothing', (await as(alice, () => one(`select my_slip_status('${o1}') as s`))).s === null);
+	ok('a queued slip is claimed once', (await one(`select slip_claim('${sid}', 4) as c`)).c === true && (await one(`select slip_claim('${sid}', 4) as c`)).c === false);
+	await db.exec(`select slip_finish('${sid}', 'REJECTED', 'SLIP_INVALID', null)`);
+	for (let i = 0; i < 4; i++) {
+		const id = (await one(`select gen_random_uuid() as id`)).id;
+		await db.exec(`select slip_enqueue('${id}', '${o1}', '${quinn}', 'q/r${i}.png'); select slip_claim('${id}', 4); select slip_finish('${id}', 'REJECTED', 'SLIP_INVALID', null)`);
+	}
+	await expectError('after 5 rejected slips the buyer must ask the team', `select slip_enqueue(gen_random_uuid(), '${o1}', '${quinn}', 'q/z.png')`, 'TOO_MANY_ATTEMPTS');
+
+	// SlipOK down three times, then a person looks
+	const sid2 = (await one(`select gen_random_uuid() as id`)).id;
+	await db.exec(`select slip_enqueue('${sid2}', '${o2}', '${quinn}', 'q/s.png')`);
+	for (let i = 0; i < 3; i++) await db.exec(`select slip_claim('${sid2}', 4); select slip_finish('${sid2}', 'QUEUED', 'SLIPOK_UNAVAILABLE', null)`);
+	ok('after 3 failed tries the slip waits for the team', (await one(`select status from slip_submissions where id = '${sid2}'`)).status === 'NEEDS_REVIEW');
+	ok('and the order is flagged for the team', (await one(`select order_attention(o, 0) @> '[{"code":"SLIP_REVIEW"}]'::jsonb as f from orders o where id = '${o2}'`)).f === true);
+	await expectError('no new slip while the team is reviewing', `select slip_enqueue(gen_random_uuid(), '${o2}', '${quinn}', 'q/y.png')`, 'SLIP_UNDER_REVIEW');
+
+	// a slip stuck mid-check is not repeated blindly
+	const sid3 = (await one(`select gen_random_uuid() as id`)).id;
+	await db.exec(`insert into slip_submissions (id, order_id, customer_id, image_path, status, claimed_at) values ('${sid3}', '${o3}', '${quinn}', 'q/stale.png', 'CHECKING', now() - interval '5 minutes')`);
+	ok('a slip stuck in CHECKING is not claimed again', (await one(`select slip_claim('${sid3}', 4) as c`)).c === false);
+	ok('it goes to the team instead', (await one(`select status || '/' || error_code as s from slip_submissions where id = '${sid3}'`)).s === 'NEEDS_REVIEW/STUCK');
+
+	// the money gap: SlipOK accepted a slip for an order the buyer cancelled meanwhile
+	await as(quinn, () => db.exec(`select cancel_order('${o1}')`));
+	ok('a slip for a cancelled order is booked as a refund, not lost', (await one(`select record_slip_payment('${o1}', 'REF-LATE', (select total_price from orders where id = '${o1}')) as r`)).r === 'REFUND_DUE');
+	await as(tina, async () => {
+		ok('and the order is in the refund list', (await rpc(`admin_refunds_due()`)).some((r) => r.order_id === o1));
+	});
+	await expectError('the same order cannot be paid twice', `select record_slip_payment('${o1}', 'REF-LATE2', (select total_price from orders where id = '${o1}'))`, 'ALREADY_PAID');
+
+	// expiry
+	await db.exec(`update orders set created_at = now() - interval '30 minutes' where id = '${o2}'`);
+	ok('an order whose slip waits for the team does not expire', (await one(`select expire_unpaid_orders(null) as n`)).n === 0);
+	const o4 = (await as(quinn, () => placeOrder('kfc-01', [{ menu_item_id: 'kfc-01-1', quantity: 1 }], null, 'PROMPTPAY'))).id;
+	await db.exec(`update orders set created_at = now() - interval '30 minutes' where id = '${o4}'`);
+	ok('an unpaid PromptPay order expires after 20 minutes', (await one(`select expire_unpaid_orders(null) as n`)).n === 1 && (await one(`select status from orders where id = '${o4}'`)).status === 'CANCELLED');
+
+	// who may call what
+	await as(quinn, () => expectError('a buyer cannot queue slips directly', `select slip_enqueue(gen_random_uuid(), '${o4}', '${quinn}', 'x')`, 'permission denied'));
+	await as(quinn, () => expectError('a buyer cannot finish a slip as PAID', `select slip_finish('${sid2}', 'PAID', null, null)`, 'permission denied'));
+	await as(quinn, () => expectError('a buyer cannot record payments', `select record_slip_payment('${o4}', 'FAKE', 40)`, 'permission denied'));
 }
 
 // Anonymous visitors can browse the catalogue

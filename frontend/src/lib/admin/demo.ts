@@ -469,6 +469,10 @@ export function createDemoApi(): DemoApi {
 			return wait(detail);
 		},
 
+		async orderSlips() {
+			return [];
+		},
+
 		async orderChat(id) {
 			const o = find(id);
 			if (!o) return fail('ORDER_NOT_FOUND');

@@ -1,7 +1,9 @@
 <script lang="ts">
 	// Live PromptPay: the order already exists (unpaid, hidden from riders). The
-	// buyer transfers the server's total to the team and uploads the slip; the
-	// verify-slip function checks it with SlipOK and the order goes to riders.
+	// buyer transfers the server's total to the team and uploads the slip. The slip
+	// is queued at once ("กำลังตรวจสลิป"); verify-slip checks it with SlipOK in the
+	// background and the order goes to riders. This screen follows the check.
+	import { untrack } from 'svelte';
 	import * as api from '$lib/api/live';
 	import { awaitingPayment, promptPayName, promptPayPayload } from '$lib/payments';
 	import { nav } from '$lib/stores/nav.svelte';
@@ -19,6 +21,45 @@
 
 	let checking = $state(false);
 	let slipInput = $state<HTMLInputElement>();
+
+	// The slip queue: what the check has made of the latest slip
+	let slip = $state<api.SlipStatus | null>(null);
+	const waiting = $derived(slip?.status === 'QUEUED' || slip?.status === 'CHECKING');
+	const underReview = $derived(slip?.status === 'NEEDS_REVIEW');
+	const rejected = $derived(slip?.status === 'REJECTED');
+	let lastKick = 0;
+
+	async function onPaid() {
+		if (!order) return;
+		await orders.reload(order.id);
+		toast.show('ตรวจสลิปผ่านแล้ว กำลังหาเพื่อนรับหิ้ว', 'success');
+		nav.reset('TRACKING', ['HOME', 'ORDERS']);
+	}
+
+	async function refreshSlip() {
+		const id = order?.id;
+		if (!id) return;
+		try {
+			slip = await api.fetchSlipStatus(id);
+		} catch {
+			return;
+		}
+		if (slip?.status === 'PAID') await onPaid();
+		// A slip still waiting after 20 s: ask the function to run it again (safe to repeat)
+		else if (slip?.status === 'QUEUED' && Date.now() - new Date(slip.created_at).getTime() > 20_000 && Date.now() - lastKick > 20_000) {
+			lastKick = Date.now();
+			void api.kickSlip(slip.id);
+		}
+	}
+
+	$effect(() => {
+		if (!order?.id) return;
+		untrack(() => void refreshSlip());
+		const timer = setInterval(() => {
+			if (slip?.status === 'QUEUED' || slip?.status === 'CHECKING' || slip?.status === 'NEEDS_REVIEW') void refreshSlip();
+		}, 3000);
+		return () => clearInterval(timer);
+	});
 
 	// QR test mode: pay without a transfer. Test site only; the real database refuses it too (migration 20261101)
 	let testMode = $state(false);
@@ -76,9 +117,8 @@
 		checking = true;
 		try {
 			await api.verifySlip(order.id, file);
-			await orders.reload(order.id);
-			toast.show('ตรวจสลิปผ่านแล้ว กำลังหาเพื่อนรับหิ้ว', 'success');
-			nav.reset('TRACKING', ['HOME', 'ORDERS']);
+			toast.show('สร้างออเดอร์แล้ว รับสลิปแล้ว กำลังตรวจสลิป', 'success');
+			await refreshSlip();
 		} catch (err) {
 			toast.show(friendlyError(err), 'error', { duration: 6000 });
 		} finally {
@@ -114,6 +154,23 @@
 						{#if checking}<span class="h-4 w-4 animate-spin rounded-full border-2 border-amber-300 border-t-amber-900"></span>{/if}
 						จ่ายแบบทดสอบ ({order.totalPrice} ฿ ไม่โอนจริง)
 					</button>
+				</section>
+			{/if}
+			{#if waiting}
+				<section class="rounded-2xl border border-sky-200 bg-sky-50 p-4" role="status" aria-live="polite">
+					<p class="flex items-center gap-2 text-sm font-semibold text-sky-900"><span class="h-4 w-4 animate-spin rounded-full border-2 border-sky-200 border-t-sky-700"></span>สร้างออเดอร์แล้ว กำลังตรวจสลิป</p>
+					<p class="mt-1 text-sm text-sky-900">{#if slip && slip.ahead > 0}ตอนนี้มีคนส่งสลิปพร้อมกันเยอะ คุณอยู่คิวที่ {slip.ahead + 1} {:else}รับสลิปแล้ว {/if}ไม่ต้องโอนซ้ำ ปิดหน้านี้ได้ ระบบตรวจให้เอง ผ่านแล้วเพื่อนจะเห็นงานนี้ทันที</p>
+				</section>
+			{:else if underReview}
+				<section class="rounded-2xl border border-amber-200 bg-amber-50 p-4" role="status" aria-live="polite">
+					<p class="flex items-center gap-2 text-sm font-semibold text-amber-900"><Icon name="alert" class="h-4 w-4" />ทีมงานกำลังตรวจสลิปให้</p>
+					<p class="mt-1 text-sm text-amber-900">ระบบตรวจอัตโนมัติไม่ได้ ทีมงานจะเทียบกับบัญชีธนาคารให้ ไม่ต้องโอนซ้ำ ผ่านแล้วเพื่อนจะเห็นงานนี้ทันที</p>
+				</section>
+			{:else if rejected && slip}
+				<section class="rounded-2xl border border-red-200 bg-red-50 p-4" role="alert">
+					<p class="flex items-center gap-2 text-sm font-semibold text-red-900"><Icon name="alert" class="h-4 w-4" />สลิปนี้ยังไม่ผ่าน</p>
+					<p class="mt-1 text-sm text-red-800">{friendlyError(new Error(slip.error ?? 'SLIP_INVALID'))}</p>
+					<p class="mt-1 text-xs text-red-700">{slip.attempts_left > 0 ? `แนบใหม่ได้อีก ${slip.attempts_left} ครั้ง` : 'ส่งครบ 5 ครั้งแล้ว ติดต่อทีมงานให้ช่วยตรวจ'}</p>
 				</section>
 			{/if}
 			<section class="rounded-2xl border border-slate-100 bg-white px-5 py-6 text-center">
@@ -169,11 +226,13 @@
 			<button
 				type="button"
 				onclick={() => slipInput?.click()}
-				disabled={checking || (orders.onlineRiders === 0 && !testMode)}
+				disabled={checking || waiting || underReview || (rejected && (slip?.attempts_left ?? 0) <= 0) || (orders.onlineRiders === 0 && !testMode)}
 				class="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand py-4 text-sm font-semibold text-white active:bg-brand-600 disabled:opacity-60 disabled:cursor-not-allowed"
 			>
-				{#if checking}
-					<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span> กำลังตรวจสลิป...
+				{#if checking || waiting}
+					<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span> {checking ? 'กำลังส่งสลิป...' : 'กำลังตรวจสลิป...'}
+				{:else if underReview}
+					ทีมงานกำลังตรวจสลิปให้
 				{:else if orders.onlineRiders === 0 && !testMode}
 					ไม่มีคนหิ้วเปิดรับงาน (ระงับชำระเงินชั่วคราว)
 				{:else}

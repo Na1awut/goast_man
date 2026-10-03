@@ -33,6 +33,7 @@ import type {
 	RefundDue,
 	RiderApplicationRow,
 	RiderPayout,
+	SlipLine,
 	TeamMe,
 	TeamMember,
 	TeamRole
@@ -55,6 +56,8 @@ export interface AdminApi {
 	order(id: string): Promise<OrderDetail>;
 	/** The order's chat between buyer and rider, kept as evidence */
 	orderChat(id: string): Promise<ChatLogLine[]>;
+	/** Slips the buyer uploaded for this order, newest first, with a link to each image */
+	orderSlips(id: string): Promise<SlipLine[]>;
 	cancelOrder(id: string, reason: string): Promise<void>;
 	confirmPayment(id: string, bankRef: string): Promise<void>;
 	unlockOtp(id: string): Promise<void>;
@@ -159,6 +162,13 @@ const liveApi: AdminApi = {
 		const { data } = await db().storage.from('chat-images').createSignedUrls(paths, 60 * 60);
 		const urls = new Map((data ?? []).flatMap((s) => (s.path && s.signedUrl ? [[s.path, s.signedUrl] as const] : [])));
 		return lines.map((l) => ({ ...l, image_url: l.image_path ? urls.get(l.image_path) : undefined }));
+	},
+	async orderSlips(id) {
+		const slips = await call<SlipLine[]>('admin_order_slips', { p_order_id: id });
+		if (!slips.length) return slips;
+		const { data } = await db().storage.from('payment-slips').createSignedUrls(slips.map((s) => s.image_path), 60 * 60);
+		const urls = new Map((data ?? []).flatMap((s) => (s.path && s.signedUrl ? [[s.path, s.signedUrl] as const] : [])));
+		return slips.map((s) => ({ ...s, image_url: urls.get(s.image_path) }));
 	},
 	cancelOrder: (id, reason) => call('admin_cancel_order', { p_order_id: id, p_reason: reason }),
 	confirmPayment: (id, bankRef) => call('admin_confirm_payment', { p_order_id: id, p_bank_ref: bankRef }),

@@ -23,11 +23,17 @@ export interface SlipCheckDeps {
 	getOrder(id: string): Promise<PayableOrder | null>;
 	/** Sends the slip image with amount and log=true, so SlipOK also checks the receiving account and duplicates */
 	checkSlip(amount: number): Promise<SlipOkResponse>;
-	/** record_slip_payment(); throws with the database error code in the message */
-	recordPayment(orderId: string, slipRef: string, amount: number): Promise<void>;
+	/** record_slip_payment(); throws with the database error code in the message. 'REFUND_DUE': the order was cancelled meanwhile, the money is booked for refund */
+	recordPayment(orderId: string, slipRef: string, amount: number): Promise<'PAID' | 'REFUND_DUE' | void>;
 }
 
-export type VerifyResult = { ok: true; alreadyPaid?: boolean } | { ok: false; code: string; status: number };
+/**
+ * ok: the payment is recorded (ref = SlipOK's transaction reference).
+ * verifiedRef on a failure: SlipOK accepted the slip but it could not be recorded, so a person must look at it: never drop it.
+ */
+export type VerifyResult =
+	| { ok: true; alreadyPaid?: boolean; refundDue?: boolean; ref?: string }
+	| { ok: false; code: string; status: number; verifiedRef?: string };
 
 /** SlipOK error codes that mean something to the buyer; anything else is an unreadable or invalid slip */
 const SLIPOK_CODES: Record<number, string> = {
@@ -38,12 +44,13 @@ const SLIPOK_CODES: Record<number, string> = {
 
 const DB_CODES = ['SLIP_USED', 'ALREADY_PAID', 'SLIP_AMOUNT_MISMATCH', 'ORDER_NOT_PAYABLE', 'SLIP_INVALID'];
 
-const fail = (code: string, status: number): VerifyResult => ({ ok: false, code, status });
+const fail = (code: string, status: number, verifiedRef?: string): VerifyResult => ({ ok: false, code, status, ...(verifiedRef ? { verifiedRef } : {}) });
 
-export async function verifySlip(userId: string, orderId: string, deps: SlipCheckDeps): Promise<VerifyResult> {
+/** allowCancelled: the buyer may have cancelled while the slip waited in the queue; the money still arrived, so check and record it (it becomes a refund) */
+export async function verifySlip(userId: string, orderId: string, deps: SlipCheckDeps, opts: { allowCancelled?: boolean } = {}): Promise<VerifyResult> {
 	const order = await deps.getOrder(orderId);
 	if (!order || order.customer_id !== userId) return fail('ORDER_NOT_FOUND', 404);
-	if (order.payment_method !== 'PROMPTPAY' || order.status === 'CANCELLED') return fail('ORDER_NOT_PAYABLE', 409);
+	if (order.payment_method !== 'PROMPTPAY' || (order.status === 'CANCELLED' && !opts.allowCancelled)) return fail('ORDER_NOT_PAYABLE', 409);
 	// A retry after a dropped response must not spend another SlipOK check
 	if (order.paid_at) return { ok: true, alreadyPaid: true };
 
@@ -60,10 +67,13 @@ export async function verifySlip(userId: string, orderId: string, deps: SlipChec
 	if (!ref) return fail('SLIP_INVALID', 422);
 
 	try {
-		await deps.recordPayment(order.id, ref, order.total_price);
+		const recorded = await deps.recordPayment(order.id, ref, order.total_price);
+		return { ok: true, ref, ...(recorded === 'REFUND_DUE' ? { refundDue: true } : {}) };
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);
-		return fail(DB_CODES.find((c) => message.includes(c)) ?? 'PAYMENT_NOT_RECORDED', 409);
+		const code = DB_CODES.find((c) => message.includes(c));
+		if (code === 'ALREADY_PAID') return { ok: true, alreadyPaid: true, ref };
+		// Whatever the reason, SlipOK accepted this transfer: keep the reference so the team can settle it
+		return fail(code ?? 'PAYMENT_NOT_RECORDED', 409, ref);
 	}
-	return { ok: true };
 }
