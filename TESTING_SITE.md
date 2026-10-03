@@ -35,17 +35,14 @@
 
 ลองเล่นข้ามบทบาท: ให้ A เข้า ผู้ซื้อ, B เข้า คนหิ้ว (กด "พร้อมรับงาน"), C เข้า ร้านค้า, D เข้า คอนโซล ADMIN แล้วผู้ซื้อสั่งอาหาร
 
-### ตั้งค่า Vercel (ทำครั้งเดียว)
+### Vercel (ตั้งไว้แล้ว)
 
-1. สร้าง **Vercel project ใหม่** (เช่น `goose-man-test`) ต่อ GitHub repo เดียวกัน
-2. Settings → Git → **Production Branch = `dev`**
-3. Settings → Environment Variables (Production) ใส่:
-   - `PUBLIC_TEST_SITE` = `true`
-   - `PUBLIC_SUPABASE_URL` = `https://bvsupdlsbgbispeubstt.supabase.co`
-   - `PUBLIC_SUPABASE_ANON_KEY` = anon key ของโปรเจกต์ทดสอบ (Supabase → Project Settings → API ค่านี้ไม่ลับเหมือนของเว็บจริง)
-   - **ห้ามใส่** `PUBLIC_PROMPTPAY_*`, `PUBLIC_VAPID_*` และห้ามใส่ key ของเว็บจริง
-4. แนะนำเปิด **Deployment Protection (Vercel Authentication)** ให้เฉพาะคนในทีมเปิดเว็บทดสอบได้
-5. ให้โปรเจกต์ **เว็บจริง** ข้ามการ build branch อื่นนอกจาก `main` (Settings → Git → Ignored Build Step: `[ "$VERCEL_GIT_COMMIT_REF" != "main" ]`) ไม่งั้น Vercel จะสร้างลิงก์ชั่วคราวของ branch `dev` ที่ต่อฐานข้อมูลจริง
+- โปรเจกต์ `goose-man-test` ต่อ GitHub repo เดียวกับเว็บจริง ที่อยู่เว็บทดสอบ (คงที่ ตามชื่อ branch): **https://goose-man-test-git-dev-na1awuts-projects.vercel.app**
+- build เฉพาะ branch `dev` (Ignored Build Step: ข้ามทุก branch ที่ไม่ใช่ `dev`) เป็นการ build แบบ Preview เพราะ Vercel ตั้ง Production Branch ผ่าน API ไม่ได้ ผลที่ได้เหมือนกัน
+- ตัวแปรของโปรเจกต์ทดสอบมี 3 ตัว: `PUBLIC_TEST_SITE=true`, `PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY` (ของโปรเจกต์ทดสอบ) ห้ามเพิ่ม `PUBLIC_PROMPTPAY_*`, `PUBLIC_VAPID_*` หรือ key ของเว็บจริง
+- **Deployment Protection เปิดอยู่:** ต้องล็อกอิน Vercel ด้วยบัญชีที่อยู่ในทีม (ตอนนี้บัญชี `na1awut`) ถึงจะเปิดเว็บทดสอบได้ ถ้าจะให้เพื่อนในทีมเปิด ให้เชิญเขาเข้า Vercel team (Settings → Members) หรือผ่อนการป้องกันที่ Settings → Deployment Protection
+- โปรเจกต์ **เว็บจริง** (`goast-man-otu3`) ตั้ง Ignored Build Step ให้ build เฉพาะ `main` จึงไม่มี Preview ของ branch `dev` ที่ต่อฐานข้อมูลจริง
+- โดเมน `goose-man.tech` และ `goastman.dev` ยังอยู่กับโปรเจกต์เว็บจริงตามเดิม
 
 ### Migration ใหม่
 
@@ -65,7 +62,7 @@ SUPABASE_ACCESS_TOKEN=<จาก .env.test> npx supabase db query --linked=false
 
 ```
 git switch dev          # ทำงานและลองที่นี่
-git push                # -> เว็บทดสอบอัปเดต เว็บจริงไม่ขยับ
+git push                # -> เว็บทดสอบอัปเดต เว็บจริงไม่ขยับ (Vercel ข้าม branch นี้)
 # (มี migration ใหม่: รันลงฐานข้อมูลทดสอบก่อน)
 # พอพร้อมปล่อย: รัน migration ลงฐานข้อมูลจริง แล้ว
 git switch main
