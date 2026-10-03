@@ -1,4 +1,4 @@
-import { isSimulation } from '$lib/sim';
+import { isTestEnv } from '$lib/sim';
 
 // Built as robots.txt. The test site tells every crawler to stay away; the real site welcomes them
 // (except the team console).
@@ -13,6 +13,6 @@ Sitemap: https://goose-man.tech/sitemap.xml
 `;
 
 export const GET = () =>
-	new Response(isSimulation ? '# Test site: not for search\nUser-agent: *\nDisallow: /\n' : REAL, {
+	new Response(isTestEnv ? '# Test site: not for search\nUser-agent: *\nDisallow: /\n' : REAL, {
 		headers: { 'Content-Type': 'text/plain; charset=utf-8' }
 	});

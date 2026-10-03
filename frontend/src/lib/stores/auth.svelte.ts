@@ -4,6 +4,7 @@ import type { User } from '$lib/types';
 import { isKmuttEmail } from '$lib/utils';
 import { digitsOnly, needsOnboarding, TERMS_VERSION, type ProfileInput } from '$lib/profile';
 import * as api from '$lib/api/live';
+import { isTestSite } from '$lib/sim';
 import { friendlyError, isLive, supabase } from '$lib/supabase';
 import { toast } from './toast.svelte';
 import { catalog } from './catalog.svelte';
@@ -158,6 +159,20 @@ class AuthStore {
 		localStorage.setItem(USER_KEY, JSON.stringify(user));
 		localStorage.setItem(TOKEN_KEY, this.token);
 		return user;
+	}
+
+	/** Test site with its own database: sign in as one of the test accounts. Refused on the real site. */
+	async signInWithPasswordForTest(email: string, password: string): Promise<User> {
+		if (!isTestSite) throw new AuthError('ล็อกอินบัญชีทดสอบใช้ได้เฉพาะเว็บทดสอบ');
+		try {
+			await api.signInWithPasswordForTest(email, password);
+		} catch (err) {
+			const text = err instanceof Error ? err.message : String(err);
+			throw new AuthError(/invalid login|credentials/i.test(text) ? 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' : friendlyError(err));
+		}
+		this.user = await api.currentUser();
+		if (!this.user) throw new AuthError('บัญชีนี้ยังไม่มีข้อมูลผู้ใช้ในฐานข้อมูลทดสอบ');
+		return this.user;
 	}
 
 	/** Test site only: be the demo student, rider or shop owner straight away. Refuses on the real site. */

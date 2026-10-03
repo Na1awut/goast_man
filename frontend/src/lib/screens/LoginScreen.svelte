@@ -9,12 +9,32 @@
 	import { nav } from '$lib/stores/nav.svelte';
 	import { welcome } from '$lib/stores/welcome.svelte';
 	import { orders } from '$lib/stores/orders.svelte';
+	import TestLogin from '$lib/components/TestLogin.svelte';
+	import { isTestSite } from '$lib/sim';
 	import { isLive } from '$lib/supabase';
 
 	let loading = $state<'google' | 'microsoft' | 'partner' | 'rider' | null>(null);
 	/** Shown on the page, not only as a toast: this is the one thing a rejected student needs to read */
 	let error = $state(auth.signInError);
 	let legal = $state<LegalPage | null>(null);
+	let testBusy = $state(false);
+
+	/** Test site only: sign in as one of the test accounts */
+	async function signInTest(email: string, password: string) {
+		if (testBusy) return;
+		testBusy = true;
+		error = '';
+		try {
+			const user = await auth.signInWithPasswordForTest(email, password);
+			nav.reset(auth.isPartner ? 'PARTNER' : auth.mustOnboardNow ? 'ONBOARDING' : 'HOME');
+			void orders.init(user.id);
+			welcome.show(auth.displayName);
+		} catch (err) {
+			error = err instanceof AuthError ? err.message : 'เข้าสู่ระบบไม่สำเร็จ ลองใหม่อีกครั้ง';
+		} finally {
+			testBusy = false;
+		}
+	}
 
 	async function signIn(as: 'student' | 'partner' | 'rider' = 'student', provider: 'google' | 'microsoft' = 'google') {
 		if (loading) return;
@@ -69,6 +89,7 @@
 
 		<section class="sign-in" aria-labelledby="sign-in-title">
 			<div class="sign-in-content">
+				{#if isTestSite}<div class="mb-5"><TestLogin area="app" busy={testBusy} {error} onsubmit={signInTest} /></div>{/if}
 				<h2 id="sign-in-title">พร้อมฝากหิ้วแล้วหรือยัง?</h2>
 				<p class="sign-in-description">เข้าสู่ระบบ แล้วให้เพื่อนในมอหิ้วให้</p>
 				<div class="auth-actions">

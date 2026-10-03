@@ -5,6 +5,7 @@ import type { CartItem, ChatMessage, HomeBanner, MenuItem, MenuOptionGroup, Oper
 import { owedToRider } from '$lib/admin/rules';
 import { base } from '$app/paths';
 import { verifySlipUrl } from '$lib/payments';
+import { isTestSite } from '$lib/sim';
 import { db } from '$lib/supabase';
 import { formatTime } from '$lib/utils';
 import { fileToDataUrl } from '$lib/image';
@@ -185,6 +186,13 @@ export async function currentUser(): Promise<User | null> {
  * students' accounts and sent them to a blank sign-in form. The database trigger
  * rejects anything but KMUTT accounts and invited partner shops.
  */
+/** Test site only (see lib/sim.ts): a test account signs in with its password. Refused everywhere else. */
+export async function signInWithPasswordForTest(email: string, password: string): Promise<void> {
+	if (!isTestSite) throw new Error('TEST_SITE_ONLY');
+	const { error } = await db().auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
+	if (error) throw error;
+}
+
 export async function signInWithGoogle(asPartner: boolean): Promise<void> {
 	const { error } = await db().auth.signInWithOAuth({
 		provider: 'google',

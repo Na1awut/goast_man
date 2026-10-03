@@ -8,7 +8,7 @@
 	import SimBanner from '$lib/components/SimBanner.svelte';
 	import SimLauncher from '$lib/components/SimLauncher.svelte';
 	import { seoFor } from '$lib/seo';
-	import { installSimTitle, isSimulation } from '$lib/sim';
+	import { installSimTitle, isSimulation, isTestEnv } from '$lib/sim';
 	import { db, isLive } from '$lib/supabase';
 	let { children } = $props();
 
@@ -29,7 +29,7 @@
 	// (hooks.server.ts + lib/seo.ts). Moving between pages inside the open app only needs the tab title.
 	afterNavigate(({ to }) => {
 		const page = to && seoFor(to.url.pathname);
-		if (page && !isSimulation) document.title = page.title;
+		if (page && !isTestEnv) document.title = page.title;
 	});
 
 	// Uncaught errors go to the team's error log (console page "ข้อผิดพลาด")
@@ -42,7 +42,7 @@
 	}
 </script>
 
-{#if isSimulation}<SimBanner />{/if}
+{#if isTestEnv}<SimBanner />{/if}
 
 {#if simHome}
 	<SimLauncher />
