@@ -40,7 +40,7 @@ export const FAQ: { q: string; a: string }[] = [
 	},
 	{
 		q: 'ร้านค้าอยากเข้าร่วมกับ Goose Man ต้องทำยังไง',
-		a: 'ติดต่อทีม Goose Man ผ่าน Facebook: GooseRider หรือ Instagram: gooserider.co ทีมงานจะส่งคำเชิญให้ร้านเข้าระบบ แล้วร้านจัดการเมนู ราคา และเวลาเปิด-ปิดเองได้'
+		a: 'ติดต่อทีม Goose Man ผ่าน Instagram: gooseman.co หรือเพจ Facebook ของ Goose Man ทีมงานจะส่งคำเชิญให้ร้านเข้าระบบ แล้วร้านจัดการเมนู ราคา และเวลาเปิด-ปิดเองได้'
 	},
 	{
 		q: 'สั่งอาหารผ่าน Goose Man ทำยังไง',
@@ -52,7 +52,7 @@ export const FAQ: { q: string; a: string }[] = [
 	},
 	{
 		q: 'ถ้าของไม่ครบหรือไม่ถูกต้องทำยังไง',
-		a: 'อย่าเพิ่งบอกรหัส OTP จนกว่าจะได้ของครบ แล้วแชทหรือโทรหาคนหิ้วจากหน้าติดตามออเดอร์ ถ้ายังแก้ไม่ได้ ติดต่อทีม Goose Man ที่ Facebook: GooseRider หรือ Instagram: gooserider.co'
+		a: 'อย่าเพิ่งบอกรหัส OTP จนกว่าจะได้ของครบ แล้วแชทหรือโทรหาคนหิ้วจากหน้าติดตามออเดอร์ ถ้ายังแก้ไม่ได้ ติดต่อทีม Goose Man ที่ Instagram: gooseman.co หรือเพจ Facebook ของ Goose Man'
 	},
 	{
 		q: 'ยกเลิกออเดอร์ได้ไหม',
@@ -133,7 +133,7 @@ export const FAQ_RIDER: { q: string; a: string }[] = [
 export const FAQ_PARTNER: { q: string; a: string }[] = [
 	{
 		q: 'ร้านอาหารใน มจธ. เข้าร่วมกับ Goose Man ยังไง',
-		a: 'ติดต่อทีม Goose Man ที่ Facebook: GooseRider หรือ Instagram: gooserider.co ทีมงานจะเพิ่มร้านและส่งคำเชิญไปที่อีเมลของร้าน แล้วร้านเข้าสู่ระบบด้วยปุ่ม "เข้าสู่ระบบร้านค้า" เพื่อจัดการร้าน'
+		a: 'ติดต่อทีม Goose Man ที่ Instagram: gooseman.co หรือเพจ Facebook ของ Goose Man ทีมงานจะเพิ่มร้านและส่งคำเชิญไปที่อีเมลของร้าน แล้วร้านเข้าสู่ระบบด้วยปุ่ม "เข้าสู่ระบบร้านค้า" เพื่อจัดการร้าน'
 	},
 	{
 		q: 'ร้านจัดการอะไรเองได้บ้าง',

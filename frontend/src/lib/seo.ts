@@ -29,8 +29,11 @@ const KMUTT = {
 	}
 };
 
-/** The team's Facebook / Instagram page URLs, once known: they tell search and AI systems these pages are the same entity (sameAs). */
-export const SOCIAL_URLS: string[] = [];
+/** The team's Facebook and Instagram pages: they tell search and AI systems these pages are the same entity as this site (sameAs). */
+export const SOCIAL_URLS: string[] = [
+	'https://www.facebook.com/profile.php?id=61594818175024',
+	'https://www.instagram.com/gooseman.co/'
+];
 
 const ORGANIZATION = {
 	'@type': 'Organization',

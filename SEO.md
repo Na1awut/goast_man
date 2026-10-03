@@ -37,7 +37,7 @@
 1. **Google Search Console**: เพิ่มโดเมน `goose-man.tech` (แบบ Domain ยืนยันด้วย DNS TXT) แล้วส่ง `https://goose-man.tech/sitemap.xml` และกด "ขอจัดทำดัชนี" ที่หน้า `/` กับอีก 4 หน้า
 2. **Bing Webmaster Tools**: นำเข้าจาก Search Console ได้ในคลิกเดียว
 3. **ตรวจรูปแชร์**: วางลิงก์ใน Facebook Sharing Debugger / LINE ดูว่าการ์ดขึ้นถูก
-4. **หน้า Facebook และ Instagram ของทีม (GooseRider / gooserider.co)**: ใส่ลิงก์ `https://goose-man.tech/` ในโปรไฟล์และโพสต์ปักหมุด นี่คือลิงก์ย้อนกลับที่ได้ง่ายที่สุด
+4. **หน้า Facebook และ Instagram ของทีม (Facebook: facebook.com/profile.php?id=61594818175024 · Instagram: @gooseman.co)**: ใส่ลิงก์ `https://goose-man.tech/` ในโปรไฟล์และโพสต์ปักหมุด นี่คือลิงก์ย้อนกลับที่ได้ง่ายที่สุด
 5. **ลิงก์จากที่ที่คนใน มจธ. อ่าน**: กลุ่ม Facebook ฝากซื้อ/ตลาดนัด มจธ., ชมรม/สโมสรนักศึกษา, เพจคณะ, ประกาศหอพัก ขอให้ใส่ลิงก์หน้า `/about/` พร้อมคำอธิบายสั้นๆ
 6. **ร้านค้า Partner**: ขอให้ร้านใส่ "สั่งผ่าน Goose Man" พร้อมลิงก์ในเพจ/ป้ายหน้าร้าน (ได้ทั้งลิงก์และคนรู้จัก)
 7. **ติดตามผล**: ดู Search Console รายสัปดาห์ (หน้าไหนติด คำค้นอะไรเข้ามา) แล้วปรับเนื้อหาตามคำที่คนค้นจริง

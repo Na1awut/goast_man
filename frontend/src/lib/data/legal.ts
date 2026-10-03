@@ -5,7 +5,7 @@
 export type LegalPage = 'terms' | 'privacy' | 'contact';
 
 /** Taken from the Goose Rider banner */
-export const CONTACT_CHANNELS = ['Facebook: GooseRider', 'Instagram: gooserider.co'];
+export const CONTACT_CHANNELS = ['Facebook: เพจ Goose Man', 'Instagram: gooseman.co'];
 
 export const LEGAL: Record<LegalPage, { title: string; sections: { heading?: string; items: string[] }[] }> = {
 	terms: {

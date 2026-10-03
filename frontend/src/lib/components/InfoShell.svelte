@@ -40,6 +40,6 @@
 		<nav class="mx-auto flex max-w-3xl flex-wrap gap-x-5 gap-y-1 px-4 pt-5" aria-label="เมนูข้อมูล">
 			{#each links as l (l.href)}<a href={l.href} class="min-h-11 py-3 text-sm font-medium text-slate-700 hover:text-brand">{l.label}</a>{/each}
 		</nav>
-		<p class="mx-auto max-w-3xl px-4 pt-1 pb-8 text-xs leading-relaxed text-slate-500">Goose Man ใช้ได้เฉพาะนักศึกษาและบุคลากร มจธ. ที่เข้าสู่ระบบด้วยอีเมล @kmutt.ac.th หรือ @mail.kmutt.ac.th · ติดต่อทีม: Facebook GooseRider · Instagram gooserider.co</p>
+		<p class="mx-auto max-w-3xl px-4 pt-1 pb-8 text-xs leading-relaxed text-slate-500">Goose Man ใช้ได้เฉพาะนักศึกษาและบุคลากร มจธ. ที่เข้าสู่ระบบด้วยอีเมล @kmutt.ac.th หรือ @mail.kmutt.ac.th · ติดต่อทีม: <a href="https://www.facebook.com/profile.php?id=61594818175024" rel="me noopener" class="underline underline-offset-2 hover:text-brand">Facebook</a> · <a href="https://www.instagram.com/gooseman.co/" rel="me noopener" class="underline underline-offset-2 hover:text-brand">Instagram gooseman.co</a></p>
 	</footer>
 </div>

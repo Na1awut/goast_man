@@ -25,7 +25,7 @@
 
 	<section aria-labelledby="join">
 		<h2 id="join" class="text-xl font-bold">เข้าร่วมยังไง</h2>
-		<p class="mt-3 text-slate-700">ติดต่อทีม Goose Man ผ่าน Facebook: GooseRider หรือ Instagram: gooserider.co ทีมงานจะเพิ่มร้านของคุณและส่งคำเชิญไปที่อีเมลของร้าน จากนั้นเข้าสู่ระบบที่หน้าแรกด้วยปุ่ม "เข้าสู่ระบบร้านค้า" เพื่อจัดการร้านได้ทันที</p>
+		<p class="mt-3 text-slate-700">ติดต่อทีม Goose Man ผ่าน<a href="https://www.facebook.com/profile.php?id=61594818175024" rel="me noopener" class="font-medium text-brand underline underline-offset-2">เพจ Facebook</a>หรือ<a href="https://www.instagram.com/gooseman.co/" rel="me noopener" class="font-medium text-brand underline underline-offset-2">Instagram: gooseman.co</a> ทีมงานจะเพิ่มร้านของคุณและส่งคำเชิญไปที่อีเมลของร้าน จากนั้นเข้าสู่ระบบที่หน้าแรกด้วยปุ่ม "เข้าสู่ระบบร้านค้า" เพื่อจัดการร้านได้ทันที</p>
 	</section>
 
 	<FaqSection items={FAQ_PARTNER} heading="คำถามสำหรับร้านค้า" />

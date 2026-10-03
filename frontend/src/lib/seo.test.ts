@@ -69,6 +69,11 @@ describe('search metadata', () => {
 		expect(html).toContain('"dateModified":"2026-10-03"');
 	});
 
+	it('the Organization points at the real Facebook and Instagram pages of the team', () => {
+		const html = headTags(seoFor('/'));
+		expect(html).toContain('"sameAs":["https://www.facebook.com/profile.php?id=61594818175024","https://www.instagram.com/gooseman.co/"]');
+	});
+
 	it('the FAQ is stated in plain words, with no invented numbers', () => {
 		expect(FAQ.length).toBeGreaterThanOrEqual(8);
 		for (const f of FAQ) {
