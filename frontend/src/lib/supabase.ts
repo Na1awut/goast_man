@@ -2,6 +2,7 @@
 // mode on in-memory data, so the UI stays usable before a project exists.
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { env } from '$env/dynamic/public';
+import { isSimulation } from '$lib/sim';
 
 const REQUEST_TIMEOUT_MS = 15_000;
 
@@ -21,8 +22,9 @@ export const returnedFromSignIn = typeof window !== 'undefined' && new URLSearch
 const url = env.PUBLIC_SUPABASE_URL?.trim();
 const anonKey = env.PUBLIC_SUPABASE_ANON_KEY?.trim();
 
+/** The test site never opens a connection to the real database, whatever keys the build has (see lib/sim.ts) */
 export const supabase: SupabaseClient | null =
-	url && anonKey
+	url && anonKey && !isSimulation
 		? createClient(url, anonKey, {
 				auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce' },
 				global: { fetch: fetchWithTimeout }

@@ -5,9 +5,16 @@
 	import { isConsoleHost } from '$lib/admin/host';
 	import { installErrorLog, installStaleBuildReload } from '$lib/errorlog';
 	import { installClientSecurity } from '$lib/security';
+	import SimBanner from '$lib/components/SimBanner.svelte';
+	import SimLauncher from '$lib/components/SimLauncher.svelte';
 	import { seoFor } from '$lib/seo';
+	import { installSimTitle, isSimulation } from '$lib/sim';
 	import { db, isLive } from '$lib/supabase';
 	let { children } = $props();
+
+	// The test site: its home page is the role launcher, every page carries the banner, tabs say "[ทดสอบ]"
+	const simHome = isSimulation && typeof location !== 'undefined' && location.pathname.replace(/\/$/, '') === base;
+	if (typeof window !== 'undefined') installSimTitle();
 
 	// Client-side security: anti-F12, anti-inspect, anti-offline/download
 	if (typeof window !== 'undefined') installClientSecurity();
@@ -22,7 +29,7 @@
 	// (hooks.server.ts + lib/seo.ts). Moving between pages inside the open app only needs the tab title.
 	afterNavigate(({ to }) => {
 		const page = to && seoFor(to.url.pathname);
-		if (page) document.title = page.title;
+		if (page && !isSimulation) document.title = page.title;
 	});
 
 	// Uncaught errors go to the team's error log (console page "ข้อผิดพลาด")
@@ -35,7 +42,11 @@
 	}
 </script>
 
-{#if consoleHome}
+{#if isSimulation}<SimBanner />{/if}
+
+{#if simHome}
+	<SimLauncher />
+{:else if consoleHome}
 	{#await import('$lib/admin/AdminApp.svelte') then { default: AdminApp }}
 		<AdminApp />
 	{/await}

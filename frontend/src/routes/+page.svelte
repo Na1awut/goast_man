@@ -39,6 +39,7 @@
 	import { nav } from '$lib/stores/nav.svelte';
 	import { network } from '$lib/stores/network.svelte';
 	import { orders } from '$lib/stores/orders.svelte';
+	import { simEntry } from '$lib/sim';
 	import { push } from '$lib/stores/push.svelte';
 	import { call } from '$lib/stores/call.svelte';
 	import { rider } from '$lib/stores/rider.svelte';
@@ -113,7 +114,8 @@
 		void catalog.load().then(() => cart.init());
 		try {
 			if (await withTimeout(auth.init(), AUTH_TIMEOUT_MS)) {
-				nav.reset(auth.isPartner ? 'PARTNER' : auth.mustOnboardNow ? 'ONBOARDING' : 'HOME');
+				if (simEntry.screen === 'RIDER') nav.reset('RIDER', ['HOME', 'PROFILE']);
+				else nav.reset(auth.isPartner ? 'PARTNER' : auth.mustOnboardNow ? 'ONBOARDING' : 'HOME');
 				void orders.init(auth.user!.id);
 				// Stores open and close on their own (schedule, team lock, owner): hear it as it happens
 				catalog.watch();

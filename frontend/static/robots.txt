@@ -1,6 +1,0 @@
-# Public pages are open to every crawler; the team console and app internals are not for search.
-User-agent: *
-Allow: /
-Disallow: /admin
-
-Sitemap: https://goose-man.tech/sitemap.xml

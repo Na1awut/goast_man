@@ -160,6 +160,18 @@ class AuthStore {
 		return user;
 	}
 
+	/** Test site only: be the demo student, rider or shop owner straight away. Refuses on the real site. */
+	signInDemo(role: 'student' | 'rider' | 'partner'): User {
+		if (isLive) throw new AuthError('โหมดจำลองใช้ได้เฉพาะเว็บทดสอบ');
+		const user = role === 'partner' ? DEMO_PARTNER : role === 'rider' ? DEMO_RIDER : DEMO_USER;
+		this.user = user;
+		this.token = `demo-token-${Date.now()}`;
+		if (user.partnerStoreId) catalog.markDemoPartner(user.partnerStoreId);
+		localStorage.setItem(USER_KEY, JSON.stringify(user));
+		localStorage.setItem(TOKEN_KEY, this.token);
+		return user;
+	}
+
 	/**
 	 * Live: redirects to Microsoft Azure OAuth. Demo: signs in as the demo student, partner or rider.
 	 */

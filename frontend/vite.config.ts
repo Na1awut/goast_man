@@ -19,6 +19,8 @@ export default defineConfig({
 
 			// Static SPA for GitHub Pages. 404.html serves any unknown path so the app still boots there.
 			adapter: adapter({ fallback: '404.html' }),
+			// Pages nothing links to: the test site's app entry and the robots file
+			prerender: { entries: ['*', '/app/', '/robots.txt'] },
 			// '' on a custom domain; '/<repo>' when served from <user>.github.io/<repo> (set by the deploy workflow)
 			paths: { base: (process.env.BASE_PATH ?? '') as '' | `/${string}` }
 		})
