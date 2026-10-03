@@ -112,6 +112,8 @@ try {
 	await db.exec(readFileSync(`${ROOT}/migrations/20261031000000_store_open_control.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261101000000_test_pay_test_project_only.sql`, 'utf8'));
 	await db.exec(readFileSync(`${ROOT}/migrations/20261102000000_slip_queue.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261103000000_storage_image_limits.sql`, 'utf8'));
+	await db.exec(readFileSync(`${ROOT}/migrations/20261104000000_client_errors_cap.sql`, 'utf8'));
 	// The suite signs up dozens of users in seconds; the limit gets its own test below
 	await db.exec(`update app_settings set value = '1000' where key = 'signup_limit_per_minute'`);
 	ok('profile-at-first-order migration applies cleanly', true);
